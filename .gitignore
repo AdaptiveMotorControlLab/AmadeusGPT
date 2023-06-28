@@ -1,0 +1,44 @@
+*~
+*.mp4
+*.h5
+*.pickle
+*.pth
+__pycache__
+.env
+.DS_Store
+/examples
+
+## gitignore for Python
+## Source: https://raw.githubusercontent.com/github/gitignore/master/Python.gitignore
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Binary files
+*.png
+*.jpg
+*.jpeg
+*.ipynb
+*.svg
+*.mp4
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST

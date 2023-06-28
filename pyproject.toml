@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amadeusgpt"
+readme = "README.md"
+requires-python = ">=3.8"
+dynamic = ["dependencies"]
+version = "0.0.1"
+
+[tool.setuptools]
+packages = ["amadeusgpt"]
+
+[tool.setuptools.dynamic]

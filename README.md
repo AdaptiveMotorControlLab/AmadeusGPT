@@ -12,3 +12,24 @@
 
   - WIP [Click here]() to launch our hosted Streamlit App!
   - Please note you need an [openAPI key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
+
+  ## License 
+
+  AmadeusGPT is license under Apache-2.0 license.
+  -  Please note several key dependencies have their own licensing. Please carefully check the license information for DeepLabCut (LGPL-3.0 license), SAM (Apache-2.0 license), CEBRA (Non-Commercial), etc...
+
+  ## Citation
+
+  If you use ideas or code from this project in your work, please cite us  using the following BibTeX entry. 🙏
+
+ - AmadeusGPT
+
+ ```
+ ```
+@article{ye2023superanimal,
+      title={AmadeusGPT: a natural language interface for interactive animal behavioral analysis}, 
+      author={Shaokai Ye and Jessy Lauer and Mu Zhou and Alexander Mathis and Mackenzie Weygandt Mathis},
+      journal={arXiv:WIP},
+      year={2023}
+}
+```
