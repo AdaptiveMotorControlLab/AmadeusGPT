@@ -8,28 +8,31 @@
 - For more details, check out our arXiv preprint **AmadeusGPT: a natural language interface for interactive animal behavioral analysis** by [Shaokai Ye](https://github.com/yeshaokai), [Jessy Lauer](https://github.com/jeylau), [Mu Zhou](https://github.com/zhoumu53), [Alexander Mathis](https://github.com/AlexEMG) & [Mackenzie W. Mathis](https://github.com/MMathisLab).
 
 - 🧙‍♀️ *Code coming soon!*
-  ## Demo:
+
+## Demo AmadeusGPT🎻
 
   - WIP [Click here]() to launch our hosted Streamlit App!
   - Please note you need an [openAPI key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
 
-  ## License 
+## License 
 
-  AmadeusGPT is license under Apache-2.0 license.
+  AmadeusGPT is license under the Apache-2.0 license.
   -  Please note several key dependencies have their own licensing. Please carefully check the license information for DeepLabCut (LGPL-3.0 license), SAM (Apache-2.0 license), CEBRA (Non-Commercial), etc...
 
-  ## Citation
+## Citation
 
   If you use ideas or code from this project in your work, please cite us  using the following BibTeX entry. 🙏
 
  - AmadeusGPT
 
  ```
- ```
-@article{ye2023superanimal,
+@article{ye2023amadeusGPT,
       title={AmadeusGPT: a natural language interface for interactive animal behavioral analysis}, 
       author={Shaokai Ye and Jessy Lauer and Mu Zhou and Alexander Mathis and Mackenzie Weygandt Mathis},
       journal={arXiv:WIP},
-      year={2023}
-}
+      year={2023}}
 ```
+
+## Questions?
+
+- [Contact us](http://www.mackenziemathislab.org/)
