@@ -7,17 +7,17 @@
 - We use large language models (LLMs) to bridge natural language and behavior analysis.
 - For more details, check out our arXiv preprint **AmadeusGPT: a natural language interface for interactive animal behavioral analysis** by [Shaokai Ye](https://github.com/yeshaokai), [Jessy Lauer](https://github.com/jeylau), [Mu Zhou](https://github.com/zhoumu53), [Alexander Mathis](https://github.com/AlexEMG) & [Mackenzie W. Mathis](https://github.com/MMathisLab).
 
-- 🧙‍♀️ *Code coming soon!*
+- 🧙‍♀️ Code coming soon
 
 ## Demo AmadeusGPT🎻
 
   - [Click here](https://forms.gle/fhQXGoBw9554kbED6) to request access to our hosted demo!
-  - Please note you also need an [openAPI key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
+  - Please note you also need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
 
 ## License 
 
   AmadeusGPT is license under the Apache-2.0 license.
-  -  Please note several key dependencies have their own licensing. Please carefully check the license information for DeepLabCut (LGPL-3.0 license), SAM (Apache-2.0 license), CEBRA (Non-Commercial), etc...
+  -  Please note several key dependencies have their own licensing. Please carefully check the license information for [DeepLabCut](https://github.com/DeepLabCut/DeepLabCut) (LGPL-3.0 license), [SAM](https://github.com/facebookresearch/segment-anything) (Apache-2.0 license), [CEBRA](https://github.com/AdaptiveMotorControlLab/CEBRA) (Non-Commercial), etc...
 
 ## Citation
 
