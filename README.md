@@ -5,14 +5,21 @@
 🪄 **We turn natural language descriptions of behaviors into machine-executable code.**
 
 - We use large language models (LLMs) to bridge natural language and behavior analysis.
-- For more details, check out our arXiv preprint **AmadeusGPT: a natural language interface for interactive animal behavioral analysis** by [Shaokai Ye](https://github.com/yeshaokai), [Jessy Lauer](https://github.com/jeylau), [Mu Zhou](https://github.com/zhoumu53), [Alexander Mathis](https://github.com/AlexEMG) & [Mackenzie W. Mathis](https://github.com/MMathisLab).
+- For more details, check out our arXiv preprint **[AmadeusGPT: a natural language interface for interactive animal behavioral analysis](https://arxiv.org/abs/2307.04858)** by [Shaokai Ye](https://github.com/yeshaokai), [Jessy Lauer](https://github.com/jeylau), [Mu Zhou](https://github.com/zhoumu53), [Alexander Mathis](https://github.com/AlexEMG) & [Mackenzie W. Mathis](https://github.com/MMathisLab).
 
-- 🧙‍♀️ Code coming soon
-
+- Like this project? Please consider giving us a star ⭐️!
+  
 ## Demo AmadeusGPT🎻
 
-  - [Click here](https://forms.gle/fhQXGoBw9554kbED6) to request access to our hosted demo!
-  - Please note you also need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
+  - [Click here](https://forms.gle/fhQXGoBw9554kbED6) to request access to the demo!
+    
+  - 🔮 App: [https://amadeusgpt.kinematik.ai/](https://amadeusgpt.kinematik.ai/)
+
+  - We thank [Kinematik AI](https://kinematik.ai/) for partnering with us on hosting the demo. This is an academic research project demo, so expect a few bumps please, but we are actively working to make it better 💕
+
+https://github.com/AdaptiveMotorControlLab/AmadeusGPT/assets/28102185/61bc447c-29d4-4295-91be-23e5a7f10386
+
+- Please note that you might* need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys). *this depends on our running costs, so if you see the token input box, you will need it 🙏.
 
 ## License 
 
@@ -27,10 +34,12 @@
 @article{ye2023amadeusGPT,
       title={AmadeusGPT: a natural language interface for interactive animal behavioral analysis}, 
       author={Shaokai Ye and Jessy Lauer and Mu Zhou and Alexander Mathis and Mackenzie Weygandt Mathis},
-      journal={arXiv:WIP},
+      journal={arXiv:2307.04858},
       year={2023}}
 ```
 
-## 🔮 Questions?
+## News
 
-- [Contact us](http://www.mackenziemathislab.org/)
+- 🧙‍♀️ Code coming soon
+- 🔮 arXiv paper and demo released July 2023
+- 🪄[Contact us](http://www.mackenziemathislab.org/)
