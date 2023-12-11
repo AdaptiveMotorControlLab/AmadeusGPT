@@ -1,0 +1,12 @@
+[
+    {
+        "role": "human",
+        "error": NaN,
+        "query": "Define <|chases|> as a social behavior where closest distance between this animal and other animals is less than 40 pixels and the angle between this and other animals have to be less than 30 and this animal has to travel faster than 2."
+    },
+    {
+        "role": "human",
+        "error": NaN,
+        "query": "Define watch as a social behavior where distance between animals is less than 260 and larger than 50 and head angle between animals is less than 15. The smooth_window_size is 15."
+    }
+]

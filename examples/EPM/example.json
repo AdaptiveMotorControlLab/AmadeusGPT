@@ -1,0 +1,14 @@
+[
+    {
+        "role": "human",
+        "query": "plot the trajectory of the animal"
+    },
+    {
+        "role": "human",
+        "query": "how much time does the animal spend in the open arm which is ROI0?"
+    },
+    {
+        "role": "human",
+        "query": "define head_dips as a behavior where the mouse's mouse_center and neck are in ROI0 which is open arm while head_midpoint is outside ROI1 which is the cross-shape area. When does head_dips happen and what is the number of bouts for head_dips?"
+    }
+]
