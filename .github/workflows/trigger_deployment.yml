@@ -1,0 +1,27 @@
+name: Trigger Remote Workflow
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  trigger_remote_workflow:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Print payload info
+        run: |
+          echo Triggering action with payload
+          echo "{pusher: ${{ github.actor }}, ref: ${{ github.ref }}, "action": ${{ github.event_name }}}"
+      - name: Trigger Workflow
+        if: ${{ github.repository == 'amadeusGPT-mwmathislab/amadeusGPT-streamlit' }}
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.KINEMATIKAI_TRIGGER_REBUILD }}
+          repository: kinematik-ai/amadeus-trigger-update
+          event-type: remote-workflow-event
+          client-payload: '{"pusher": "${{ github.actor }}", "ref": "${{ github.ref }}", "action": "${{ github.event_name }}"}'

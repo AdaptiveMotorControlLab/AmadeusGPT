@@ -1,0 +1,6 @@
+python3-tk
+libgtk2.0-dev
+pkg-config
+ffmpeg 
+libsm6 
+libxext6

@@ -1,0 +1,14 @@
+
+.user-container {
+    background-color: #be85b8;
+    border-radius: 5px;
+    padding: 3px;
+    margin-bottom: 10px;
+}
+.chatbot-container {
+    background-color: #6ba6da;
+    border-radius: 5px;
+    padding: 3px;
+    margin-bottom: 10px;
+}
+

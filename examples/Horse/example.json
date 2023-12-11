@@ -1,0 +1,10 @@
+[
+    {
+        "role": "human",
+        "query": "Could you run a gait analysis of the horse? I'm interested in the keypoint Offhindfoot."
+    },
+    {
+        "role": "human",
+        "query": "Could you rerun the previous analysis but plot it this time? The limb is defined with the following keypoints: Offfrontfoot; Offfrontfetlock; Offknee; Elbow and Shoulder."
+    }
+]
