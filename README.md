@@ -1,13 +1,11 @@
 <p align="center">
-<img src="https://images.squarespace-cdn.com/content/v1/57f6d51c9f74566f55ecf271/733ec9c2-52bc-4fcb-aefb-1516d0a50c19/amadeuslogo.png?format=1500w" width="95%">
+<img src="https://images.squarespace-cdn.com/content/v1/57f6d51c9f74566f55ecf271/8555eac6-6af0-4538-bda4-c1a8a2c7bed8/amadeusgpt_logo.png?format=1500w" width="95%">
 </p>
 
 🪄 **We turn natural language descriptions of behaviors into machine-executable code.**
 
 - We use large language models (LLMs) to bridge natural language and behavior analysis.
-- This work is accepted to **NeuRIPS2023!** 
-- For more details, check out our arXiv preprint version **[AmadeusGPT: a natural language interface for interactive animal behavioral analysis](https://arxiv.org/abs/2307.04858)** by [Shaokai Ye](https://github.com/yeshaokai), [Jessy Lauer](https://github.com/jeylau), [Mu Zhou](https://github.com/zhoumu53), [Alexander Mathis](https://github.com/AlexEMG) & [Mackenzie W. Mathis](https://github.com/MMathisLab).
-
+- This work is accepted to **NeuRIPS2023!** Read the paper, [AmadeusGPT: a natural language interface for interactive animal behavioral analysis](https://www.google.com/search?q=amadeusgpt+openreview&sca_esv=590699485&rlz=1C5CHFA_enCH1059CH1060&ei=K1N6ZaHdKvmrur8PosOOkAo&ved=0ahUKEwjhnta83I2DAxX5le4BHaKhA6IQ4dUDCBE&uact=5&oq=amadeusgpt+openreview&gs_lp=Egxnd3Mtd2l6LXNlcnAiFWFtYWRldXNncHQgb3BlbnJldmlldzIHECEYoAEYCjIHECEYoAEYCki2HVDfAliOHHACeACQAQGYAYMDoAHaGaoBCDEuMTEuMS40uAEDyAEA-AEBwgIFECEYqwLCAggQABiABBiiBMICCBAAGIkFGKIE4gMEGAEgQYgGAQ&sclient=gws-wiz-serp#:~:text=AmadeusGPT%3A%20a%20natural,net%20%E2%80%BA%20pdf)
 - Like this project? Please consider giving us a star ⭐️!
   
 ## Demo AmadeusGPT🎻
@@ -37,8 +35,10 @@ https://github.com/AdaptiveMotorControlLab/AmadeusGPT/assets/28102185/61bc447c-2
       year={2023},
       url={https://openreview.net/forum?id=9AcG3Tsyoq},
 ```
+- arXiv preprint version **[AmadeusGPT: a natural language interface for interactive animal behavioral analysis](https://arxiv.org/abs/2307.04858)** by [Shaokai Ye](https://github.com/yeshaokai), [Jessy Lauer](https://github.com/jeylau), [Mu Zhou](https://github.com/zhoumu53), [Alexander Mathis](https://github.com/AlexEMG) & [Mackenzie W. Mathis](https://github.com/MMathisLab).
 
 ## News
+- 🤩 Dec 2023, code released!
 - 🔥 Our work was accepted to NeuRIPS2023
 - 🧙‍♀️ Open-source code coming in the fall of 2023
 - 🔮 arXiv paper and demo released July 2023
