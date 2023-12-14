@@ -1,0 +1,10 @@
+# This environment can be used to install amadeusGPT
+
+name: amadeus
+channels:
+    - defaults
+dependencies:
+    - python<3.10
+    - pip
+    - pytorch
+    - jupyter
