@@ -14,9 +14,7 @@
 ```python
 pip install amadeusgpt[streamlit]
 ```
-- If you want the demo, you will also need demo files that are supplied in our repo (see below**), so please git clone the repo.
-
-- Then, to launch the Demo App execute:
+- If you want the demo, you will also need demo files that are supplied in our repo (see below**), so please git clone the repo. Then, to launch the Demo App execute:
 ```python
 make app
 ```
@@ -26,7 +24,7 @@ make app
 - *make a new conda env: `conda create --name amadeusGPT` then run `conda activate amadeusGPT` or you can also use our supplied conda if you git cloned the repo: `conda env create -f amadesuGPT.yml`
 - **git clone this repo: so please open a terminal, we recommend to download into Documents (so type `cd Documents`) and run `git clone https://github.com/AdaptiveMotorControlLab/AmadeusGPT.git` Then go into the dir (`cd AmadeusGPT`)
 
-  ## Prior Hosted Demo:
+## Prior Hosted Demo:
 
   - 🔮 App: [https://amadeusgpt.kinematik.ai/](https://amadeusgpt.kinematik.ai/)
   - Please note that you need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
