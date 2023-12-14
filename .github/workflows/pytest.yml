@@ -42,5 +42,5 @@ jobs:
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
-       pip install -e .
+       pip install '.[streamlit]'
        pytest tests --timeout=400
