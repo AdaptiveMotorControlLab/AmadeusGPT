@@ -136,7 +136,7 @@ def welcome_page(text):
             )
 
         model_selection = st.sidebar.selectbox(
-            "Select a GPT model (if you have access to GPT-4 we recommend it. Its slower but produces less errors)",
+            "Select a GPT-4 model",
             ("gpt-4", "gpt-4-1106-preview"),
         )
         st.session_state["gpt_model"] = model_selection
@@ -148,7 +148,7 @@ def welcome_page(text):
         st.session_state["enable_explainer"] = enable_explainer
 
         enable_SAM = st.sidebar.selectbox(
-            "Do you want to use Segment Anything on your own data? This can be slow.",
+            "Do you want to use Segment Anything on your own data? This can be slow and requires you to download the model weights.",
             ("No", "Yes"),
         )
         st.session_state["enable_SAM"] = enable_SAM
@@ -178,10 +178,10 @@ def welcome_page(text):
     st.markdown("### 👥 Instructions")
 
     st.markdown(
-        f"{small_font} - We use LLMs to bridge natural language and behavior analysis code. For more details, check out our paper '[AmadeusGPT: a natural language interface for interactive animal behavioral analysis' by Shaokai Ye, Jessy Lauer, Mu Zhou, Alexander Mathis \& Mackenzie W. Mathis](https://github.com/AdaptiveMotorControlLab/AmadeusGPT)."
+        f"{small_font} - We use LLMs to bridge natural language and behavior analysis code. For more details, check out our NeurIPS 2023 paper '[AmadeusGPT: a natural language interface for interactive animal behavioral analysis' by Shaokai Ye, Jessy Lauer, Mu Zhou, Alexander Mathis \& Mackenzie W. Mathis](https://github.com/AdaptiveMotorControlLab/AmadeusGPT)."
     )
     st.markdown(
-        f"{small_font} - 🤗 Please note that depending on our server capacity and openAI, the runtimes can vary - you can see the app is `🏃RUNNING` in the top right when you run demos or ask new queries.\n"
+        f"{small_font} - 🤗 Please note that depending on openAI, the runtimes can vary - you can see the app is `🏃RUNNING` in the top right when you run demos or ask new queries.\n"
     )
     st.markdown(
         f"{small_font} - Please give us feedback if the output is correct 👍, or needs improvement 👎. This is an ` academic research project` demo, so expect a few bumps please, but we are actively working to make it better 💕.\n"
@@ -191,7 +191,7 @@ def welcome_page(text):
     )
 
     st.markdown(
-        f"{small_font} - After our early demo period, to run queries you will to input an OpenAI API key at the sidebar. To create one please see: https://platform.openai.com/overview.\n"
+        f"{small_font} - To create an OpenAI API key please see: https://platform.openai.com/overview.\n"
     )
 
     st.markdown("### How AmadeusGPT🎻 works")
