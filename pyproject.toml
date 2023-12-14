@@ -1,16 +1,16 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools<=60.10.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "AmadeusGPT"
 readme = "README.md"
 requires-python = ">=3.8"
-dynamic = ["dependencies"]
-version = "0.0.1"
+dynamic = ["version"]
+version = "0.0.2"
 
 [tool.setuptools]
 packages = ["amadeusgpt"]
 
 [tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
+dependencies = {file = ["setup.cfg"]}
