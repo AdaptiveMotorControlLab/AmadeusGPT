@@ -21,8 +21,9 @@ make app
 
 ### Install tips:
 
-- *make a new conda env: `conda create --name amadeusGPT` then run `conda activate amadeusGPT` or you can also use our supplied conda if you git cloned the repo: `conda env create -f amadesuGPT.yml`
-- **git clone this repo: so please open a terminal, we recommend to download into Documents (so type `cd Documents`) and run `git clone https://github.com/AdaptiveMotorControlLab/AmadeusGPT.git` Then go into the dir (`cd AmadeusGPT`)
+- *Make a new conda env: `conda create --name amadeusGPT` then run `conda activate amadeusGPT` or you can also use our supplied conda if you git cloned the repo: `conda env create -f amadesuGPT.yml` then pip install amadeusGPT once created/lauched.
+- **Git clone this repo: so please open a terminal, we recommend to download into Documents (so type `cd Documents`) and run `git clone https://github.com/AdaptiveMotorControlLab/AmadeusGPT.git` Then go into the dir (`cd AmadeusGPT`)
+- i=If you hit an error on an M1/m2 macbook with HDF5, consider running `conda install h5py` in your conda env.
 
 ## Prior Hosted Demo:
 
