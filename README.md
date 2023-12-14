@@ -19,26 +19,6 @@ pip install amadeusgpt[streamlit]
 make app
 ```
 
-### Install tips:
-
-- *Make a new conda env: `conda create --name amadeusGPT` then run `conda activate amadeusGPT` or you can also use our supplied conda if you git cloned the repo: `conda env create -f amadesuGPT.yml` then pip install amadeusGPT once created/lauched.
-- **Git clone this repo: so please open a terminal, we recommend to download into Documents (so type `cd Documents`) and run `git clone https://github.com/AdaptiveMotorControlLab/AmadeusGPT.git` Then go into the dir (`cd AmadeusGPT`)
-- If you hit an error during installing on an M1/M2 Macbook with installing HDF5, run `conda install h5py` in your conda env.
-
-## Prior Hosted Demo:
-
-  - 🔮 App: [https://amadeusgpt.kinematik.ai/](https://amadeusgpt.kinematik.ai/)
-  - Please note that you need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
-
-https://github.com/AdaptiveMotorControlLab/AmadeusGPT/assets/28102185/61bc447c-29d4-4295-91be-23e5a7f10386
-
-
-
-## License 
-
-AmadeusGPT is license under the Apache-2.0 license.
-  -  🚨 Please note several key dependencies have their own licensing. Please carefully check the license information for [DeepLabCut](https://github.com/DeepLabCut/DeepLabCut) (LGPL-3.0 license), [SAM](https://github.com/facebookresearch/segment-anything) (Apache-2.0 license), [CEBRA](https://github.com/AdaptiveMotorControlLab/CEBRA) (Non-Commercial), etc...
-
 ## Citation
 
   If you use ideas or code from this project in your work, please cite us  using the following BibTeX entry. 🙏
@@ -52,6 +32,27 @@ AmadeusGPT is license under the Apache-2.0 license.
       url={https://openreview.net/forum?id=9AcG3Tsyoq},
 ```
 - arXiv preprint version **[AmadeusGPT: a natural language interface for interactive animal behavioral analysis](https://arxiv.org/abs/2307.04858)** by [Shaokai Ye](https://github.com/yeshaokai), [Jessy Lauer](https://github.com/jeylau), [Mu Zhou](https://github.com/zhoumu53), [Alexander Mathis](https://github.com/AlexEMG) & [Mackenzie W. Mathis](https://github.com/MMathisLab).
+
+### Install tips
+- *Make a new conda env: `conda create --name amadeusGPT` then run `conda activate amadeusGPT` or you can also use our supplied conda if you git cloned the repo: `conda env create -f amadesuGPT.yml` then pip install amadeusGPT once created/lauched.
+- **Git clone this repo: so please open a terminal, we recommend to download into Documents (so type `cd Documents`) and run `git clone https://github.com/AdaptiveMotorControlLab/AmadeusGPT.git` Then go into the dir (`cd AmadeusGPT`)
+  
+###  Install Trouble shooting:
+- If you hit an error during installing on an M1/M2 Macbook with installing HDF5, run `conda install h5py` in your conda env.
+- If you launch the app and get an ffmpeg error, `RuntimeError: No ffmpeg exe could be found. Install ffmpeg on your system, or set the IMAGEIO_FFMPEG_EXE environment variable.` try running `conda install ffmpeg`.
+
+## Hosted Demo:
+
+  - 🔮 App: [https://amadeusgpt.kinematik.ai/](https://amadeusgpt.kinematik.ai/)
+  - Please note that you need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
+
+https://github.com/AdaptiveMotorControlLab/AmadeusGPT/assets/28102185/61bc447c-29d4-4295-91be-23e5a7f10386
+
+## License 
+
+AmadeusGPT is license under the Apache-2.0 license.
+  -  🚨 Please note several key dependencies have their own licensing. Please carefully check the license information for [DeepLabCut](https://github.com/DeepLabCut/DeepLabCut) (LGPL-3.0 license), [SAM](https://github.com/facebookresearch/segment-anything) (Apache-2.0 license), [CEBRA](https://github.com/AdaptiveMotorControlLab/CEBRA) (Non-Commercial), etc...
+
 
 ## News
 - 🤩 Dec 2023, code released!
