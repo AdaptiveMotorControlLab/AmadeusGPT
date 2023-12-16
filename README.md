@@ -41,7 +41,7 @@ make app
 ###  Install trouble shooting:
 - If you hit an error during installing on an M1/M2 Macbook with installing HDF5, run `conda install h5py` in your conda env.
 - If you launch the app and get an ffmpeg error, `RuntimeError: No ffmpeg exe could be found. Install ffmpeg on your system, or set the IMAGEIO_FFMPEG_EXE environment variable.` try running `conda install ffmpeg`.
-- If you have an M1/M2 chip and use CEBRA within AmadeusGPT, and you get this error: `RuntimeError: Device type MPS is not supported for torch.Generator() api` run `pip install --update torch`
+- If you have an M1/M2 chip and use CEBRA within AmadeusGPT, and you get this error: `RuntimeError: Device type MPS is not supported for torch.Generator() api` run `pip install --upgrade torch`.
 
 ## Hosted Demo:
 
