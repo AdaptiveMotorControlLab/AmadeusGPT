@@ -34,7 +34,7 @@ make app
 - arXiv preprint version **[AmadeusGPT: a natural language interface for interactive animal behavioral analysis](https://arxiv.org/abs/2307.04858)** by [Shaokai Ye](https://github.com/yeshaokai), [Jessy Lauer](https://github.com/jeylau), [Mu Zhou](https://github.com/zhoumu53), [Alexander Mathis](https://github.com/AlexEMG) & [Mackenzie W. Mathis](https://github.com/MMathisLab).
 
 ### Install tips
-- *Make a new conda env: `conda create --name amadeusGPT python=3.9` then run `conda activate amadeusGPT` or you can also use our supplied conda if you git cloned the repo: `conda env create -f amadesuGPT.yml` then pip install amadeusGPT once created/lauched.
+- *Make a new conda env: `conda create --name amadeusGPT python=3.9` then run `conda activate amadeusGPT` or you can also use our supplied conda if you git cloned the repo (navigate into the conda directory): `conda env create -f amadesuGPT.yml` then pip install amadeusGPT once created/lauched.
 - **Git clone this repo: so please open a terminal, we recommend to download into Documents (so type `cd Documents`) and run `git clone https://github.com/AdaptiveMotorControlLab/AmadeusGPT.git` Then go into the dir (`cd AmadeusGPT`)
 - If you want to use SAM, you need to download the weights. Otherwise you will see the following message in the app: `Cannot find SAM checkpoints. Skipping SAM`. Download them and add to "static" directory: wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
   
