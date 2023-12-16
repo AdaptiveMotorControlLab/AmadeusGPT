@@ -12,7 +12,7 @@
 
 - AmadeusGPT is a Python package hosted on pypi. You can create a virtual env (conda, etc, see below*) or Docker and run:
 ```python
-pip install amadeusgpt[streamlit]
+pip install 'amadeusgpt[streamlit]'
 ```
 - If you want the demo, you will also need demo files that are supplied in our repo (see below**), so please git clone the repo. Then, to launch the Demo App execute:
 ```python
