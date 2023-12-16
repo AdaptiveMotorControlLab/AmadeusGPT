@@ -1,4 +1,5 @@
 def compute_embedding_with_cebra_and_plot_embedding(
+    self,
     inputs,
     n_dimension=3,
     max_iterations=100,
