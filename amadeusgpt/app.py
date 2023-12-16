@@ -1,4 +1,6 @@
 import os
+import subprocess
+
 import streamlit as st
 import traceback
 from collections import defaultdict
@@ -9,24 +11,69 @@ import requests
 from amadeusgpt import app_utils
 from amadeusgpt.utils import validate_openai_api_key
 
+# Initialize session state variables if not present
 st._is_running_with_streamlit = True
 os.environ["streamlit_app"] = "True"
 assert "streamlit_app" in os.environ, "The 'streamlit_app' environment variable is not set!"
 
-# Initialize session state variables if not present
 if "exist_valid_openai_api_key" not in st.session_state:
     st.session_state["exist_valid_openai_api_key"] = False
 
-def main():
-    subprocess.run(["./launch_app"], check=True)
-    st.title("AmadeusGPT")
+# Set page configuration
+st.set_page_config(layout="wide")
+app_utils.load_css("static/styles/style.css")
 
+def main():
     import time
     from streamlit_profiler import Profiler
 
-    # TITLE PANEL
-    st.set_page_config(layout="wide")
-    app_utils.load_css("static/styles/style.css")
+    def fetch_user_headers():
+        """Fetch user and email info from HTTP headers.
+
+        Output of this function is identical to querying
+        https://amadeusgpt.kinematik.ai/oauth2/userinfo, but
+        works from within the streamlit app.
+        """
+        # TODO(stes): This could change without warning n future streamlit
+        # versions. So I'll leave the import here in case sth should go
+        # wrong in the future
+        from streamlit.web.server.websocket_headers import _get_websocket_headers
+
+        headers = _get_websocket_headers()
+        AmadeusLogger.debug(f"Received Headers: {headers}")
+        return dict(
+            email=headers.get("X-Forwarded-Email", "no_email_in_header"),
+            user=headers.get("X-Forwarded-User", "no_user_in_header"),
+        )
+
+
+    def fetch_user_info():
+        url = "https://amadeusgpt.kinematik.ai/oauth2/userinfo"
+        try:
+            return fetch_user_headers()
+        # TODO(stes): Lets be on the safe side for now.
+        except Exception as e:
+            AmadeusLogger.info(f"Error: {e}")
+            return None
+
+
+    if "streamlit_app" in os.environ:
+        if "session_id" not in st.session_state:
+            session_id = str(uuid.uuid4())
+            st.session_state["session_id"] = session_id
+        user_info = fetch_user_info()
+        if user_info:
+            st.session_state["username"] = user_info.get("user", "fake_username")
+            st.session_state["email"] = user_info.get("email", "fake_email")
+        else:
+            AmadeusLogger.info("Getting None from the endpoint")
+            st.session_state["username"] = "no_username"
+            st.session_state["email"] = "no_email"
+
+        AmadeusLogger.debug("A new user logs in ")
+
+        if f"database" not in st.session_state:
+            st.session_state[f"database"] = defaultdict(dict)
 
 
     ###### Initialize ######
@@ -116,9 +163,10 @@ def main():
             
             # remove this for now
             # st.caption(f"git hash: {app_utils.get_git_hash()}")
-
+        current_script_directory = os.path.dirname(os.path.abspath(__file__))
+        logo_path = os.path.join(current_script_directory, 'static/images/amadeusgpt_logo.png')
         st.image(
-            os.path.join(os.getcwd(), "static/images/amadeusgpt_logo.png"),
+            logo_path,
             caption=None,
             width=None,
             use_column_width=None,
@@ -164,9 +212,9 @@ def main():
         st.markdown(
             f"{small_font} - This demo serves to highlight a hosted user-experience, but does not include all the features yet..."
         )
-        st.markdown(f"{small_font} - Watch the video below to see how to use the App.")
+        #st.markdown(f"{small_font} - Watch the video below to see how to use the App.")
 
-        st.video("static/demo_withvoice.mp4")
+        #st.video("static/demo_withvoice.mp4")
 
         st.markdown("### ⚠️ Disclaimers")
 

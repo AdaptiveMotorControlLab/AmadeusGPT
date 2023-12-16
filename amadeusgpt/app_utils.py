@@ -35,8 +35,9 @@ import io
 
 LOG_DIR = os.path.join(os.path.expanduser("~"), "Amadeus_logs")
 VIDEO_EXTS = "mp4", "avi", "mov"
-user_profile_path = "static/images/cat.png"
-bot_profile_path = "static/images/chatbot.png"
+current_script_directory = os.path.dirname(os.path.abspath(__file__))
+user_profile_path = os.path.join(current_script_directory,'static/images/cat.png')
+bot_profile_path = os.path.join(current_script_directory,'static/images/chatbot.png')
 
 
 def get_git_hash():
@@ -311,9 +312,12 @@ def ask_amadeus(question):
 
 
 def load_css(css_file):
-    with open(css_file, "r") as f:
-        css = f.read()
-    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+    current_script_directory = os.path.dirname(os.path.abspath(__file__))
+    css_path = os.path.join(current_script_directory, 'static/styles/style.css')
+    if os.path.exists(css_path):
+        st.markdown(f'<style>{open(css_path).read()}</style>', unsafe_allow_html=True)
+    else:
+        st.error(f"File not found: {css_path}")
 
 
 # caching display roi will make the roi stick to
@@ -626,8 +630,10 @@ def get_sam_image(example):
 
 @conditional_memory_profile
 def render_page_by_example(example):
+    current_script_directory = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.join(current_script_directory, 'static/images/amadeusgpt_logo.png')
     st.image(
-        os.path.join(os.getcwd(), "static/images/amadeusgpt_logo.png"),
+        logo_path,
         caption=None,
         width=None,
         use_column_width=None,
