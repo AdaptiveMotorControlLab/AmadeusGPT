@@ -36,11 +36,12 @@ make app
 ### Install tips
 - *Make a new conda env: `conda create --name amadeusGPT` then run `conda activate amadeusGPT` or you can also use our supplied conda if you git cloned the repo: `conda env create -f amadesuGPT.yml` then pip install amadeusGPT once created/lauched.
 - **Git clone this repo: so please open a terminal, we recommend to download into Documents (so type `cd Documents`) and run `git clone https://github.com/AdaptiveMotorControlLab/AmadeusGPT.git` Then go into the dir (`cd AmadeusGPT`)
+- If you want to use SAM, you need to download the weights. Otherwise you will see the following message in the app: `Cannot find SAM checkpoints. Skipping SAM`. Download them and add to "static" directory: wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
   
 ###  Install trouble shooting:
 - If you hit an error during installing on an M1/M2 Macbook with installing HDF5, run `conda install h5py` in your conda env.
 - If you launch the app and get an ffmpeg error, `RuntimeError: No ffmpeg exe could be found. Install ffmpeg on your system, or set the IMAGEIO_FFMPEG_EXE environment variable.` try running `conda install ffmpeg`.
-- If you want to use SAM, you need to download the weights. Otherwise you will see the following message in the app: `Cannot find SAM checkpoints. Skipping SAM`. Download them and add to "static" directory: wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
+- If you have an M1/M2 chip and use CEBRA within AmadeusGPT, and you get this error: `RuntimeError: Device type MPS is not supported for torch.Generator() api` run `pip install --update torch`
 
 ## Hosted Demo:
 
