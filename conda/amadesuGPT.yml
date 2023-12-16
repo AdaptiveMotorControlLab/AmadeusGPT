@@ -1,6 +1,6 @@
 # This environment can be used to install amadeusGPT
 
-name: amadeus
+name: amadeusgpt
 channels:
     - defaults
 dependencies:
