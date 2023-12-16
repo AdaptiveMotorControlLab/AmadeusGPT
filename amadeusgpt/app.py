@@ -8,10 +8,22 @@ from datetime import datetime
 import requests
 from amadeusgpt import app_utils
 
+st._is_running_with_streamlit = True
+os.environ["streamlit_app"] = "True"
+assert "streamlit_app" in os.environ, "The 'streamlit_app' environment variable is not set."
+
+
 
 def main():
-    #import app_utils
     st.title("AmadeusGPT")
+
+    from amadeusgpt.utils import validate_openai_api_key
+    import time
+    from streamlit_profiler import Profiler
+
+    # Initialize session state variables if not present
+    if "exist_valid_openai_api_key" not in st.session_state:
+        st.session_state["exist_valid_openai_api_key"] = False
 
 
     def fetch_user_headers():
@@ -62,9 +74,6 @@ def main():
         if f"database" not in st.session_state:
             st.session_state[f"database"] = defaultdict(dict)
     
-    from amadeusgpt.utils import validate_openai_api_key
-    import time
-    from streamlit_profiler import Profiler
 
     # TITLE PANEL
     st.set_page_config(layout="wide")
@@ -314,15 +323,6 @@ def main():
                 AmadeusLogger.store_chats("errors", str(e) + "\n" + traceback.format_exc())
         AmadeusLogger.debug(traceback.format_exc())
 
-    # with st.sidebar as sb:
-    #     if "chat_history" in st.session_state and 'creation_time' in st.session_state:
-    #         if example_bar != "Welcome":
-    #             st.download_button(
-    #                 label="Download current chat",
-    #                 data=st.session_state["chat_history"],
-    #                 file_name=f"conversations_{st.session_state['creation_time']}.csv",
-    #                 mime="text/csv",
-    #                 key="chat_download",
-    #             )
+
 if __name__ == "__main__":
     main()
