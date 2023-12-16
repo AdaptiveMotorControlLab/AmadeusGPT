@@ -11,7 +11,7 @@ from amadeusgpt import app_utils
 
 def main():
     #import app_utils
-    st.title("Your Streamlit App")
+    st.title("AmadeusGPT")
 
 
     def fetch_user_headers():
