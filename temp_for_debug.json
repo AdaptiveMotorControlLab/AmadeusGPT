@@ -1,4 +1,0 @@
-{
-    "function_code": "def task_program():\n    behavior_analysis = AnimalBehaviorAnalysis()\n    keypoints = behavior_analysis.get_keypoints()\n    embedding_plot_info = compute_embedding_with_cebra_and_plot_embedding(keypoints, n_dimension=3)\n    return embedding_plot_info",
-    "query": "# Make a 3D CEBRA embedding and plot the embedding \n"
-}
