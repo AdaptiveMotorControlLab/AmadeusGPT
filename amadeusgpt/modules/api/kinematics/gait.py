@@ -1,4 +1,4 @@
-def run_gait_analysis(limb_keypoint_names):
+def run_gait_analysis(self,limb_keypoint_names):
     """
     Compute an animal's gait parameters given a list of distal keypoints.
     Examples

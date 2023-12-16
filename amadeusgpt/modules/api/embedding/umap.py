@@ -1,5 +1,5 @@
-def compute_embedding_with_umap_and_plot_embedding(
-    inputs, n_dimension=3, color_by_object=False, color_by_time=False, **kwargs
+def compute_embedding_with_umap_and_plot_embedding(        
+    self,inputs, n_dimension=3, color_by_object=False, color_by_time=False, **kwargs
 ):
     """
     Parameters
