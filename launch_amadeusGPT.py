@@ -1,9 +1,7 @@
-# launch_amadeusGPT.py
-from amadeusgpt.app import main
+#!/usr/bin/env python
+import sys
+from amadeusgpt import app
 
 if __name__ == "__main__":
-    import subprocess
-    import sys
+    main()
 
-    cmd = ["streamlit", "run", "app.py"]
-    subprocess.run(cmd + sys.argv[1:])
