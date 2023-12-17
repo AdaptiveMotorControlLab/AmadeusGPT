@@ -21,7 +21,6 @@ EPM_queries = [
 def test_EPM():
     keypoint_file = os.path.join(root_dir, "EPM_11DLC_snapshot-1000.h5")
     video_file = os.path.join(root_dir, "EPM_11DLC_snapshot-1000_labeled_x264.mp4")
-    example_file = os.path.join(root_dir, "example.csv")
 
     AnimalBehaviorAnalysis.set_video_file_path(video_file)
     AnimalBehaviorAnalysis.set_keypoint_file_path(keypoint_file)

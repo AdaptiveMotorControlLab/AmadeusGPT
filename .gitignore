@@ -17,7 +17,6 @@ __pycache__/
 *$py.class
 
 # Binary files
-*.png
 *.jpg
 *.jpeg
 *.ipynb
