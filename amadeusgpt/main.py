@@ -125,7 +125,7 @@ class AMADEUS:
     @classmethod
     def load_module_smartly(cls, user_input):
         sorted_query_results = match_module(user_input)
-        if sorted_query_results is None:
+        if len(sorted_query_results) == 0:
             return None
         # query result sorted by most relevant module text
         modules = []
