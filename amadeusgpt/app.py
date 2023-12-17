@@ -2,6 +2,12 @@ import os
 import subprocess
 
 import streamlit as st
+
+if "session_state" not in st.session_state:
+    st.session_state.session_id = None
+    st.session_state.username = None
+    st.session_state.email = None
+
 import traceback
 from collections import defaultdict
 import uuid
@@ -62,9 +68,9 @@ def main():
             session_id = str(uuid.uuid4())
             st.session_state["session_id"] = session_id
         user_info = fetch_user_info()
-        if user_info:
-            st.session_state["username"] = user_info.get("user", "fake_username")
-            st.session_state["email"] = user_info.get("email", "fake_email")
+        if user_info is not None:
+            st.session_state["username"] = "no_username"
+            st.session_state["email"] = "no_email"
         else:
             AmadeusLogger.info("Getting None from the endpoint")
             st.session_state["username"] = "no_username"
