@@ -680,7 +680,8 @@ def render_page_by_example(example):
             "- Here are some example queries you might consider: 'The <|open arm|> is the ROI0. How much time does the mouse spend in the open arm?' (NOTE here you can re-draw an ROI0 if you want. Be sure to click 'finish drawing') | 'Define head_dips as a behavior where the mouse's mouse_center and neck are in ROI0 which is open arm while head_midpoint is outside ROI1 which is the cross-shape area. When does head_dips happen and what is the number of bouts for head_dips?' "
         )
         st.markdown("- ⬇️🎥 Watch this short clip on how to draw the ROI(s)🤗")
-        st.video("static/customEPMprompt_short.mp4")
+        
+        st.video(os.path.join(current_script_directory,'static/customEPMprompt_short.mp4'))
 
     if example == "MABe":
         st.markdown(
@@ -792,7 +793,9 @@ def render_page_by_example(example):
     if example == "EPM" or example == "MausHaus":
         # will read the keypoints from h5 file to avoid hard coding
         with st.sidebar:
-            st.image("static/images/supertopview.png")
+            topviewimage = os.path.join(current_script_directory,'static/images/supertopview.png')
+            st.image(topviewimage)
+            #st.image("static/images/supertopview.png")
     with st.sidebar:
         st.write("Keypoints:")
         st.write(AnimalBehaviorAnalysis.get_bodypart_names())
