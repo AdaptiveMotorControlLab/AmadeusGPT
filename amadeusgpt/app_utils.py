@@ -370,7 +370,7 @@ def update_roi(result_json, ratios):
             count += 1
         AnimalBehaviorAnalysis.set_roi_objects(roi_objects)
 
-        AmadeusLogger.debug("User just drawed roi")
+        AmadeusLogger.debug("User just drawn roi")
 
 
 def finish_drawing(canvas_result, ratio):
