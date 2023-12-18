@@ -103,7 +103,7 @@ class BaseBrain:
             if "gpt_model" in st.session_state:
                 gpt_model = st.session_state["gpt_model"]
 
-        # allow kwargs to overrite gpt_model. This is to make sure child class of BaseBrain can use different option
+        # allow kwargs to override gpt_model. This is to make sure child class of BaseBrain can use different option
         if "gpt_model" in kwargs:
             gpt_model = kwargs["gpt_model"]
 

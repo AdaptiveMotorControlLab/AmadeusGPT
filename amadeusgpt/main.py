@@ -159,7 +159,7 @@ class AMADEUS:
 
     @classmethod
     def save_state(cls):
-        # save the class attirbutes of all classes that are under state_list.
+        # save the class attributes of all classes that are under state_list.
         def get_class_variables(_class):
             return {
                 k: v
