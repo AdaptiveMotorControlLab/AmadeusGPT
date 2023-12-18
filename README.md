@@ -14,7 +14,7 @@
 ```python
 pip install 'amadeusgpt[streamlit]'
 ```
-- If you want the demo, you will also need demo files that are supplied in our repo (see below**), so please git clone the repo. Then, to launch the Demo App execute:
+- If you want the **Streamlit Demo on your computer**, you will also need demo files that are supplied in our repo (see below**), so please git clone the repo and navigate into the `AmadeusGPT` directory. Then in your conda env/terminal run  `pip install '.[streamlit]'`. Then, to launch the Demo App execute in the terminal:
 ```python
 make app
 ```
