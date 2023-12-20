@@ -19,7 +19,7 @@ from amadeusgpt.utils import frame_number_to_minute_seconds, get_fps, parse_erro
 class Figure:
     plot_type: str    
     axes: list
-    figure: plt.Figure
+    figure: plt.Figure = field(default=None)
     plot_caption: str = ""
 
 
@@ -37,12 +37,6 @@ class AmadeusAnswer:
     summary: str = None
     ndarray: List[any] = field(default_factory=list)
     role = "ai"
-
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
 
     def asdict(self):
         return dataclasses.asdict(self)
@@ -72,7 +66,7 @@ class AmadeusAnswer:
                 data["plot_caption"] = ""  
 
         if "figure" in data and "axes" in data:
-            ret = Figure(**data)
+            ret = Figure(**data)  
         else:
             ret = None
 
@@ -149,27 +143,25 @@ class AmadeusAnswer:
         function_returns: Tuple(ret1, ret2, ret3 ... )
         populate the data fields from function returns.
         """
-        instance = AmadeusAnswer()
+        instance = AmadeusAnswer()      
         instance.function_code = function_code
         instance.chain_of_thoughts = thought_process
-        # If the function returns are tuple, try to parse the tuple and generate plots
+        # If the function returns are tuple, try to parse the tuple and generate plots 
         if isinstance(function_returns, tuple):
             # if the returns contain plots, the return must be tuple (fig, axes)
             _plots = instance.parse_plot_tuple(function_returns)
             if _plots:
-                instance.plots.append(_plots)
-
+                instance.plots.append(_plots)       
         # without wrapping it in a list, the following for loop can cause problems     
         if isinstance(function_returns, tuple):
             function_returns = list(function_returns)
         else:
             function_returns = [function_returns]
-
+       
         for function_return in function_returns:                    
             if isinstance(function_return, (pd.Series, pd.DataFrame, np.ndarray)):
-                if not isinstance(function_return, np.ndarray):
-                    function_return = function_return.to_numpy()
-                instance.ndarray.append(function_return)
+                if isinstance(function_return, (pd.Series,pd.DataFrame)):
+                    function_return = function_return.to_numpy()            
             elif isinstance(function_return, AnimalEvent):
                 instance.get_plots_for_animal_events(function_return)
             elif isinstance(function_return, AnimalAnimalEvent):
@@ -180,6 +172,4 @@ class AmadeusAnswer:
                     (matplotlib.figure.Figure, matplotlib.axes._axes.Axes),
                 ):
                     instance.str_answer = str(function_return)
-
-
         return instance
