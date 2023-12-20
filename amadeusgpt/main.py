@@ -305,45 +305,38 @@ class AMADEUS:
             text,
             function_code,
             thought_process,
-        ) = cls.code_generator_brain.parse_openai_response(response)
-
-        
-
-
+        ) = cls.code_generator_brain.parse_openai_response(response)        
 
         with open("temp_for_debug.json", "w") as f:
             out = {'function_code': function_code,
                    'query': rephrased_user_msg}
             json.dump(out, f, indent=4)
-        # handle_function_codes gives the answer with function outputs
+        # handle_function_codes gives the answer with function outputs   
         amadeus_answer = cls.core_loop(
             rephrased_user_msg, text, function_code, thought_process
         )
-        amadeus_answer = amadeus_answer.asdict()
-
         # export the generated function to code_output
-        if amadeus_answer['function_code'] and code_output != "":
+        if amadeus_answer.function_code and code_output != "":
             cls.export_function_code(
-                original_user_msg, amadeus_answer["function_code"], code_output
+                original_user_msg, amadeus_answer.function_code, code_output
             )
 
         # if there is an error or the function code is empty, we want to make sure we prevent ChatGPT to learn to output nothing from few-shot learning
         # is this used anymore?
-        if amadeus_answer["has_error"]:
+        if amadeus_answer.has_error:
             cls.code_generator_brain.context_window[-1][
                 "content"
             ] += "\n While executing the code above, there was error so it is not correct answer\n"
 
-        elif amadeus_answer["has_error"]:
+        elif amadeus_answer.has_error:
             cls.code_generator_brain.context_window.pop()
             cls.code_generator_brain.history.pop()
         else:
             # needs to manage memory of Amadeus for context window management and state restore etc.
             # we have it remember user's original question instead of the rephrased one for better
             cls.code_generator_brain.manage_memory(
-                original_user_msg, copy.deepcopy(amadeus_answer)
-            )
-
+                original_user_msg, amadeus_answer
+            )        
         return amadeus_answer
 
     # this should become an async function so the user can continue to ask question
@@ -354,7 +347,7 @@ class AMADEUS:
         function_code,
     ):
         # we might register a few helper functions into globals()
-        result = None        
+        result = None
         exec(function_code, globals())
         if "task_program" not in globals():
             return None
@@ -534,8 +527,8 @@ class AMADEUS:
             function_returns, function_code, thought_process
         )
 
-        if cls.plot:
-            plt.show()
+        #if cls.plot:
+        #    plt.show()
 
         # deduplicate as both events and plot could append plots
         return amadeus_answer
@@ -608,9 +601,7 @@ class AMADEUS:
                 code_output=code_output,
                 functions=functions,
             )
-        if not isinstance(answer, AmadeusAnswer):
-            answer = AmadeusAnswer.fromdict(answer)
-
+       
         return answer
 
     # @classmethod
@@ -653,19 +644,19 @@ class AMADEUS:
             ):
                 explanation = cls.explainer_brain.generate_explanation(
                     user_query,
-                    amadeus_answer["chain_of_thoughts"],
-                    amadeus_answer["str_answer"],
-                    amadeus_answer["plots"]
+                    amadeus_answer.chain_of_thoughts,
+                    amadeus_answer.str_answer,
+                    amadeus_answer.plots
                 )
-                amadeus_answer["summary"] = explanation
+                amadeus_answer.summary = explanation
                 AmadeusLogger.info("Generated explanation from the explainer:")
                 AmadeusLogger.info(explanation)
             else:
-                amadeus_answer["summary"] = ""
+                amadeus_answer.summary = ""
         else:
             # if gpt apologies or asks for clarification, it will be no error but no function
             amadeus_answer = AmadeusAnswer()
-            amadeus_answer["chain_of_thoughts"] = thought_process
+            amadeus_answer.chain_of_thoughts = thought_process
         return amadeus_answer
 
     @classmethod

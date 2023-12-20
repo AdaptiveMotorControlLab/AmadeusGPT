@@ -127,7 +127,7 @@ class AIMessage(BaseMessage):
             self.data = {}
         self.data["role"] = "ai"
         if amadeus_answer:
-            self.data.update(amadeus_answer.asdict())
+            self.data.update(amadeus_answer)
 
     def render(self):
         """
@@ -305,7 +305,8 @@ def summon_the_beast():
 def ask_amadeus(question):
     answer = AMADEUS.chat_iteration(
         question
-    )  # use chat_iteration to support some magic commands
+    ).asdict()  # use chat_iteration to support some magic commands
+
     # Get the current process
     AmadeusLogger.log_process_memory(log_position="ask_amadeus")
     return answer
