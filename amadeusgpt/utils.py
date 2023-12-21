@@ -293,5 +293,3 @@ def flatten_tuple(t):
         else:
             flattened.append(item)
     return tuple(flattened)
-
-#def render_
