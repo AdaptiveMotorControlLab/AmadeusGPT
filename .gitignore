@@ -18,7 +18,6 @@ __pycache__/
 # Binary files
 *.jpg
 *.jpeg
-*.ipynb
 *.svg
 *.mp4
 

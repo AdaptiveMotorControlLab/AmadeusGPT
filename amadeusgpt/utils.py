@@ -282,7 +282,6 @@ def validate_openai_api_key(key):
     except openai.error.AuthenticationError:
         return False
 
-
 def flatten_tuple(t):
     """
     Used to handle function returns
