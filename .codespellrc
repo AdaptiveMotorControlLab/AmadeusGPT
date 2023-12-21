@@ -1,0 +1,2 @@
+[DEFAULT]
+skip = *.png,*.jpg,*.jpeg,*.gif,*.bmp,*.tiff,*.ico
