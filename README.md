@@ -14,6 +14,7 @@
 ```python
 pip install 'amadeusgpt[streamlit]'
 ```
+ - Please note that you need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
 - If you want the **Streamlit Demo on your computer**, you will also need demo files that are supplied in our repo (see below**), so please git clone the repo and navigate into the `AmadeusGPT` directory. Then in your conda env/terminal run  `pip install '.[streamlit]'`. Then, to launch the Demo App execute in the terminal:
 ```python
 make app
@@ -42,13 +43,6 @@ make app
 - If you hit an error during installing on an M1/M2 Macbook with installing HDF5, run `conda install h5py` in your conda env.
 - If you launch the app and get an ffmpeg error, `RuntimeError: No ffmpeg exe could be found. Install ffmpeg on your system, or set the IMAGEIO_FFMPEG_EXE environment variable.` try running `conda install ffmpeg`.
 - If you have an M1/M2 chip and use CEBRA within AmadeusGPT, and you get this error: `RuntimeError: Device type MPS is not supported for torch.Generator() api` run `pip install --upgrade torch`.
-
-## Hosted Demo:
-
-  - 🔮 App: [https://amadeusgpt.kinematik.ai/](https://amadeusgpt.kinematik.ai/)
-  - Please note that you need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
-
-https://github.com/AdaptiveMotorControlLab/AmadeusGPT/assets/28102185/61bc447c-29d4-4295-91be-23e5a7f10386
 
 ## License 
 
