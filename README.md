@@ -68,7 +68,7 @@ AmadeusGPT is license under the Apache-2.0 license.
 
 ## News
 - 🤩 Dec 2023, code released!
-- 🔥 Our work was accepted to NeuRIPS2023
-- 🧙‍♀️ Open-source code coming in the fall of 2023
-- 🔮 arXiv paper and demo released July 2023
+- 🔥 Our work was accepted to NeuRIPS2023!
+- 🧙‍♀️ Open-source code coming in the fall of 2023!
+- 🔮 arXiv paper and demo released July 2023!
 - 🪄[Contact us](http://www.mackenziemathislab.org/)
