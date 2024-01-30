@@ -1914,7 +1914,16 @@ class AnimalBehaviorAnalysis:
         return temp
 
     @classmethod
-    def ast_fillna_2d(cls, arr):
+    def ast_fillna_2d(cls, arr: np.ndarray) -> np.ndarray:
+        """
+        Fills NaN values in a 4D keypoints array using linear interpolation.
+
+        Parameters:
+        arr (np.ndarray): A 4D numpy array of shape (n_frames, n_individuals, n_kpts, n_dims).
+
+        Returns:
+        np.ndarray: The 4D array with NaN values filled.
+        """
         n_frames, n_individuals, n_kpts, n_dims = arr.shape
         arr_reshaped = arr.reshape(n_frames, -1)
         x = np.arange(n_frames)
@@ -1922,13 +1931,15 @@ class AnimalBehaviorAnalysis:
             valid_mask = ~np.isnan(arr_reshaped[:, i])
             if np.all(valid_mask):
                 continue
-            arr_reshaped[:, i] = np.interp(
-                x, x[valid_mask], arr_reshaped[valid_mask, i]
-            )
-        # Reshape the array back to 4D
-        arr = arr_reshaped.reshape(n_frames, n_individuals, n_kpts, n_dims)
+            elif np.any(valid_mask):
+                # Perform interpolation when there are some valid points
+                arr_reshaped[:, i] = np.interp(x, x[valid_mask], arr_reshaped[valid_mask, i])
+            else:
+                # Handle the case where all values are NaN
+                # Replace with a default value or another suitable handling
+                arr_reshaped[:, i].fill(0)  # Example: filling with 0
 
-        return arr
+        return arr_reshaped.reshape(n_frames, n_individuals, n_kpts, n_dims)
 
     @classmethod
     @timer_decorator
