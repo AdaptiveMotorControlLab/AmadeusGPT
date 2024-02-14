@@ -60,6 +60,7 @@ random.seed(78)
 scene_frame_number = 0
 
 
+
 class Database:
     """
     A singleton that stores all data. Should be easy to integrate with a Nonsql database
@@ -1218,9 +1219,19 @@ class SAM(Segmentation):
         else:
             return self.pickledata
 
+ 
+
 
 class AnimalBehaviorAnalysis:
+    """
+    This class holds methods and objects that are useful for analyzing animal behavior.
+    It no longer holds the states of objects directly. Instead, it references to the Database
+    singleton object. This is to make the class more stateless and easier to use in a web app.    
+    """
+    
+    # to be deprecated
     task_programs = {}
+    # to be deprecated
     task_program_results = {}
     # if a function has a parameter, it assumes the result_buffer has it
     # special dataset flags set to be False
@@ -1251,7 +1262,7 @@ class AnimalBehaviorAnalysis:
     @classmethod
     def release_cache_objects(cls):
         """
-        For web app, switching from one example to the other requires a release of cached objects
+        For web app, switching from one example to the another requires a release of cached objects
         """
         if Database.exist(cls.__name__, "animal_objects"):
             Database.delete(cls.__name__, "animal_objects")

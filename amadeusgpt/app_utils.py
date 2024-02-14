@@ -598,7 +598,6 @@ def get_scene_image(example):
         return get_scene_image(example)
 
 
-@st.cache_data(persist="disk")
 def get_sam_image(example):
     if AnimalBehaviorAnalysis.get_video_file_path():
         seg_objects = AnimalBehaviorAnalysis.get_seg_objects()        
