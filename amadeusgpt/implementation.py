@@ -60,6 +60,7 @@ random.seed(78)
 scene_frame_number = 0
 
 
+
 class Database:
     """
     A singleton that stores all data. Should be easy to integrate with a Nonsql database
@@ -1218,9 +1219,19 @@ class SAM(Segmentation):
         else:
             return self.pickledata
 
+ 
+
 
 class AnimalBehaviorAnalysis:
+    """
+    This class holds methods and objects that are useful for analyzing animal behavior.
+    It no longer holds the states of objects directly. Instead, it references to the Database
+    singleton object. This is to make the class more stateless and easier to use in a web app.    
+    """
+    
+    # to be deprecated
     task_programs = {}
+    # to be deprecated
     task_program_results = {}
     # if a function has a parameter, it assumes the result_buffer has it
     # special dataset flags set to be False
@@ -1251,7 +1262,7 @@ class AnimalBehaviorAnalysis:
     @classmethod
     def release_cache_objects(cls):
         """
-        For web app, switching from one example to the other requires a release of cached objects
+        For web app, switching from one example to the another requires a release of cached objects
         """
         if Database.exist(cls.__name__, "animal_objects"):
             Database.delete(cls.__name__, "animal_objects")
@@ -1914,7 +1925,16 @@ class AnimalBehaviorAnalysis:
         return temp
 
     @classmethod
-    def ast_fillna_2d(cls, arr):
+    def ast_fillna_2d(cls, arr: np.ndarray) -> np.ndarray:
+        """
+        Fills NaN values in a 4D keypoints array using linear interpolation.
+
+        Parameters:
+        arr (np.ndarray): A 4D numpy array of shape (n_frames, n_individuals, n_kpts, n_dims).
+
+        Returns:
+        np.ndarray: The 4D array with NaN values filled.
+        """
         n_frames, n_individuals, n_kpts, n_dims = arr.shape
         arr_reshaped = arr.reshape(n_frames, -1)
         x = np.arange(n_frames)
@@ -1922,13 +1942,15 @@ class AnimalBehaviorAnalysis:
             valid_mask = ~np.isnan(arr_reshaped[:, i])
             if np.all(valid_mask):
                 continue
-            arr_reshaped[:, i] = np.interp(
-                x, x[valid_mask], arr_reshaped[valid_mask, i]
-            )
-        # Reshape the array back to 4D
-        arr = arr_reshaped.reshape(n_frames, n_individuals, n_kpts, n_dims)
+            elif np.any(valid_mask):
+                # Perform interpolation when there are some valid points
+                arr_reshaped[:, i] = np.interp(x, x[valid_mask], arr_reshaped[valid_mask, i])
+            else:
+                # Handle the case where all values are NaN
+                # Replace with a default value or another suitable handling
+                arr_reshaped[:, i].fill(0)  # Example: filling with 0
 
-        return arr
+        return arr_reshaped.reshape(n_frames, n_individuals, n_kpts, n_dims)
 
     @classmethod
     @timer_decorator

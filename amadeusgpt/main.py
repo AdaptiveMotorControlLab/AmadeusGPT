@@ -100,9 +100,11 @@ class AMADEUS:
     code_generator_brain.enforce_prompt = ""
     usage = 0
     behavior_modules_in_context = True
-    # to save the behavior module strings for context window use
+    # load the integration modules to context
     smart_loading = True
+    # number of topk integration modules to load
     load_module_top_k = 3
+    module_threshold = 0.7
     context_window_dict = {}
     plot = False
     use_rephraser = True
@@ -124,6 +126,7 @@ class AMADEUS:
 
     @classmethod
     def load_module_smartly(cls, user_input):
+        # TODO: need to improve the module matching by vector database
         sorted_query_results = match_module(user_input)
         if len(sorted_query_results) == 0:
             return None
@@ -134,7 +137,7 @@ class AMADEUS:
             query_module = query_result[0]
             query_score = query_result[1][0][0]
 
-            if query_score > 0.7:
+            if query_score > cls.module_threshold:
                 modules.append(query_module)
                 # parse the query result by loading active loading
                 module_path = os.sep.join(query_module.split(os.sep)[-2:]).replace(
@@ -158,7 +161,7 @@ class AMADEUS:
         AmadeusLogger.info(result.stdout.decode("utf-8"))
 
     @classmethod
-    def save_state(cls):
+    def save_state(cls, output_path = 'soul.pickle'):
         # save the class attributes of all classes that are under state_list.
         def get_class_variables(_class):
             return {
@@ -171,15 +174,14 @@ class AMADEUS:
 
         state = {k.__name__: get_class_variables(k) for k in cls.state_list}
 
-        output_filename = "soul.pickle"
-        with open(output_filename, "wb") as f:
+        with open(output_path, "wb") as f:
             pickle.dump(state, f)
-        AmadeusLogger.info(f"memory saved to {output_filename}")
+        AmadeusLogger.info(f"memory saved to {output_path}")
 
     @classmethod
-    def load_state(cls):
+    def load_state(cls, ckpt_path = 'soul.pickle'):
         # load the class variables into 3 class
-        memory_filename = "soul.pickle"
+        memory_filename = ckpt_path
         AmadeusLogger.info(f"loading memory from {memory_filename}")
         with open(memory_filename, "rb") as f:
             state = pickle.load(f)
@@ -296,6 +298,7 @@ class AMADEUS:
             cls.interface_str, cls.behavior_modules_str
         )
         cls.code_generator_brain.update_history("user", rephrased_user_msg)
+        
         response = cls.code_generator_brain.connect_gpt(
             cls.code_generator_brain.context_window, max_tokens=700, functions=functions
         )
@@ -307,10 +310,12 @@ class AMADEUS:
             thought_process,
         ) = cls.code_generator_brain.parse_openai_response(response)        
 
+        # write down the task program for offline processing
         with open("temp_for_debug.json", "w") as f:
             out = {'function_code': function_code,
                    'query': rephrased_user_msg}
             json.dump(out, f, indent=4)
+            
         # handle_function_codes gives the answer with function outputs   
         amadeus_answer = cls.core_loop(
             rephrased_user_msg, text, function_code, thought_process
@@ -321,16 +326,19 @@ class AMADEUS:
                 original_user_msg, amadeus_answer.function_code, code_output
             )
 
-        # if there is an error or the function code is empty, we want to make sure we prevent ChatGPT to learn to output nothing from few-shot learning
-        # is this used anymore?
+
+        # Could be used for in context feedback learning. Costly
         if amadeus_answer.has_error:
             cls.code_generator_brain.context_window[-1][
                 "content"
             ] += "\n While executing the code above, there was error so it is not correct answer\n"
 
-        elif amadeus_answer.has_error:
-            cls.code_generator_brain.context_window.pop()
-            cls.code_generator_brain.history.pop()
+        
+        # if there is an error or the function code is empty, we want to make sure we prevent ChatGPT to learn to output nothing from few-shot learning            
+        #elif amadeus_answer.has_error:
+        #    cls.code_generator_brain.context_window.pop()
+        #    cls.code_generator_brain.history.pop()
+        
         else:
             # needs to manage memory of Amadeus for context window management and state restore etc.
             # we have it remember user's original question instead of the rephrased one for better
@@ -351,10 +359,13 @@ class AMADEUS:
         exec(function_code, globals())
         if "task_program" not in globals():
             return None
+
+        # TODO: to serialize and support different function arguments
         func_sigs = inspect.signature(task_program)
         if not func_sigs.parameters:
             result = task_program()
         else:
+            # TODO: We don't do this anymore. But in the future, Is passing result buffer from each function sustainable?
             result_buffer = AnimalBehaviorAnalysis.result_buffer
             AmadeusLogger.info(f"result_buffer: {result_buffer}")
             if isinstance(result_buffer, tuple):
@@ -368,9 +379,11 @@ class AMADEUS:
     @classmethod
     def contribute(cls, program_name):
         """
+        Deprecated
         Takes the program from the task program registry and write it into contribution folder
         TODO: split the task program into implementation and api
-        """
+        """        
+        
         AmadeusLogger.info(f"contributing {program_name}")
         task_program = AnimalBehaviorAnalysis.task_programs[program_name]
         # removing add_symbol or add_task_program line
@@ -390,6 +403,7 @@ class AMADEUS:
         Called during loading behavior modules from disk or when task program is updated
         """
         modules_str = []
+        # context_window_dict is where integration modules are stored in current AMADEUS class        
         for name, task_program in cls.context_window_dict.items():
             modules_str.append(task_program)
         modules_str = modules_str[-cls.load_module_top_k :]
