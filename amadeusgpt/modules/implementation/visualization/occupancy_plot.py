@@ -35,7 +35,7 @@ def plot_occupancy_heatmap_per_animal(
     print("xmin,ymin, xmax,ymax")
     print(xmin, ymin, xmax, ymax)
 
-    # Peform the kernel density estimate
+    # Perform the kernel density estimate
     bins = complex(bins)
     xx, yy = np.mgrid[xmin:xmax:bins, ymin:ymax:bins]
     pos = np.vstack([xx.ravel(), yy.ravel()])

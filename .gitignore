@@ -7,7 +7,6 @@ __pycache__
 .env
 .DS_Store
 /examples
-.github
 
 ## gitignore for Python
 ## Source: https://raw.githubusercontent.com/github/gitignore/master/Python.gitignore
@@ -17,10 +16,8 @@ __pycache__/
 *$py.class
 
 # Binary files
-*.png
 *.jpg
 *.jpeg
-*.ipynb
 *.svg
 *.mp4
 

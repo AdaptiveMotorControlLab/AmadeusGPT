@@ -103,7 +103,7 @@ class BaseBrain:
             if "gpt_model" in st.session_state:
                 gpt_model = st.session_state["gpt_model"]
 
-        # allow kwargs to overrite gpt_model. This is to make sure child class of BaseBrain can use different option
+        # allow kwargs to override gpt_model. This is to make sure child class of BaseBrain can use different option
         if "gpt_model" in kwargs:
             gpt_model = kwargs["gpt_model"]
 
@@ -198,23 +198,23 @@ class BaseBrain:
 
         # it's maybe important to keep the answer in the context window. Otherwise we are teaching the model to output empty string
         # need to be very careful as LLMs fewshot learning can wrongly link the answer (even if it is invalid) to the question
-        if bot_answer["ndarray"]:
-            cls.update_history("assistant", bot_answer["function_code"])
+        if bot_answer.ndarray:
+            cls.update_history("assistant", bot_answer.function_code)
         else:
             
             answer_for_memory = ''
                                     
-            if bot_answer["function_code"]:
-                for code in bot_answer["function_code"]:
+            if bot_answer.function_code:
+                for code in bot_answer.function_code:
                     answer_for_memory += code
 
-            answer_for_memory += '\n' + bot_answer['str_answer']
+            answer_for_memory += '\n' + bot_answer.str_answer
 
             captions = ''
-            if isinstance(bot_answer['plots'], list):
-                for plot in bot_answer['plots']:
-                    if plot['plot_caption'] !='':
-                        captions+=plot['plot_caption']
+            if isinstance(bot_answer.plots, list):
+                for plot in bot_answer.plots:
+                    if plot.plot_caption !='':
+                        captions+=plot.plot_caption
                 if captions!='':
                     answer_for_memory+=captions            
                     
@@ -279,12 +279,10 @@ class BaseBrain:
 
         # if there is valid function code and there is a corresponding task program in the task program table
         if (
-            "function_code" in bot_answer
+            bot_answer.function_code
             and symbol_name in AnimalBehaviorAnalysis.task_programs
         ):
-            AnimalBehaviorAnalysis.task_programs[symbol_name] = bot_answer[
-                "function_code"
-            ]
+            AnimalBehaviorAnalysis.task_programs[symbol_name] = bot_answer.function_code            
 
     @classmethod
     def print_history(cls):

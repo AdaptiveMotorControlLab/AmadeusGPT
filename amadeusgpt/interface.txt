@@ -115,7 +115,7 @@ class AnimalBehaviorAnalysis:
         return the orientation vector of the vector connecting bodypart_name1 and bodypart_name2 for all animals
 
     plot_ethogram(events: AnimalEvent) -> Tuple[plt.Figure, plt.Axes, plot_caption]  
-        get ethogram for correpsonding AnimalEvent    
+        get ethogram for corresponding AnimalEvent    
     
     animals_social_events(inter_individual_animal_state_query_list, 
                                 inter_individual_animal_state_comparison_list,

@@ -26,8 +26,8 @@ class AmadeusLogger:
         session_id = st.session_state.get("session_id", "")
         now = datetime.now()
         timestamp = now.strftime("%Y%m%d_%H%M%S")
-        username = st.session_state.get("username", "fake_username")
-        email = st.session_state.get("email", "fake_email")
+        username = st.session_state["username"] = "no_username"
+        email = st.session_state["email"] = "no_email"
         return f"{timestamp} - session_id:{session_id} - username:{username} - email: {email} - {message}"
 
     @classmethod

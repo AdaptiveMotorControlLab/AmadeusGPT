@@ -14,3 +14,9 @@ packages = ["amadeusgpt"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["setup.cfg"]}
+
+[tool.codespell]
+skip = '.git,*.pdf,*.svg,go.sum,*.css,*.txt'
+check-hidden = true
+# ignore-regex = ''
+ignore-words-list = 'mabe,missings,nd,tread'
