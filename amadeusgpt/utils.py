@@ -13,6 +13,8 @@ from amadeusgpt.logger import AmadeusLogger
 import sys
 import traceback
 import cv2
+from typing import Dict, Any
+import ast
 
 def moving_average(x: Sequence, window_size: int, pos: str = "centered"):
     """
@@ -35,6 +37,8 @@ def moving_average(x: Sequence, window_size: int, pos: str = "centered"):
     # but also numerically stable (unlike the one based on cumulative sum).
     # https://stackoverflow.com/questions/13728392/moving-average-or-running-mean/27681394#27681394
     x = np.asarray(x, dtype=float)
+    x = np.squeeze(x)
+
     window_size = int(window_size)
 
     if window_size > x.size:
@@ -91,6 +95,11 @@ def get_fps(video_path):
     fps = video.get(cv2.CAP_PROP_FPS)
     video.release()    
     return fps
+def get_video_length(video_path):
+    video = cv2.VideoCapture(video_path)
+    fps = video.get(cv2.CAP_PROP_FPS)
+    n_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
+    return int(n_frames)
 
 
 def frame_number_to_minute_seconds(frame_number, video_path):
@@ -102,28 +111,7 @@ def frame_number_to_minute_seconds(frame_number, video_path):
     return ret
 
 
-def _plot_ethogram(masks, ax, video_path, cmap="rainbow"):
-    fps = get_fps(video_path)
-    n_rois = len(masks)
-    cmap = plt.cm.get_cmap(cmap, n_rois)
 
-    colors = cmap(np.linspace(0, 1, n_rois))
-    pos = []
-    for mask in masks.values():
-        video_length = len(mask)
-        pos.append(np.flatnonzero(mask) / fps)
-
-    def format_func(value, tick_number):
-        # format the value to minute:second format
-        minutes = int(value // 60)
-        seconds = int(value % 60)
-        ret = f"{minutes:02d}:{seconds:02d}"
-        return ret
-
-    ax.set_xlim([0, video_length / fps])
-    ax.eventplot(pos, colors=colors)
-    ax.xaxis.set_major_formatter(FuncFormatter(format_func))
-    ax.set_xlabel("Time (mm:ss)")
 
 
 def search_generated_func(text):
@@ -216,11 +204,11 @@ def search_external_module_for_task_program_table(text):
             end = lines[i].index("(")
             func_name = lines[i][start:end]
             func_names.append(func_name)
-        if ">>>" not in lines[i]:
+        if "" not in lines[i]:
             i += 1
             continue
         else:
-            lines[i] = lines[i].replace(">>>", "").strip()
+            lines[i] = lines[i].replace("", "").strip()
         line = lines[i].strip()
         func_signature = "def "
         if line.strip() == "":
@@ -234,11 +222,11 @@ def search_external_module_for_task_program_table(text):
                 if i == len(lines):
                     break
                 next_line = lines[i].rstrip()
-                if ">>>" not in lines_copy[i]:
+                if "" not in lines_copy[i]:
                     in_function = False
                     continue
                 function_lines.append(
-                    next_line.replace(">>>", "").replace(example_indentation, "", 1)
+                    next_line.replace("", "").replace(example_indentation, "", 1)
                 )
             functions.append("\n".join(function_lines))
         else:
@@ -260,6 +248,7 @@ def timer_decorator(func):
         AmadeusLogger.debug(
             f"The function {func.__name__} took {end_time - start_time} seconds to execute."
         )
+        print (f"The function {func.__name__} took {end_time - start_time} seconds to execute.")
         return result
 
     return wrapper
@@ -293,3 +282,47 @@ def flatten_tuple(t):
         else:
             flattened.append(item)
     return tuple(flattened)
+
+# the function func2json takes a function object as inputs
+# and returns a json object that contains the function name,
+# input type, output type, function body, and function description
+
+import inspect
+import textwrap
+
+def func2json(func):
+    # Capture the function's signature for input arguments
+    sig = inspect.signature(func)
+    inputs = {name: str(param.annotation) for name, param in sig.parameters.items()}
+
+    # Extract the docstring
+    docstring = inspect.getdoc(func)
+    if docstring:
+        docstring = textwrap.dedent(docstring)
+
+    # Capture the function's full source and parse it to an AST
+    full_source = inspect.getsource(func)
+    parsed = ast.parse(textwrap.dedent(full_source))
+    func_def = parsed.body[0]
+
+    # Remove the docstring node if present
+    if func_def.body and isinstance(func_def.body[0], ast.Expr) and isinstance(func_def.body[0].value, (ast.Str, ast.Constant)):
+        func_def.body.pop(0)
+
+    # Remove decorators from the function definition
+    func_def.decorator_list = []
+
+    # Convert the modified AST back to source code
+    if hasattr(ast, 'unparse'):
+        source_without_docstring_or_decorators = ast.unparse(func_def)
+    else:
+        # Placeholder for actual conversion in older Python versions
+        source_without_docstring_or_decorators = None  # Consider using `astor` here
+
+    json_obj = {
+        'name': func.__name__,
+        'inputs': inputs,
+        'source_code': textwrap.dedent(source_without_docstring_or_decorators),
+        'docstring': docstring
+    }
+    return json_obj

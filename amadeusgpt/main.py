@@ -17,7 +17,7 @@ import openai
 import pandas as pd
 from typing import Dict, List, Tuple
 import amadeusgpt
-from amadeusgpt.datamodel import AmadeusAnswer
+from amadeusgpt.analysis_objects import AmadeusAnswer
 from amadeusgpt.utils import parse_error_message_from_python
 
 
@@ -61,7 +61,7 @@ from RestrictedPython.Guards import (
 ############
 
 
-from amadeusgpt.datamodel.amadeus_answer import AmadeusAnswer
+from amadeusgpt.analysis_objects.amadeus_answer import AmadeusAnswer
 
 from amadeusgpt.brains import (
     BaseBrain,

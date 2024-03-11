@@ -1,11 +1,5 @@
 from amadeusgpt.implementation import (
     AnimalBehaviorAnalysis,
-    Event,
-    EventList,
-    AnimalEvent,
-    AnimalAnimalEvent,
-    Object,
-    Orientation,
     Database,
 )
 import time
