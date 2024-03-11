@@ -4,7 +4,7 @@ from amadeusgpt.analysis_objects.object import AnimalSeq
 import numpy as np
 from numpy import ndarray
 import pandas as pd
-from typing import List, Dict
+from typing import List, Dict, Optional
 from amadeusgpt.api_registry import register_class_methods, register_core_api
 
 
@@ -138,11 +138,14 @@ class AnimalManager(Manager):
         """
         return np.array([animal.get_keypoints() for animal in self.animals])
     @register_core_api
-    def get_speed(self) -> ndarray:
+    def get_speed(self, 
+                  ) -> ndarray:
         """
-        Get the speed.
+        Get the speed of all animals. The shape is of shape  n_frames, n_individuals, n_kpts, n_dims
         """
-        return np.array([animal.get_speed() for animal in self.animals])
+        
+        return np.stack([animal.get_speed() for animal in self.animals], axis = 1)
+
     
     @register_core_api
     def get_acceleration(self) -> ndarray:
