@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.ndimage.filters import uniform_filter1d
 import time
-from matplotlib.ticker import FuncFormatter
 from amadeusgpt.logger import AmadeusLogger
 import sys
 import traceback
 import cv2
 from typing import Dict, Any
 import ast
+from numpy import ndarray
 
 def moving_average(x: Sequence, window_size: int, pos: str = "centered"):
     """
@@ -294,6 +294,7 @@ def func2json(func):
     # Capture the function's signature for input arguments
     sig = inspect.signature(func)
     inputs = {name: str(param.annotation) for name, param in sig.parameters.items()}
+   
 
     # Extract the docstring
     docstring = inspect.getdoc(func)
@@ -323,6 +324,7 @@ def func2json(func):
         'name': func.__name__,
         'inputs': inputs,
         'source_code': textwrap.dedent(source_without_docstring_or_decorators),
-        'docstring': docstring
+        'docstring': docstring,
+        'return': str(sig.return_annotation)
     }
     return json_obj

@@ -8,8 +8,19 @@ from amadeusgpt.utils import func2json
 import json
 from inspect import signature
 import copy 
+from numpy import ndarray
+import typing
+import traceback
+from amadeusgpt.implementation import AnimalBehaviorAnalysis
+from amadeusgpt.config import Config
 
 
+required_classes = {
+    'AnimalBehaviorAnalysis': AnimalBehaviorAnalysis,
+    'Config': Config  
+}
+required_types = {name: getattr(typing, name) for name in dir(typing) if not name.startswith('_')}
+required_types.update({'ndarray': ndarray})
 class TaskProgram:
     """
     The task program in the system should be uniquely tracked by the id
@@ -58,6 +69,8 @@ class TaskProgram:
         # there are only two creators for the task program
         assert creator in ['human', 'llm_agent']
     
+
+
     def display(self):
         json_obj = copy.deepcopy(self.json_obj)
         json_obj['id'] = self.id
@@ -107,16 +120,20 @@ class TaskProgram:
         from amadeusgpt.config import Config
 
         exec_namespace = {'__builtins__': __builtins__}
-        exec_namespace['Config'] = Config
-        exec_namespace['AnimalBehaviorAnalysis'] = AnimalBehaviorAnalysis
+        exec_namespace.update(required_types)
+        exec_namespace.update(required_classes)
         exec(self.json_obj['source_code'], exec_namespace)
                 
         arguments = [repr(arg) for arg in args] + [f"{k}={repr(v)}" for k, v in kwargs.items()]
         arguments_str = ", ".join(arguments)
 
         # Construct the call string safely
-        call_str = f"{self.json_obj['name']}({arguments_str})"           
-        exec(f"result = {call_str}", exec_namespace)
+        call_str = f"{self.json_obj['name']}({arguments_str})"
+        try:
+            exec(f"result = {call_str}", exec_namespace)
+        except Exception as e:
+            error_message = traceback.format_exc()
+            print(error_message)  # Or log/store the error message as needed
         result = exec_namespace['result']
         self.result_buffer = result       
         return result        

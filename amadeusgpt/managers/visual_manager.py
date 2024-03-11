@@ -9,6 +9,7 @@ from collections import defaultdict
 from amadeusgpt.api_registry import register_class_methods, register_core_api
 from amadeusgpt.analysis_objects.event import BaseEvent
 
+
 def mask2distance(locations):
     assert len(locations.shape) == 2
     assert locations.shape[1] == 2
