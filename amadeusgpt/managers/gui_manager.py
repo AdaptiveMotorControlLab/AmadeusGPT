@@ -4,64 +4,55 @@ from typing import List, Dict, Any
 import cv2
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
-
-from matplotlib.path import Path
-from matplotlib.widgets import  PolygonSelector
-import itertools
+import numpy as np 
 from amadeusgpt.api_registry import register_class_methods, register_core_api
+from matplotlib.widgets import Button, PolygonSelector
+from matplotlib.path import Path
+from .base import Manager
+
 
 class ROISelector:
-    # Use itertools.cycle to cycle through colors indefinitely
-    cmap = itertools.cycle(["red", "blue", "yellow", "green"])
+    roi_count = 0
+    cmap = ["red", "blue", "yellow", "green"]
 
-    def __init__(self, axs):
+    def __init__(self, axs, object_manager):
         self.axs = axs
+        self.object_manager = object_manager
         self.selector = PolygonSelector(self.axs, self.onselect)
         self.paths = []
 
     def roi_select_event(self, vertices):
-        # Create a new list for vertices to close the path without modifying the original list
-        closed_vertices = vertices + [vertices[0]]
-        path = Path(closed_vertices)
+        # once the bounding box is done drawing, run the following command
+        first_point = vertices[0]
+        vertices.append(first_point)
+        path = Path(vertices)
         self.paths.append(path)
-        
-        # Use the next color from the cycle for each new ROI
-        edgecolor = next(type(self).cmap)
-        
-        # Add the new ROI patch
-        self.axs.add_patch(
-            plt.Polygon(path.vertices, fill=None, edgecolor=edgecolor)
-        )
-        
-        # Update the legend for each ROI
+        # self.axs.clear()
+        for i, path in enumerate(self.paths):
+            self.axs.add_patch(
+                plt.Polygon(path.vertices, fill=None, edgecolor=type(self).cmap[i])
+            )
         handles = [
-            mlines.Line2D([], [], color=next(type(self).cmap), label=f"ROI {i}")
+            mlines.Line2D([], [], color=self.cmap[i], label=f"ROI{i}")
             for i in range(len(self.paths))
         ]
         self.axs.legend(handles=handles, loc="upper right")
-        
-        # Explicitly update the figure
-        plt.draw()
+
+        # saving roi figure
 
     def onselect(self, vertices):
         self.roi_select_event(vertices)
+        figure_output = "roi_figure.png"
+        plt.savefig(figure_output, dpi=800)
+        
+        # Here you can add any further processing of the polygons
+        self.object_manager.roi_objects = []
+        self.object_manager.add_roi_object(self.paths)
+        
+        print (len(self.object_manager.roi_objects))
+        # Assuming the object_manager's add_roi_object is meant to handle the completed polygons
 
-def select_roi_from_video(video_filename):
-    cap = cv2.VideoCapture(video_filename)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    middle_frame_index = total_frames // 2
-    cap.set(cv2.CAP_PROP_POS_FRAMES, middle_frame_index)
-    ret, frame = cap.read()
-    fig, axs = plt.subplots(1)
-    axs.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))  # Convert BGR to RGB
-    selector = ROISelector(axs)
-    plt.show()
-    return selector.paths
 
-def select_roi_from_plot(fig, ax):
-    selector = ROISelector(ax)
-    fig.show()
-    return selector.paths
 
 @register_class_methods
 class GUIManager(Manager):
@@ -74,12 +65,24 @@ class GUIManager(Manager):
         self.videos = {}
     
     def add_roi_from_video_selection(self)-> None:
-        ret = select_roi_from_video(self.video_file_path)
-        print ("object to be added", ret)
-        self.object_manager.add_roi_object(ret)
+        cap = cv2.VideoCapture(self.video_file_path)
+        if not cap.isOpened():
+            print("Error opening video file.")
+            return []
+
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        middle_frame_index = total_frames // 2
+        cap.set(cv2.CAP_PROP_POS_FRAMES, middle_frame_index)
+        ret, frame = cap.read()
+        cap.release()
+
+        if not ret:
+            print("Failed to retrieve frame.")
+            return []
+        fig, ax = plt.subplots(1)
+        ax.imshow(frame)
+        self.selector = ROISelector(ax, self.object_manager)
 
     
     def get_serializeable_list_names(self) -> List[str]:
         return []
-    
-    

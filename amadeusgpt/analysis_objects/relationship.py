@@ -14,7 +14,7 @@ class Orientation(IntEnum):
 
 def calc_orientation_in_egocentric_animal(animal_seq, p):
     "Express the 2D points p into the mouse-centric coordinate system."
-    mouse_cs = MABE.get_cs(animal_seq)
+    mouse_cs = animal_seq.get_body_cs()
     mouse_cs_inv = np.full_like(mouse_cs, np.nan)
     valid = np.isclose(np.linalg.det(mouse_cs[:, :2, :2]), 1)
     mouse_cs_inv[valid] = np.linalg.inv(mouse_cs[valid])
@@ -34,22 +34,6 @@ def calc_orientation_in_egocentric_animal(animal_seq, p):
     np.place(orientation, np.logical_and(theta > 30, theta < 150), Orientation.LEFT)
     np.place(orientation, np.logical_and(theta > 210, theta < 330), Orientation.RIGHT)
     return orientation
-
-
-def calc_head_cs(animal_seq):
-    nose = animal_seq.whole_body[:, 0]
-    neck = animal_seq.whole_body[:, 3]
-    head_axis = nose - neck
-    head_axis_norm = head_axis / np.linalg.norm(head_axis, axis=1, keepdims=True)
-    # Get a normal vector pointing left
-    mediolat_axis_norm = head_axis_norm[:, [1, 0]].copy()
-    mediolat_axis_norm[:, 0] *= -1
-    nrows = len(head_axis_norm)
-    mouse_cs = np.zeros((nrows, 3, 3))
-    rot = np.stack((head_axis_norm, mediolat_axis_norm), axis=2)
-    mouse_cs[:, :2, :2] = rot
-    mouse_cs[:, :, 2] = np.c_[neck, np.ones(nrows)]
-    return mouse_cs
 
 
 def calc_angle_between_2d_coordinate_systems(cs1, cs2):
@@ -85,25 +69,6 @@ def calc_angle_in_egocentric_animal(mouse_cs_inv, p):
     theta = np.rad2deg(theta % (2 * np.pi))
     return theta
 
-class MABE:
-    @classmethod
-    def get_cs(cls, animal_seq):
-        neck = animal_seq.whole_body[:, 3]
-        tailbase = animal_seq.whole_body[:, 9]
-        body_axis = neck - tailbase
-        body_axis_norm = body_axis / np.linalg.norm(body_axis, axis=1, keepdims=True)
-        # Get a normal vector pointing left
-        mediolat_axis_norm = body_axis_norm[:, [1, 0]].copy()
-        mediolat_axis_norm[:, 0] *= -1
-        nrows = len(body_axis_norm)
-        mouse_cs = np.zeros((nrows, 3, 3))
-        rot = np.stack((body_axis_norm, mediolat_axis_norm), axis=2)
-        mouse_cs[:, :2, :2] = rot
-        mouse_cs[:, :, 2] = np.c_[
-            animal_seq.whole_body[:, 6], np.ones(nrows)
-        ]  # center back
-
-        return mouse_cs
 
 class Relationship(AnalysisObject):
     """
@@ -111,6 +76,10 @@ class Relationship(AnalysisObject):
     data: This attribute is a dictionary that contains the relationship between two objects
     each value of self.data is a numpy array that is either boolean or a float
     """
+    def __getitem__(self, key):
+        return self.data[key]
+    def __setitem__(self, key, value):
+        self.data[key] = value
     def get_name(self):
         return self.__name__
     def query_relationship(self, relation_query:str) -> ndarray:
@@ -156,18 +125,22 @@ class AnimalObjectRelationship(Relationship):
 
         distance = np.linalg.norm(animal.get_center() - c, axis=1)
         overlap = other_obj.Path.contains_points(animal.get_center())
-        # orientation = calc_orientation_in_egocentric_animal(
-        #     animal, other_obj.get_center()
-        # )
-        return  {
+        orientation = None
+        if animal.support_body_orientation:
+            orientation = calc_orientation_in_egocentric_animal(animal, other_obj.get_center())
+      
+        ret = {
             "to_left": to_left,
             "to_right": to_right,
             "to_below": to_below,
             "to_above": to_above,
             "distance": distance,
             "overlap": overlap,
-            #"orientation": orientation,
         }
+
+        if orientation is not None:
+            ret["orientation"] = orientation
+        return ret
 class AnimalAnimalRelationship(Relationship):
     """
     To be referenced in the animal class
@@ -220,7 +193,6 @@ class AnimalAnimalRelationship(Relationship):
         if self.receiver_animal_bodyparts_names is not None:
             receiver_animal.update_roi_keypoint_names(self.receiver_animal_bodyparts_names)
 
-        c = sender_animal.get_center()
 
         to_left = sender_animal.get_xmax() <= receiver_animal.get_xmin()
         to_right = sender_animal.get_xmin() >= receiver_animal.get_xmax()
@@ -238,36 +210,49 @@ class AnimalAnimalRelationship(Relationship):
             overlap.append(other_path.contains_point(np.array(robust_center[path_id])))
         overlap = np.array(overlap)
 
-        # this angle is calculated using hardecoded MABE bodyparts
-        # need to change in the future
-        # angles = calc_angle_between_2d_coordinate_systems(
-        #     MABE.get_cs(sender_animal), MABE.get_cs(receiver_animal)
-        # )
-        mouse_cs = calc_head_cs(sender_animal)
+        angles = None
+        head_angles = None
+        orientation = None
 
-        head_cs_inv = []
-        mouse_cs_inv = np.full_like(mouse_cs, np.nan)
-        valid = np.isclose(np.linalg.det(mouse_cs[:, :2, :2]), 1)
-        mouse_cs_inv[valid] = np.linalg.inv(mouse_cs[valid])
-        head_cs_inv.append(mouse_cs_inv)
-        relative_speed = np.abs(np.diff(np.linalg.norm(sender_animal.get_center() - c, axis=-1)))
+        if sender_animal.support_body_orientation:
+            angles = calc_angle_between_2d_coordinate_systems(
+                sender_animal.get_body_cs(), receiver_animal.get_body_cs()
+            )
+            orientation = calc_orientation_in_egocentric_animal(sender_animal, receiver_animal.get_center())
+
+        if sender_animal.support_head_orientation:
+            mouse_cs = sender_animal.calc_head_cs()
+            head_cs_inv = []
+            mouse_cs_inv = np.full_like(mouse_cs, np.nan)
+            valid = np.isclose(np.linalg.det(mouse_cs[:, :2, :2]), 1)
+            mouse_cs_inv[valid] = np.linalg.inv(mouse_cs[valid])
+            head_cs_inv.append(mouse_cs_inv)
+            head_angles = calc_angle_in_egocentric_animal(head_cs_inv, sender_animal.get_center())
+
+        relative_speed = np.diff(np.linalg.norm(sender_animal.get_center() - receiver_animal.get_center(), axis=-1))
         relative_speed = np.pad(relative_speed, (0, 1), mode="constant")
-        head_angles = calc_angle_in_egocentric_animal(head_cs_inv, c)
-        orientation = calc_orientation_in_egocentric_animal(sender_animal, receiver_animal.get_center())
+
+        
         closest_distance = np.nanmin(
             get_pairwise_distance(sender_animal.keypoints, receiver_animal.keypoints), axis=(1, 2)
         )
-        return {
+        ret =  {
             "to_left": to_left,
             "to_right": to_right,
             "to_below": to_below,
             "to_above": to_above,
             "distance": distance,
             "overlap": overlap,
-            #"relative_angle": angles,
-            "relative_head_angle": head_angles,
             "closest_distance": closest_distance,
             "relative_speed": relative_speed,
-            "orientation": orientation,
         }
+
+        if head_angles is not None:
+            ret["relative_head_angle"] = head_angles
+        if angles is not None:
+            ret["relative_angle"] = angles
+        if orientation is not None:
+            ret["orientation"] = orientation
+
+        return ret
 

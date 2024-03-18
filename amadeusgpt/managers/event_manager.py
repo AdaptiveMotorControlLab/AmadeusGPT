@@ -10,6 +10,7 @@ from typing import List, Dict, Any, Union, Set, Optional
 from amadeusgpt.analysis_objects.event import BaseEvent, Event
 from amadeusgpt.api_registry import register_class_methods, register_core_api
 from .base import Manager, cache_decorator
+from amadeusgpt.analysis_objects.relationship import Orientation
 
 def find_complement_number(string):
     digits = ""
@@ -309,8 +310,8 @@ class EventManager(Manager):
         """
        
         animals_animals_relationships = self.relationship_manager.get_animals_animals_relationships(
-            sender_animal_bodypart_names=bodypart_names,
-            receiver_animal_bodypart_names=otheranimal_bodypart_names
+            sender_animal_bodyparts_names=bodypart_names,
+            receiver_animal_bodyparts_names=otheranimal_bodypart_names
         )
         all_events = []
         for relationship in animals_animals_relationships:            

@@ -2,7 +2,7 @@ from ast import Dict
 from .base import AnalysisObject
 import numpy as np
 import matplotlib.path as mpath
-from typing import List
+from typing import List, Dict, Any
 from pycocotools import mask as mask_decoder
 from scipy.spatial import ConvexHull
 from numpy import ndarray
@@ -234,10 +234,12 @@ class AnimalSeq(Animal):
         self.state = {}
         self.kinematics_types = ["speed", "acceleration"]
         self.bodypart_relation = ["bodypart_pairwise_distance"]
-
+        self.support_body_orientation = False
+        self.support_head_orientation = False
         # self.keypoints are updated by indices of keypoint names given
         keypoint_indices = [keypoint_names.index(name) for name in keypoint_names]
         self.keypoints = self.whole_body[:, keypoint_indices]
+
 
     def update_roi_keypoint_by_names(self, keypoint_names: List[str]):
         # update self.keypoints based on keypoint names given
@@ -248,6 +250,16 @@ class AnimalSeq(Animal):
 
     def restore_roi_keypoint(self):
         self.keypoints = self.whole_body
+
+    def set_body_orientation_keypoints(self, body_orientation_keypoints: Dict[str, Any]):
+        self.neck_name = body_orientation_keypoints["neck"]
+        self.tail_base_name = body_orientation_keypoints["tail_base"]
+        self.animal_center_name = body_orientation_keypoints["animal_center"]
+        self.support_body_orientation = True
+    def set_head_orientation_keypoints(self, head_orientation_keypoints: Dict[str, Any]):
+        self.nose_name = head_orientation_keypoints["nose"]
+        self.neck_name = head_orientation_keypoints["neck"]
+        self.support_head_orientation = True
 
     # all the properties cannot be cached because update could happen
     def get_paths(self):   
@@ -343,3 +355,41 @@ class AnimalSeq(Animal):
         return distances
     
 
+    def get_body_cs(self,
+               ):
+        # this only works for topview
+        neck_index = self.keypoint_names.index(self.neck_name)
+        tailbase_index = self.keypoint_names.index(self.tail_base_name)
+        neck = self.whole_body[:, neck_index]
+        tailbase = self.whole_body[:, tailbase_index]
+        body_axis = neck - tailbase
+        body_axis_norm = body_axis / np.linalg.norm(body_axis, axis=1, keepdims=True)
+        # Get a normal vector pointing left
+        mediolat_axis_norm = body_axis_norm[:, [1, 0]].copy()
+        mediolat_axis_norm[:, 0] *= -1
+        nrows = len(body_axis_norm)
+        animal_cs = np.zeros((nrows, 3, 3))
+        rot = np.stack((body_axis_norm, mediolat_axis_norm), axis=2)
+        animal_cs[:, :2, :2] = rot
+        animal_center_index = self.keypoint_names.index(self.animal_center_name)
+        animal_cs[:, :, 2] = np.c_[
+            self.whole_body[:, animal_center_index], np.ones(nrows)
+        ]  # center back
+
+        return animal_cs
+    def calc_head_cs(self):
+        nose_index = self.keypoint_names.index(self.nose_name)
+        nose = self.whole_body[:, nose_index]
+        neck_index = self.keypoint_names.index(self.neck_name)
+        neck = self.whole_body[:, neck_index]
+        head_axis = nose - neck
+        head_axis_norm = head_axis / np.linalg.norm(head_axis, axis=1, keepdims=True)
+        # Get a normal vector pointing left
+        mediolat_axis_norm = head_axis_norm[:, [1, 0]].copy()
+        mediolat_axis_norm[:, 0] *= -1
+        nrows = len(head_axis_norm)
+        mouse_cs = np.zeros((nrows, 3, 3))
+        rot = np.stack((head_axis_norm, mediolat_axis_norm), axis=2)
+        mouse_cs[:, :2, :2] = rot
+        mouse_cs[:, :, 2] = np.c_[neck, np.ones(nrows)]
+        return mouse_cs

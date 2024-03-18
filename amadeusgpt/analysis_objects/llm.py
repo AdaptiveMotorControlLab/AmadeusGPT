@@ -19,6 +19,19 @@ class LLM(AnalysisObject):
         self.long_term_memory = {}
         self.accumulated_tokens = 0
 
+    def whetehr_speak(self, chat_channel):
+        """
+        Handcrafted rules to decide whether to speak
+        1) If there is a error in the current chat channel        
+        """
+        return False
+
+    def speak(self, chat_channel):
+        """
+        Speak to the chat channel
+        """
+        raise NotImplementedError("This method should be implemented in the subclass")
+
     def connect_gpt(self, messages, **kwargs):
         # if openai version is less than 1
         if openai.__version__ < 1:
@@ -157,6 +170,26 @@ class CodeGenerationLLM(LLM):
     """
     Resource management for the behavior analysis part of the system
     """
+    def __init__(self, config):
+        super().__init__(config)
+
+    def whether_speak(self, chat_channel):
+        """
+        It's not clear whether we always need to write code
+        """
+        return True
+
+    def speak(self, chat_channel):
+        """
+        Speak to the chat channel
+        """
+        user_input = chat_channel.user_query[-1]
+        self.update_system_prompt()
+        self.update_history("user", user_input)
+        response = self.connect_gpt(self.context_window, max_tokens=700)
+        text, function_codes, thought_process = self.parse_openai_response(response)
+        chat_channel['code_history'].append(function_codes)
+        chat_channel['chain_of_thought'].append(thought_process)               
 
     def get_system_prompt(self, interface_str, behavior_module_str):
         from amadeusgpt.system_prompts.code_generator import _get_system_prompt
@@ -171,6 +204,12 @@ class DiagnosisLLM(LLM):
     """
     Resource management for testing and error handling
     """
+
+    def whether_speak(self, chat_channel):
+        """
+        Handcrafted rules to decide whether to speak
+        1) If there is a error in the current chat channel        
+        """
 
     @classmethod
     def get_system_prompt(
