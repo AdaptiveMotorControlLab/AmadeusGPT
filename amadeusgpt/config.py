@@ -52,7 +52,8 @@ class Config:
         """
         Get a value from the configuration data.
         """
-        return self.data[key]    
+        return self.data[key] 
+    
 
     def __str__(self):
         """

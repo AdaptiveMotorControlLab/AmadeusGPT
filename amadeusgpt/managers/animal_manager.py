@@ -80,10 +80,18 @@ class AnimalManager(Manager):
         for individual_id in range(self.n_individuals):
             animal_name = f'animal_{individual_id}'
             # by default, we initialize all animals with the same keypoints and all the keypoint names
-            self.animals.append(AnimalSeq(animal_name, 
-                                                  all_keypoints[:, individual_id],
-                                                  self.keypoint_names))
 
+            animalseq = AnimalSeq(animal_name, 
+                                all_keypoints[:, individual_id],
+                                self.keypoint_names)
+            if 'body_orientation_keypoints' in config['dlc_info']:
+                animalseq.set_body_orientation_keypoints(config['dlc_info']['body_orientation_keypoints'])
+            if 'head_orientation_keypoints' in config['dlc_info']:
+                animalseq.set_head_orientation_keypoints(config['dlc_info']['head_orientation_keypoints'])
+
+            self.animals.append(animalseq)
+
+   
 
     def _process_keypoint_file_from_h5(self) -> ndarray:
         df = pd.read_hdf(self.keypoint_file_path)
@@ -136,7 +144,9 @@ class AnimalManager(Manager):
         """
         Get the keypoints.
         """
-        return np.array([animal.get_keypoints() for animal in self.animals])
+        ret =  np.stack([animal.get_keypoints() for animal in self.animals], axis = 1)
+
+        return ret
     @register_core_api
     def get_speed(self, 
                   ) -> ndarray:
@@ -190,3 +200,4 @@ class AnimalManager(Manager):
 
     def get_serializeable_list_names(self) -> List[str]:
         return ['animals']
+

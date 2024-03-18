@@ -7,9 +7,7 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 from amadeusgpt.implementation import (
-    AnimalBehaviorAnalysis,
-    AnimalAnimalEvent,
-    AnimalEvent,
+    AnimalBehaviorAnalysis,   
 )
 import sys
 from amadeusgpt.utils import frame_number_to_minute_seconds, get_fps, parse_error_message_from_python

@@ -17,6 +17,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib
 from scipy.signal import medfilt
 import matplotlib.patches as patches
+from matplotlib.ticker import FuncFormatter
 import networkx as nx
 from matplotlib.animation import FuncAnimation
 
@@ -323,13 +324,14 @@ def _plot_ethogram(etho_obj: Dict[str, Any],
     # etho_obj -> {'animal_name': mask}
 
     fps = get_fps(video_path)
+    video_length = get_video_length(video_path)
     n_rois = len(etho_obj)
 
     if n_rois == 0:
         return
 
     cmap = plt.cm.get_cmap(cmap, n_rois)
-    video_length = 1800
+
     colors = cmap(np.linspace(0, 1, n_rois))
     pos = []
     
