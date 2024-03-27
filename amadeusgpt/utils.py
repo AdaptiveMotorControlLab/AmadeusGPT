@@ -291,40 +291,101 @@ import inspect
 import textwrap
 
 def func2json(func):
-    # Capture the function's signature for input arguments
-    sig = inspect.signature(func)
-    inputs = {name: str(param.annotation) for name, param in sig.parameters.items()}
-   
+    if isinstance(func, str):
+        func_str = textwrap.dedent(func)
+        
+        # Parse the function string to an AST
+        parsed = ast.parse(func_str)
+        func_def = parsed.body[0]
 
-    # Extract the docstring
-    docstring = inspect.getdoc(func)
-    if docstring:
-        docstring = textwrap.dedent(docstring)
+        # Use the AST to extract the function's name
+        func_name = func_def.name
 
-    # Capture the function's full source and parse it to an AST
-    full_source = inspect.getsource(func)
-    parsed = ast.parse(textwrap.dedent(full_source))
-    func_def = parsed.body[0]
+        # Extract the function's signature from the AST
+        
+        # Extract the docstring directly from the AST
+        docstring = ast.get_docstring(parsed)
 
-    # Remove the docstring node if present
-    if func_def.body and isinstance(func_def.body[0], ast.Expr) and isinstance(func_def.body[0].value, (ast.Str, ast.Constant)):
-        func_def.body.pop(0)
+        # Remove the docstring node if present
+        if func_def.body and isinstance(func_def.body[0], ast.Expr) and isinstance(func_def.body[0].value, (ast.Str, ast.Constant)):
+            func_def.body.pop(0)
 
-    # Remove decorators from the function definition
-    func_def.decorator_list = []
+        # Remove decorators from the function definition
+        func_def.decorator_list = []
 
-    # Convert the modified AST back to source code
-    if hasattr(ast, 'unparse'):
-        source_without_docstring_or_decorators = ast.unparse(func_def)
+        # Convert the modified AST back to source code
+        if hasattr(ast, 'unparse'):
+            source_without_docstring_or_decorators = ast.unparse(func_def)
+        else:
+            # Placeholder for actual conversion in older Python versions
+            source_without_docstring_or_decorators = None  # Consider using `astor` here
+
+        # Attempt to evaluate return annotation, if any
+        return_annotation = "No return annotation"
+        if func_def.returns:
+            return_annotation = ast.unparse(func_def.returns)
+
+        json_obj = {
+            'name': func_name,
+            'inputs': '',
+            'source_code': source_without_docstring_or_decorators,
+            'docstring': docstring,
+            'return': return_annotation
+        }
+        return json_obj        
     else:
-        # Placeholder for actual conversion in older Python versions
-        source_without_docstring_or_decorators = None  # Consider using `astor` here
 
-    json_obj = {
-        'name': func.__name__,
-        'inputs': inputs,
-        'source_code': textwrap.dedent(source_without_docstring_or_decorators),
-        'docstring': docstring,
-        'return': str(sig.return_annotation)
-    }
-    return json_obj
+        # Capture the function's signature for input arguments
+        sig = inspect.signature(func)
+        inputs = {name: str(param.annotation) for name, param in sig.parameters.items()}
+    
+
+        # Extract the docstring
+        docstring = inspect.getdoc(func)
+        if docstring:
+            docstring = textwrap.dedent(docstring)
+
+        # Capture the function's full source and parse it to an AST
+        full_source = inspect.getsource(func)
+        parsed = ast.parse(textwrap.dedent(full_source))
+        func_def = parsed.body[0]
+
+        # Remove the docstring node if present
+        if func_def.body and isinstance(func_def.body[0], ast.Expr) and isinstance(func_def.body[0].value, (ast.Str, ast.Constant)):
+            func_def.body.pop(0)
+
+        # Remove decorators from the function definition
+        func_def.decorator_list = []
+
+        # Convert the modified AST back to source code
+        if hasattr(ast, 'unparse'):
+            source_without_docstring_or_decorators = ast.unparse(func_def)
+        else:
+            # Placeholder for actual conversion in older Python versions
+            source_without_docstring_or_decorators = None  # Consider using `astor` here
+
+        json_obj = {
+            'name': func.__name__,
+            'inputs': inputs,
+            'source_code': textwrap.dedent(source_without_docstring_or_decorators),
+            'docstring': docstring,
+            'return': str(sig.return_annotation)
+        }
+        return json_obj
+
+def get_func_name_from_func_string(function_string:str):
+    import ast
+   
+    # Parse the string into an AST
+    parsed_ast = ast.parse(function_string)
+
+    # Initialize a variable to hold the function name
+    function_name = None
+
+    # Traverse the AST
+    for node in ast.walk(parsed_ast):
+        if isinstance(node, ast.FunctionDef):
+            function_name = node.name
+            break
+
+    return function_name

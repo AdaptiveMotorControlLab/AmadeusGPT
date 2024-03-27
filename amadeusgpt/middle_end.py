@@ -71,7 +71,7 @@ class AmadeusAnswer:
         return ret
 
     def get_plots_for_animal_animal_events(
-        self, animal_animal_events: AnimalAnimalEvent
+        self, animal_animal_events
     ):
         behavior_analysis = AnimalBehaviorAnalysis()
         video_file_path = AnimalBehaviorAnalysis.get_video_file_path()
@@ -97,7 +97,7 @@ class AmadeusAnswer:
             self.plots.append(traj_figure_obj)
             self.plots.append(etho_figure_obj)
 
-    def get_plots_for_animal_events(self, animal_events: AnimalEvent):
+    def get_plots_for_animal_events(self, animal_events):
         """
         We always plot ethogram and trajectories for events
         """
@@ -159,11 +159,7 @@ class AmadeusAnswer:
         for function_return in function_returns:                    
             if isinstance(function_return, (pd.Series, pd.DataFrame, np.ndarray)):
                 if isinstance(function_return, (pd.Series,pd.DataFrame)):
-                    function_return = function_return.to_numpy()            
-            elif isinstance(function_return, AnimalEvent):
-                instance.get_plots_for_animal_events(function_return)
-            elif isinstance(function_return, AnimalAnimalEvent):
-                instance.get_plots_for_animal_animal_events(function_return)
+                    function_return = function_return.to_numpy()                     
             else:
                 if not isinstance(
                     function_return,

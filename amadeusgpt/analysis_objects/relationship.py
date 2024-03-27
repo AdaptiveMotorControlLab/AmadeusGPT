@@ -189,9 +189,9 @@ class AnimalAnimalRelationship(Relationship):
         This is the relationship between two animals
         """
         if self.sender_animal_bodyparts_names is not None:
-            sender_animal.update_roi_keypoint_names(self.sender_animal_bodyparts_names)
+            sender_animal.update_roi_keypoint_by_names(self.sender_animal_bodyparts_names)
         if self.receiver_animal_bodyparts_names is not None:
-            receiver_animal.update_roi_keypoint_names(self.receiver_animal_bodyparts_names)
+            receiver_animal.update_roi_keypoint_by_names(self.receiver_animal_bodyparts_names)
 
 
         to_left = sender_animal.get_xmax() <= receiver_animal.get_xmin()

@@ -12,6 +12,9 @@ class Config:
 
     def __repr__(self):
         return repr(self.data)
+    
+    def get(self, key, default=None):
+        return self.data.get(key, default)
 
     def load_config(self):
         # Load the YAML config file

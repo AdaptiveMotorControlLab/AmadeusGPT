@@ -6,7 +6,7 @@ from .object_manager import ObjectManager
 from .animal_manager import AnimalManager
 from .relationship_manager import RelationshipManager
 import numpy as np
-from typing import List, Dict, Any, Union, Set, Optional
+from typing import List, Dict, Any, Union, Set, Optional, Literal
 from amadeusgpt.analysis_objects.event import BaseEvent, Event
 from amadeusgpt.api_registry import register_class_methods, register_core_api
 from .base import Manager, cache_decorator
@@ -64,7 +64,7 @@ class EventManager(Manager):
         self.animals_animals_events = []
         self.animals_state_events = []
     @register_core_api
-    @cache_decorator
+    #@cache_decorator
     def get_animals_object_events(
         self,
         object_name: str,
@@ -89,14 +89,7 @@ class EventManager(Manager):
         min_window: min length of the event to include
         max_window: max length of the event to include
         negate: bool, default false
-           whether to negate the spatial events. For example, if negate is set True, inside roi would be outside roi       
-        Examples
-        --------
-         # find events where the animal is to the left of object 6  
-         def task_program():
-             behavior_analysis = AnimalBehaviorAnalysis()
-             left_to_object6_events = behavior_analysis.animals_object_events('6', 'to_left',  bodypart_names = ['all'])
-             return left_to_object6_events  
+           whether to negate the spatial events. For example, if negate is set True, inside roi would be outside roi
         """        
         # ugly fix for ROI
         if (
@@ -162,7 +155,7 @@ class EventManager(Manager):
             self.animal_manager.restore_roi_keypoint()
 
         return ret_events
-    @cache_decorator
+    #@cache_decorator
     @register_core_api
     def get_animals_state_events(
         self,
@@ -177,24 +170,15 @@ class EventManager(Manager):
         Parameters
         ----------
         query_name: str
-            Must be one of 'speed', 'acceleration', 'bodypart_pairwise_distance'
+            Must be one of ['speed', 'acceleration', 'bodypart_pairwise_distance']
         comparison: str
-            Must be a comparison operator followed by a number like <50,
+            Must be a numerical comparison such as  ['<10', '>5']
         Returns
         -------
         List[BaseEvent]
         Examples that create task programs using this API. 
         --------
         # A task program that captures events where animal moving faster than 3 pixels across frames.       
-        def get_faster_than_3():
-            behavior_analysis = AnimalBehaviorAnalysis()
-            animal_faster_than_3_events =  behavior_analysis.get_animals_state_events('speed', '>3')
-            return animal_faster_than_3_events
-        # A task program that captures events where animal's nose to its own tail_base distance larger than 10
-        def example_task_program():
-            behavior_analysis = AnimalBehaviorAnalysis()
-            nose_tail_base_larger_than_10_events =  behavior_analysis.get_animals_state_events(['bodypart_pairwise_distance'], '>10', bodypart_names = ['nose', 'tail_base'])
-            return nose_tail_base_larger_than_10_events 
         """
         if bodypart_names is not None:
             self.animal_manager.update_roi_keypoint_by_names(bodypart_names)
@@ -259,11 +243,12 @@ class EventManager(Manager):
 
         return events
                                      
-    @cache_decorator
+    #@cache_decorator
+    @register_core_api
     def get_animals_animals_events(
         self,
-        cross_animal_query_list:List[str]=[],
-        cross_animal_comparison_list:List[str]=[],
+        cross_animal_query_list: List = [],
+        cross_animal_comparison_list: List = [],
         bodypart_names: Optional[Union[List[str], None]]=None,
         otheranimal_bodypart_names: Optional[Union[List[str], None]] = None,
         min_window:int = 11,
@@ -271,42 +256,33 @@ class EventManager(Manager):
         smooth_window_size:int =3,
     )-> List[BaseEvent]:
         """
-        The function is specifically for capturing multiple animals social events        
+        The function is for capturing behaviors that involve multiple animals. Don't fill the bodypart_names and otheranimal_bodypart_names unless you know the names of the bodyparts.
+        Don't pass head as bodypart when querying relative_head_direction
         Parameters
         ----------        
-        cross_animal_query_list: 
-        list of queries describing relative states among animals. The valid relative states can be and only can be any subset of the following ['to_left', 'to_right', 'to_below', 'to_above', 'overlap', 'distance', 'relative_speed', 'orientation', 'closest_distance', 'relative_angle', 'relative_head_angle']. Note distance and closest_distance are distinct queries. Also relative_angle and relative_head_angle are distinct queries.        
+        cross_animal_query_list: chosen from ['to_left', 'to_right', 'to_below', 'to_above', 'overlap', 'distance', 'relative_speed', 'orientation', 'closest_distance', 'relative_angle', 'relative_head_angle']
+        list of queries describing relative states among animals. 
         cross_animal_comparison_list:
-	    This list consists of comparison operators such as '==', '<', '>', '<=', '>='. Every comparison operator uniquely corresponds to an item in relation_query_list.
-        IMPORTANT: the `inter_individual_animal_state_comparison_list[i]` and `inter_individual_animal_state_query_list[i]` should correspond to each other. Also the length of two lists should be the same
-        Note the same relative state can appear twice to define a range.  For example, we can have ['distance', 'distance'] correspond to comparison list ['<100', '>20']       
+	    This list consists of comparison operators such as booling comparison '==True', '==False' or numerical comparison '<10', '>5', . Every comparison operator uniquely corresponds to an item in relation_query_list.
         bodypart_names:
-        list of bodyparts for the this animal. By default, it is None, which means all bodyparts are included
+        list of bodyparts for the this animal. By default, it is None, which means all bodyparts are included. Don't assume the name of the bodyparts.
         otheranimal_bodypart_names: list[str], optional
-        list of bodyparts for the other animals. By default, it is None, which means all bodyparts are included
-        min_window: int, optional
+        list of bodyparts for the other animals. By default, it is None, which means all bodyparts are included. Don't assume the name of the bodyparts
+        min_window: int, optional, default 11
         Only include events that are longer than min_window
-        pixels_per_cm: int, optional
-        how many pixels for 1 centimer
+        max_window: int, optional, default 100000
+
         smooth_window_size: int, optional
         smooth window size for smoothing the events.
         Returns
         -------        
-        List[BaseEvent]
-        Examples that create task programs using this API. 
-        --------
-        # A customized task program. Define <|run_after|> as a behavior that when animal A and other animals are within 100 pixels and other animals are in front of animal A.
-        def run_after():
-            behavior_analysis = AnimalBehaviorAnalysis()
-            run_after_social_events = behavior_analysis.get_animals_animals_events(cross_animal_query_list = ['distance', 'orientation'], 
-                cross_animal_comparison_list = [f'< 100', f'=={Orientation.FRONT}'])
-            return run_after_social_events 
-        # Define <|far_away|> as a social behavior where distance between animals is larger than 20 pixels and smaller than 100 pixels and head angle less than 15
-        def far_away():
-            behavior_analysis = AnimalBehaviorAnalysis()
-            far_away_social_events = behavior_analysis.get_animals_animals_events(cross_animal_query_list = ['distance', 'distance', 'relative_head_angle'],
-                cross_animal_comparison_list = ['> 20', '< 100', '<15'])                          
-            return far_away_social_events 
+        List[BaseEvent] 
+        Note
+        ----
+        To capture a range for a numerical query  (e.g., relative_speed) between 3 and 10, one can do:
+        get_animals_animals_events(cross_animal_query_list = ['relative_speed', 'relative_speed'], cross_animal_comparison_list = ['>3', '<10'])
+
+
         """
        
         animals_animals_relationships = self.relationship_manager.get_animals_animals_relationships(
@@ -345,27 +321,21 @@ class EventManager(Manager):
 
         return ret_events
 
-
+    @register_core_api
     def get_composite_events(self,
-                            *events_list:List[List[BaseEvent]],
-                            composition_type : str = "sequential", 
-                            merge_keys: Optional[List[str]] = None,                            
+                            events_list:Optional[List[List[BaseEvent]]] = [],
+                            composition_type: Literal["sequential", "logical_and", "logical_or"] = "logical_and",
+                            merge_keys: Optional[List[str]] = None, 
+                            min_window = 11,
+                            max_window = 1000000,
+                            smooth_window_size = 3
                              ) -> List[BaseEvent]:
         """
-        Parameters
-        ----------
-        events_list: List[dict] 
+        Parameters:
+        events_list: must be more than one list of events     
         Returns
         -------
-        List[BaseEvent]
-        Examples
-        --------
-         # An example task program that get events for the animal's nose overlaps the roi0, left eye overlaps the roi0 and tail base not overlap the roi0     
-         def NoseEyeNoTailOverlapRoi0():
-             behavior_analysis = AnimalBehaviorAnalysis()
-             nose_left_eye_in_roi0_events =  behavior_analysis.animals_object_events('ROI0', 'overlap', bodypart_names = ['nose', 'left_eye'], negate = False)        
-             tail_base_not_in_roi0_events = behavior_analysis.animals_object_events('ROI0', 'overlap', bodypart_names = ['tail base'], negate = True)
-             return Event.add_simultaneous_events(nose_left_eye_in_roi0_events, tail_base_not_in_roi0_events)             
+        List[BaseEvent]                    
         """
         assert len(events_list) > 1, "You need to provide at least two events to merge"
         assert composition_type in ["sequential", "logical_and", "logical_or"], "composition_type must be either 'sequential' or 'logical_or', or 'logical_and'"
