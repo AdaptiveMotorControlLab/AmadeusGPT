@@ -71,6 +71,7 @@ class AnimalBehaviorAnalysis:
                 cls_name = manager.__class__.__name__
                 for method_name in DEFAULT_REGISTRY[cls_name]:
                     if hasattr(manager, method_name):
+
                         method = getattr(manager, method_name)
                         setattr(self, method_name, method.__get__(manager, manager.__class__))
                         if method_name not in method_names:                            

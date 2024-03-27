@@ -53,7 +53,7 @@ class BaseEvent(AnalysisObject):
         return start, end
 
     def __lt__(self, other):
-        return self.duration < other.duration 
+        return self.duration_in_frames < other.duration_in_frames
            
 
 
@@ -424,9 +424,11 @@ class EventGraph:
             masks = [event.generate_mask() for event in events] 
             _sum = np.sum(masks, axis = 0)          
 
-
         else:
+
             new_graph = cls() 
+            if len(events) == 0:
+                return new_graph
             masks = [event.generate_mask() for event in events]         
             _sum = np.sum(masks, axis = 0)
 

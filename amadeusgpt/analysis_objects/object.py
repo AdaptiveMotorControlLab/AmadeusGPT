@@ -264,12 +264,12 @@ class AnimalSeq(Animal):
     # all the properties cannot be cached because update could happen
     def get_paths(self):   
         paths = []
-        for ind in range(self.keypoints.shape[0]):
+        for ind in range(self.whole_body.shape[0]):
             paths.append(self.get_path(ind))
         return paths
 
     def get_path(self, ind):
-        xy = self.keypoints[ind]
+        xy = self.whole_body[ind]
         xy = np.nan_to_num(xy)
         if np.all(xy == 0):
             return None

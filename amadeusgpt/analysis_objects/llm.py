@@ -1,3 +1,4 @@
+from distutils import core
 from .base import AnalysisObject
 import openai
 import os
@@ -10,50 +11,48 @@ import re
 class LLM(AnalysisObject):
     def __init__(self, config):
         self.config = config
-        self.max_tokens = config['max_tokens']
-        self.gpt_model = config['gpt_model']
+        self.max_tokens = config.get('max_tokens', 2000)
+        #self.gpt_model = config.get('gpt_model', "gpt-4-1106-preview")
+        #self.gpt_model = config.get('gpt_model', "gpt-3.5-turbo-0125")
+        self.gpt_model = config.get('gpt_model', "gpt-4-turbo-preview")
         self.context_window = []
         self.history = []
         self.usage = 0
         self.short_term_memory = []
         self.long_term_memory = {}
-        self.accumulated_tokens = 0
+        self.accumulated_tokens = 0       
 
-    def whetehr_speak(self, chat_channel):
+    def whetehr_speak(self):
         """
         Handcrafted rules to decide whether to speak
         1) If there is a error in the current chat channel        
         """
         return False
 
-    def speak(self, chat_channel):
+    def speak(self):
         """
         Speak to the chat channel
         """
         raise NotImplementedError("This method should be implemented in the subclass")
 
     def connect_gpt(self, messages, **kwargs):
-        # if openai version is less than 1
-        if openai.__version__ < 1:
-            return self.connect_gpt_oai_less_than_1(messages, **kwargs)
-        else:
-            return self.connect_gpt_oai_1(messages, **kwargs)
+        # if openai version is less than 1        
+        return self.connect_gpt_oai_1(messages, **kwargs)
 
-    def connect_gpt_oai_less_than_1(self, messages, **kwargs):
+    def connect_gpt_oai_1(self, messages, **kwargs):
+        import openai 
+        from openai import OpenAI
         if self.config.get('use_streamlit', False):            
             if "OPENAI_API_KEY" in os.environ:
-                openai.api_key = os.environ["OPENAI_API_KEY"]
-            else:
-                import streamlit as st
-                openai.api_key = st.session_state.get("OPENAI_API_KEY", "")
+                openai.api_key = os.environ["OPENAI_API_KEY"]            
         else:
             openai.api_key = os.environ["OPENAI_API_KEY"]
-
-        openai.Model.list()
         response = None
         # gpt_model is default to be the cls.gpt_model, which can be easily set
         gpt_model = self.gpt_model
         # in streamlit app, "gpt_model" is set by the text box
+                
+        client = OpenAI()
 
         if self.config.get('use_streamlit', False):
             if "gpt_model" in st.session_state:
@@ -68,7 +67,7 @@ class LLM(AnalysisObject):
         
         # the usage was recorded from the last run. However, since we have many LLMs that
         # share the call of this function, we will need to store usage and retrieve them from the database class
-        num_retries = 3
+        num_retries = 3  
         for _ in range(num_retries):
             try:
                 json_data = {
@@ -78,21 +77,20 @@ class LLM(AnalysisObject):
                     "stop": None,
                     "top_p": 1,
                     "temperature": 0.0,
-                }               
-                response = openai.ChatCompletion.create(**json_data)
-                print(response)
-                self.usage = response["usage"]
+                } 
+
+                response = client.chat.completions.create(**json_data)
+
+                self.prompt_tokens = response.usage.prompt_tokens
+                self.completion_tokens = response.usage.completion_tokens
+                self.total_tokens = response.usage.total_tokens
                 break
-            except openai.error.RateLimitError:
-                if "rate_limit_error" not in st.session_state:
-                    st.error(
-                        "It appears you are out of funds/free tokens from openAI - please check your account settings"
-                    )
-                return None
+            
 
             except Exception as e:
+                
                 error_message = traceback.format_exc()
-               
+                print ("error", error_message)
                 if self.usage is None:
                     print("OpenAI server not responding")
 
@@ -106,13 +104,9 @@ class LLM(AnalysisObject):
                 elif "Rate limit reached" in error_message:
                     print("Hit rate limit. Sleeping for 10 sec")
                     time.sleep(10)
-
-        # Extract the parsed information from the response
-        parsed_info = response
-        return parsed_info
-
-
-
+        
+        return response
+    
     def update_history(self, role, content):
         if role == "system":
             if len(self.history) > 0:
@@ -144,24 +138,18 @@ class LLM(AnalysisObject):
         if response is None:
             text = "Something went wrong"
         else:
-            text = response["choices"][-1]["message"]["content"].strip()
-
-        AmadeusLogger.info(
-            "Full response from openAI before only matching function string:"
-        )
-        AmadeusLogger.info(text)
+            text = response.choices[0].message.content.strip()
+       
+     
 
         # we need to consider better ways to parse functions
         # and save them in a more structured way
+        pattern = r"```python(.*?)```"
+        function_code = re.findall(pattern, text, re.DOTALL)[0]
 
-        function_codes, _ = search_generated_func(text)
-
-        thought_process = text
-
-        if len(function_codes) >= 1:
-            function_code = function_codes[0]
-        else:
-            function_code = None
+        # create a placeholder   
+        thought_process = text.replace(function_code, "<python_code>")
+       
 
         return text, function_code, thought_process
     
@@ -175,30 +163,138 @@ class CodeGenerationLLM(LLM):
 
     def whether_speak(self, chat_channel):
         """
-        It's not clear whether we always need to write code
+        1) if there is a error from last iteration, don't speak
         """
-        return True
 
-    def speak(self, chat_channel):
+        error = chat_channel.get_last_message().get("error", None)
+        if error is not None:
+            return False
+        else:
+            return True      
+
+    def speak(self, sandbox):
         """
         Speak to the chat channel
-        """
-        user_input = chat_channel.user_query[-1]
-        self.update_system_prompt()
-        self.update_history("user", user_input)
+        """         
+        query = sandbox.get_user_query()
+        self.update_system_prompt(sandbox)
+        self.update_history("user", query)
+
         response = self.connect_gpt(self.context_window, max_tokens=700)
-        text, function_codes, thought_process = self.parse_openai_response(response)
-        chat_channel['code_history'].append(function_codes)
-        chat_channel['chain_of_thought'].append(thought_process)               
+        text = response.choices[0].message.content.strip()            
 
-    def get_system_prompt(self, interface_str, behavior_module_str):
+        # we need to consider better ways to parse functions
+        # and save them in a more structured way
+        pattern = r"```python(.*?)```"
+        function_code = re.findall(pattern, text, re.DOTALL)[0]
+
+        # create a placeholder   
+        thought_process = text.replace(function_code, "<python_code>")
+
+        sandbox.chat_channel.code_history.append(function_code)
+        sandbox.chat_channel.chain_of_thought.append(thought_process)               
+       
+        return thought_process
+
+
+    def update_system_prompt(self, sandbox):
         from amadeusgpt.system_prompts.code_generator import _get_system_prompt
-        return _get_system_prompt(interface_str, behavior_module_str)
 
-    def update_system_prompt(self, interface_str, behavior_modules_str):
-        self.system_prompt = self.get_system_prompt(interface_str, behavior_modules_str)
+        core_api_docs = sandbox.get_core_api_docs()
+        helper_functions = sandbox.get_helper_functions()
+        task_program_docs = sandbox.get_task_program_docs()
+        variables = sandbox.get_variables()
+
+        self.system_prompt = _get_system_prompt(core_api_docs, 
+                                                             helper_functions, 
+                                                             task_program_docs, 
+                                                          variables)
+        
+
         # update both history and context window
         self.update_history("system", self.system_prompt)
+
+
+class MutationLLM(LLM):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def whether_speak(self, chat_channel):
+        """
+        1) if there is a error from last iteration, don't speak
+        """
+
+        error = chat_channel.get_last_message().get("error", None)
+        if error is not None:
+            return False
+        else:
+            return True     
+
+    def update_system_prompt(self, sandbox):
+        from amadeusgpt.system_prompts.mutation import _get_system_prompt
+        core_api_docs = sandbox.get_core_api_docs()
+
+        task_program_docs = sandbox.get_task_program_docs()
+        task_program_to_be_mutated = sandbox.get_mutation_task_program()
+
+        self.system_prompt = _get_system_prompt(core_api_docs, task_program_docs, task_program_to_be_mutated)
+        # update both history and context window        
+
+        self.update_history("system", self.system_prompt)
+
+    def speak(self, sandbox):
+        #TODO maybe we don't need to keep the history
+        """
+        Speak to the chat channel
+        """ 
+        query = "Now write the function for the new behavior. Make sure your code is within```{Code here}``\n"
+        self.update_system_prompt(sandbox)
+        self.update_history("user", query)
+
+        response = self.connect_gpt(self.context_window, max_tokens=2000)                
+        text = response.choices[0].message.content.strip() 
+        sandbox.chat_channel.chain_of_thought.append(response)
+
+        return text
+
+class BreedLLM(LLM):
+    def __init__(self, config):
+        super().__init__(config)
+    def whether_speak(self, chat_channel):
+        """
+        1) if there is a error from last iteration, don't speak
+        """
+
+        error = chat_channel.get_last_message().get("error", None)
+        if error is not None:
+            return False
+        else:
+            return True 
+    def update_system_prompt(self, sandbox):
+        from amadeusgpt.system_prompts.breed import _get_system_prompt
+
+        behavior1_docs, behavior2_docs, composition_type = sandbox.get_breed_info()        
+
+        self.system_prompt = _get_system_prompt(behavior1_docs, behavior2_docs, composition_type)
+
+        # update both history and context window        
+       
+        self.update_history("system", self.system_prompt)  
+    def speak(self, sandbox):
+        #TODO maybe we don't need to keep the history
+        """
+        Speak to the chat channel
+        """ 
+        query = "Now write the template function. Make sure your answer is concise and don't mention anything about filtering such as smooth_window or min_window\n"
+        self.update_system_prompt(sandbox)
+        self.update_history("user", query)
+
+        response = self.connect_gpt(self.context_window, max_tokens=200)                
+        text = response.choices[0].message.content.strip() 
+        sandbox.chat_channel.chain_of_thought.append(response)
+
+        return text              
+    
 
 class DiagnosisLLM(LLM):
     """
@@ -210,6 +306,12 @@ class DiagnosisLLM(LLM):
         Handcrafted rules to decide whether to speak
         1) If there is a error in the current chat channel        
         """
+        if chat_channel.get_last_message() is None:
+            return False
+        else:
+            error = chat_channel.get_last_message().get("error", None)
+
+            return error is None
 
     @classmethod
     def get_system_prompt(
@@ -241,107 +343,20 @@ class DiagnosisLLM(LLM):
         return response.choices[0]["message"]["content"]    
     
 
-class ExplainerLLM(LLM):
-    
-    def get_system_prompt(
-        self, user_input, thought_process, answer
-    ):
-        from amadeusgpt.system_prompts.explainer import _get_system_prompt
-        return _get_system_prompt(
-            user_input, thought_process, answer
-        )
-    def generate_explanation(
-            self,
-            user_input,
-            thought_process,
-            answer,
-            plots
-    ):
-        """
-        Explain to users how the solution came up
-        """
 
-        captions = ''
-        if isinstance(plots, list):
-            for plot in plots:
-                if plot.plot_caption !='':
-                    captions+=plot.plot_caption
-            if captions!='':
-                answer+=captions
-                
-        messages = [
-            {
-                "role": "system",
-                "content": self.get_system_prompt(
-                    user_input,
-                    thought_process,
-                    answer,
-                ),
-            }
-        ]
-        response = self.connect_gpt(messages, max_tokens=500)["choices"][0]["message"][
-            "content"
-        ]
-        return response
-
-
-class RephraserLLM(LLM):
-    def __init__(self, config):
-        super().__init__(config)
-        self.correction_k = 1
-
-    def get_system_prompt(self):
-        from amadeusgpt.system_prompts.rephraser import _get_system_prompt
-        return _get_system_prompt()
-
-    @classmethod
-    def generate_iid(self, user_input):
-        """
-        Try to ask the question like asked in API docs
-        """
-        messages = [
-            {"role": "system", "content": self.get_system_prompt()},
-            {"role": "user", "content": f"{user_input}"},
-        ]
-        # use gpt 3.5 for rephraser to avoid using gpt-4 too fast to run into rate limit
-        ret = self.connect_gpt(messages, max_tokens=200, gpt_model="gpt-3.5-turbo")
-        if ret is None:
-            return None
-        response = ret["choices"][0]["message"]["content"].strip()
-        return response
-
-    def generate_equivalent(self, user_input, k=5):
-        """
-        Generate equivalent messages based on base questions
-        """
-
-        messages = [
-            {
-                "role": "system",
-                "content": f"Generate equivalent sentences with proper English using {k} different expression. \
-                                                    Every generated sentence starts with <start> and end with </end>",
-            },
-            {"role": "user", "content": f"{user_input}"},
-        ]
-
-        AmadeusLogger.info("user input:")
-        AmadeusLogger.info(user_input)
-        response = self.connect_gpt(messages)["choices"][0]["message"]["content"]
-        AmadeusLogger.info("response:")
-        AmadeusLogger.info(response)
-        pattern = r"<start>\s*(.*?)\s*<\/end>"
-        # parse the equivalent sentences
-        matches = re.findall(pattern, response)
-        sentences = [match.strip() for match in matches]
-
-        return sentences
-    
 class SelfDebugLLM(LLM):
 
     def get_system_prompt(self):
         from amadeusgpt.system_prompts.self_debug import _get_system_prompt
         return _get_system_prompt()
 
+    def whetehr_speak(self, chat_channel):
+        if chat_channel.get_last_message() is None:
+            return False
+        else:
+            error = chat_channel.get_last_message().get("error", None)
+
+            return error is None
 
     def debug_and_retry(self, 
                         user_query = "",
@@ -368,3 +383,4 @@ class SelfDebugLLM(LLM):
         response = self.connect_gpt(messages, max_tokens=500)
         text, function_codes, thought_process = self.parse_openai_response(response)
         return text, function_codes, thought_process
+

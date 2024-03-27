@@ -1,5 +1,5 @@
 
-from typing import List, Dict, Any
+from typing import Callable, List, Dict, Any
 import os
 from amadeusgpt.analysis_objects import BaseEvent
 from typing import List, Any
@@ -51,7 +51,6 @@ class TaskProgram:
     
     """    
     def __init__(self, json_obj: dict,
-                 config: dict,
                  id: int,
                  creator: str = 'human'
                  ):
@@ -65,11 +64,22 @@ class TaskProgram:
         # should somehow cache the result
         self.result_buffer = ''  
         self.creator = creator
-        self.validate_function_body()
+        if self.json_obj['source_code'] is not None:
+            self.validate_function_body()
         # there are only two creators for the task program
-        assert creator in ['human', 'llm_agent']
+        assert creator in ['human', 'llm']
     
-
+    def __getitem__(self, key):
+        '''
+        {
+            'name': ''
+            'inputs': '',
+            'source_code': ''
+            'docstring': ''
+            'return': ''
+        }
+        '''
+        return self.json_obj[key]
 
     def display(self):
         json_obj = copy.deepcopy(self.json_obj)
@@ -81,7 +91,7 @@ class TaskProgram:
     def validate_function_body(self):
         function_body = self.json_obj['source_code']
         try:
-            # Parse the function body
+            # Parse the function body            
             tree = ast.parse(function_body)
 
             # Check if the body consists of a single function definition
@@ -110,32 +120,24 @@ class TaskProgram:
     def validate(self):
         pass
 
-    def __call__(self, *args, **kwargs) -> Any:
-        """
-        This is to execute the task program
-        """
-        # execute the code in a scope that has access to the AnimalBehaviorAnalysis class
-                
-        from amadeusgpt.implementation import AnimalBehaviorAnalysis
-        from amadeusgpt.config import Config
+    def __call__(self, config, namespace) -> Any:
 
-        exec_namespace = {'__builtins__': __builtins__}
-        exec_namespace.update(required_types)
-        exec_namespace.update(required_classes)
-        exec(self.json_obj['source_code'], exec_namespace)
-                
-        arguments = [repr(arg) for arg in args] + [f"{k}={repr(v)}" for k, v in kwargs.items()]
-        arguments_str = ", ".join(arguments)
+        if self.json_obj['source_code'] is not None:
+            exec(self.json_obj['source_code'], namespace)
+            function_name = self.json_obj['name']
+            function = namespace[function_name]
+        else:
+            assert self.json_obj['func_pointer'] is not None
+            function = self.json_obj['func_pointer']
+            function_name = self.json_obj['name']
+            namespace[function_name] = function
 
-        # Construct the call string safely
-        call_str = f"{self.json_obj['name']}({arguments_str})"
-        try:
-            exec(f"result = {call_str}", exec_namespace)
-        except Exception as e:
-            error_message = traceback.format_exc()
-            print(error_message)  # Or log/store the error message as needed
-        result = exec_namespace['result']
-        self.result_buffer = result       
+        function_name = self.json_obj['name']       
+        call_str = f"{function_name}(config)"
+        print (call_str)
+        exec(f"result = {call_str}", namespace)
+        result = namespace['result']
+
         return result        
 
 
@@ -151,15 +153,24 @@ class TaskProgramLibrary:
     LIBRARY = {}    
 
     @classmethod
-    def register_task_program(cls, config, creator='human'):
+    def register_task_program(cls, creator='human'):
         def decorator(func):
-            json_obj = func2json(func)
-            id = len(cls.LIBRARY)
-            task_program = TaskProgram(json_obj, 
-                                        config,
-                                         id,  creator=creator)
-            cls.LIBRARY[func.__name__] = task_program
-            return func  # It's common to return the original function unmodified
+            if isinstance(func, Callable) and not isinstance(func, TaskProgram):
+                json_obj = func2json(func)
+                id = len(cls.LIBRARY)
+                task_program = TaskProgram(json_obj, 
+                                            id,  creator=creator)
+                
+                cls.LIBRARY[json_obj['name']] = task_program
+                return func  # It's common to return the original function unmodified
+           
+            elif isinstance(func, dict):
+               
+                data_json = func 
+                task_program = TaskProgram(data_json, 
+                                            len(cls.LIBRARY),  creator=creator)
+                cls.LIBRARY[data_json['name']] = task_program
+                return task_program
         return decorator
               
     @classmethod
@@ -168,34 +179,8 @@ class TaskProgramLibrary:
         Get the task programs
         """
         return cls.LIBRARY
-
-    # def save_task_programs(self):
-    #     """
-    #     Save the task programs to the disk
-    #     """
-    #     ret = []
-    #     for task_program in self.task_programs:
-    #         ret.append(task_program.json_obj)
-    #     save_path = self.config['task_programs']['save_path']
-    #     with open(save_path, 'w') as f:
-    #         f.write(ret)
-        
-
-    # def save_human_task_programs(self):
-    #     """
-    #     Save to to dict, according to the config file
-    #     """
-    #     pass
-
-    # def save_llm_task_programs(self): 
-    #     """
-        
-    #     """
-    #     pass
-
-    # def load_human_task_programs(self):
-    #     pass
-
-    # def load_llm_task_programs(self):
-    #     pass       
-        
+    @classmethod
+    def show_all(cls):
+        for name, task_program in cls.LIBRARY.items():
+            print(task_program['name'])
+            print(task_program['docstring'])

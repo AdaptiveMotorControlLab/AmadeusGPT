@@ -75,10 +75,10 @@ class RelationshipManager(Manager):
                 if sender_animal.get_name() != receiver_animal.get_name():
                     if sender_animal_bodyparts_names is not None:
                         # the keypoints of animal get updated when we update the roi bodypart names
-                        sender_animal.update_roi_keypoint_names(sender_animal_bodyparts_names)
+                        sender_animal.update_roi_keypoint_by_names(sender_animal_bodyparts_names)
                     if receiver_animal_bodyparts_names is not None:
                         # the keypoints of animal get updated when we update the roi bodypart names
-                        receiver_animal.update_roi_keypoint_names(receiver_animal_bodyparts_names)
+                        receiver_animal.update_roi_keypoint_by_names(receiver_animal_bodyparts_names)
 
                     animal_animal_relationship = AnimalAnimalRelationship(sender_animal,
                                         receiver_animal, 
