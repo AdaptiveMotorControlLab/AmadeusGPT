@@ -1,5 +1,6 @@
 from amadeusgpt import task_program_registry
 from amadeusgpt.analysis_factory import create_analysis
+from amadeusgpt.system_prompts import mutation
 from amadeusgpt.task_program_registry import TaskProgram, TaskProgramLibrary
 from functools import wraps
 import inspect
@@ -267,16 +268,29 @@ class Sandbox(SandboxBase):
         result = self.exec_namespace['result']
 
     
-    def register_task_program(self, code):        
+    def register_task_program(self,
+                            code, 
+                            parents = None, 
+                            mutation_from = None):
         self.update_namespace()
-        # this is important for the later func2json to work
+
         if isinstance(code, str):
             exec(code,  globals())
-            TaskProgramLibrary.register_task_program(creator="llm")(code)
+            TaskProgramLibrary.register_task_program(creator="llm", 
+                                                     parents = parents,
+                                                     mutation_from = mutation_from)(code)
+
         elif isinstance(code, TaskProgram):
-            TaskProgramLibrary.register_task_program(creator="llm")(code)
+            TaskProgramLibrary.register_task_program(creator="llm", 
+                                                     parents = parents,
+                                                     mutation_from = mutation_from)(code)
+
         elif isinstance(code, dict):
-            TaskProgramLibrary.register_task_program(creator="llm")(code)
+            TaskProgramLibrary.register_task_program(creator="llm", 
+                                                     parents = parents,
+                                                     mutation_from = mutation_from)(code)
+
+
 
     def step(self, user_query):    
         self.chat_channel.add_user_query(user_query)

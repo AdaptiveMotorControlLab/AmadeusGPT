@@ -1,4 +1,5 @@
 
+from amadeusgpt.system_prompts import mutation
 from amadeusgpt.task_program_registry import TaskProgram, TaskProgramLibrary
 from amadeusgpt.sandbox import EvoSandbox
 from amadeusgpt.api_registry import CORE_API_REGISTRY
@@ -9,6 +10,10 @@ import ast
 from itertools import combinations
 import functools
 from functools import partial
+import time
+import os
+random.seed(time.time() * os.getpid())
+
 def preset_args(**preset_kwargs):
     def decorator(func):
         @functools.wraps(func)
@@ -86,7 +91,6 @@ class BaseEvolution:
 class EasyEvolution(BaseEvolution):
     def __init__(self, config):
         super().__init__(config)
-
         self.mutation_llm = MutationLLM(config)
         self.code_generation_llm = CodeGenerationLLM(config)
         self.breed_llm = BreedLLM(config)
@@ -110,8 +114,10 @@ class EasyEvolution(BaseEvolution):
         function_code = re.findall(pattern, mutation_response, re.DOTALL)[0]
         print ('mutated function')
         print (function_code)
-        # create a placeholder               
-        self.sandbox.register_task_program(function_code)
+        parent_generation = TaskProgramLibrary[self.sandbox.program_to_mutate]['generation']
+        self.sandbox.register_task_program(function_code,
+                                           mutation_from = self.sandbox.program_to_mutate,
+                                           generation = parent_generation+1)
     
     def get_breed_function(self):
         breed_program.__globals__.update(self.sandbox.exec_namespace)
@@ -120,7 +126,7 @@ class EasyEvolution(BaseEvolution):
 
     def breed(self, participans):
         pairs = list(combinations(participans, 2))
-        composition_types = ['logical_and', 'logical_or', 'sequential']
+        composition_types = ['logical_and', 'sequential']
         for pair in pairs:
             for composition_type in composition_types:
                 name1, name2  = pair[0], pair[1]
@@ -148,7 +154,9 @@ class EasyEvolution(BaseEvolution):
                     'docstring': docstring,
                     'func_pointer': partial(breed_func)
                 }
-                self.sandbox.register_task_program(json_obj)                            
+
+                self.sandbox.register_task_program(json_obj,
+                                                   parents=[name1, name2])
 
        
     def select_for_mutation(self):
@@ -168,16 +176,14 @@ class EasyEvolution(BaseEvolution):
     def train(self):
         self.evaluate() 
         for i in range(2):
-            # print (f'training iteration {i}')
-            # mutate_candidate = self.select_for_mutation()
-            # print (f'selecting {mutate_candidate} {self.scores[mutate_candidate]} for mutation')
-            # self.sandbox.update_program_to_mutate(mutate_candidate)
-            # self.mutate()
-            
+            print (f'training iteration {i}')
+            mutate_candidate = self.select_for_mutation()
+            print (f'selecting {mutate_candidate} {self.scores[mutate_candidate]} for mutation')
+            self.sandbox.update_program_to_mutate(mutate_candidate)
+            self.mutate()            
             breed_participants = self.select_for_breed()
             print (f'selecting {breed_participants} for breeding')
             self.breed(breed_participants)
-
             self.evaluate()                        
 
     def evaluate(self):
@@ -186,11 +192,12 @@ class EasyEvolution(BaseEvolution):
         for name, task_program in self.task_program_library.items():           
             if name not in self.scores:
                 # call the function
-                print (name)
                 events = task_program(self.config, self.sandbox.exec_namespace)
-                if len(events) > 0:
-                    self.scores[name] = len(events)
+                if self.events_duration(events) > 1:
+                    task_program['duration'] = round(self.events_duration(events), 2)
+                    self.scores[name] = round(self.events_duration(events), 2)
                     self.cache[name] = events
+                    print (task_program.json_obj)
 
             print ('scores', self.scores)
 if __name__ == "__main__":
@@ -200,4 +207,5 @@ if __name__ == "__main__":
     register_common_task_programs()
     evo = EasyEvolution(config)
     evo.train()
+    TaskProgramLibrary.save('task_program_checkpoint.json')
     

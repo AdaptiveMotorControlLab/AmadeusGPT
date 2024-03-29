@@ -18,6 +18,7 @@ Following are information you have.
 You need to justify why that is nontrivial change and why it's realistic using the coreapidocs.
 Following are rules you should also follow:
 1) Don't apply filter such as min_window or smooth_window
+2) You can reuse the existing task programs when creating a new behavior
 
 """
     return system_prompt
