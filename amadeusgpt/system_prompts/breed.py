@@ -23,7 +23,7 @@ def name_of_behavior(config):
     <template>
 
 
-Make sure the style of the description should be similar to ones given. The name of the behavor, if multiple words, should be connected by underscores.
+Make sure the style of the description should be similar to ones given. The name of the behavor, if multiple words, should be connected by underscore. But if the names gets too long, should be shortened and reflecting the semantic meaning.
 
 
 

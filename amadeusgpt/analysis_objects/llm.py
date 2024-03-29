@@ -9,6 +9,9 @@ from amadeusgpt.utils import search_generated_func
 import re
 
 class LLM(AnalysisObject):
+    prompt_tokens = 0
+    completion_tokens = 0
+    total_tokens = 0
     def __init__(self, config):
         self.config = config
         self.max_tokens = config.get('max_tokens', 2000)
@@ -16,11 +19,7 @@ class LLM(AnalysisObject):
         #self.gpt_model = config.get('gpt_model', "gpt-3.5-turbo-0125")
         self.gpt_model = config.get('gpt_model', "gpt-4-turbo-preview")
         self.context_window = []
-        self.history = []
-        self.usage = 0
-        self.short_term_memory = []
-        self.long_term_memory = {}
-        self.accumulated_tokens = 0       
+        self.history = []     
 
     def whetehr_speak(self):
         """
@@ -81,18 +80,18 @@ class LLM(AnalysisObject):
 
                 response = client.chat.completions.create(**json_data)
 
-                self.prompt_tokens = response.usage.prompt_tokens
-                self.completion_tokens = response.usage.completion_tokens
-                self.total_tokens = response.usage.total_tokens
+                self.prompt_tokens += response.usage.prompt_tokens
+                self.completion_tokens += response.usage.completion_tokens
+                self.total_tokens += self.prompt_tokens + self.completion_tokens
+                print ('current total tokens', self.total_tokens)
+                #TODO we need to calculate the actual dollar cost
                 break
             
 
             except Exception as e:
                 
                 error_message = traceback.format_exc()
-                print ("error", error_message)
-                if self.usage is None:
-                    print("OpenAI server not responding")
+                print ("error", error_message)               
 
                 if "This model's maximum context" in error_message:
                     if len(self.context_window) > 2:
@@ -107,7 +106,7 @@ class LLM(AnalysisObject):
         
         return response
     
-    def update_history(self, role, content):
+    def update_history(self, role, content, replace=False):
         if role == "system":
             if len(self.history) > 0:
                 self.history[0]["content"] = content
@@ -116,9 +115,17 @@ class LLM(AnalysisObject):
                 self.history.append({"role": role, "content": content})
                 self.context_window.append({"role": role, "content": content})
         else:
-            self.history.append({"role": role, "content": content})
+            if replace == True:
+                if len(self.history) == 2:
+                    self.history[1]["content"] = content
+                    self.context_window[1]["content"] = content
+                else:
+                    self.history.append({"role": role, "content": content})
+                    self.context_window.append({"role": role, "content": content}) 
 
-            self.context_window.append({"role": role, "content": content})       
+            else:
+                self.history.append({"role": role, "content": content})
+                self.context_window.append({"role": role, "content": content})       
 
     def clean_context_window(self):
         while len(self.context_window) > 1:
@@ -239,7 +246,6 @@ class MutationLLM(LLM):
 
         self.system_prompt = _get_system_prompt(core_api_docs, task_program_docs, task_program_to_be_mutated)
         # update both history and context window        
-
         self.update_history("system", self.system_prompt)
 
     def speak(self, sandbox):
@@ -249,7 +255,7 @@ class MutationLLM(LLM):
         """ 
         query = "Now write the function for the new behavior. Make sure your code is within```{Code here}``\n"
         self.update_system_prompt(sandbox)
-        self.update_history("user", query)
+        self.update_history("user", query, replace = True)
 
         response = self.connect_gpt(self.context_window, max_tokens=2000)                
         text = response.choices[0].message.content.strip() 
@@ -287,9 +293,9 @@ class BreedLLM(LLM):
         """ 
         query = "Now write the template function. Make sure your answer is concise and don't mention anything about filtering such as smooth_window or min_window\n"
         self.update_system_prompt(sandbox)
-        self.update_history("user", query)
+        self.update_history("user", query, replace  = True)
 
-        response = self.connect_gpt(self.context_window, max_tokens=200)                
+        response = self.connect_gpt(self.context_window, max_tokens=400)                
         text = response.choices[0].message.content.strip() 
         sandbox.chat_channel.chain_of_thought.append(response)
 
