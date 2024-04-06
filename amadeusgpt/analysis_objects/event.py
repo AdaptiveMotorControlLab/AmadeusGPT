@@ -433,22 +433,20 @@ class EventGraph:
         # retrieve all events that satisfy the conditions (k=v)    
         events = graph.traverse_by_kvs(merge_kvs)
         if not allow_more_than_2_overlap:
-            assert Event.check_max_in_sum(events) <= 2
-                           
+            assert Event.check_max_in_sum(events) <= number_of_overlap_for_fusion, f"Detected overlap {Event.check_max_in_sum(events)}. But we only allow {number_of_overlap_for_fusion} overlap for fusion."
+        print ('max in sum', Event.check_max_in_sum(events))
         new_graph = cls() 
         if len(events) == 0:
             return new_graph
         masks = [event.generate_mask() for event in events]         
         _sum = np.sum(masks, axis = 0)          
 
-        
         mask = np.zeros_like(_sum, dtype=bool)
-        # the fusion only happens at where at least two events overlap
         # in case there are many events overlap, 
         # if the events come from one single task program, there is no overlap
         # so the overlap must come from different task programs
 
-        mask[(_sum >= number_of_overlap_for_fusion) & (_sum > 1)] = True
+        mask[(_sum >= number_of_overlap_for_fusion)] = True
         events = Event.mask2events(mask,
                                         events[0].video_file_path,
                                         events[0].sender_animal_name,
@@ -458,7 +456,6 @@ class EventGraph:
         for event in events:
             new_graph.insert_node(Node(event.start, [event]))       
 
-        assert Event.check_max_in_sum(events) == 1
 
 
         return new_graph
@@ -520,9 +517,9 @@ class EventGraph:
                     continue
                 else:
                     # this is strict continuous
-                    if event1.end >= event2.start and event1.end <= event2.end:
+                    #if event1.end >= event2.start and event1.end <= event2.end:
                     # this is not strict continuous
-                    #if event1.end <= event2.start:
+                    if event1.end <= event2.start:
                         new_event = Event.concat_two_events(event1, event2)
                         graph.insert_node(Node(new_event.start, [new_event]))
                         break                

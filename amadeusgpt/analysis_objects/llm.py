@@ -75,7 +75,7 @@ class LLM(AnalysisObject):
                     "max_tokens": self.max_tokens,
                     "stop": None,
                     "top_p": 1,
-                    "temperature": 0.1,
+                    "temperature": 0.0,
                 } 
 
                 response = client.chat.completions.create(**json_data)

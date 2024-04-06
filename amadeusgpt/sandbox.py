@@ -1,11 +1,13 @@
-from amadeusgpt import task_program_registry
-from amadeusgpt.analysis_factory import create_analysis
+from amadeusgpt.programs import task_program_registry
+from amadeusgpt.analysis_objects.analysis_factory import create_analysis
 from amadeusgpt.system_prompts import mutation
-from amadeusgpt.task_program_registry import TaskProgram, TaskProgramLibrary
+from amadeusgpt.programs.task_program_registry import TaskProgram, TaskProgramLibrary
+from amadeusgpt.analysis_objects.event import BaseEvent
 from functools import wraps
 import inspect
 import re
-
+import os
+import typing 
 
 
 class ChatChannel:
@@ -241,9 +243,13 @@ class Sandbox(SandboxBase):
     def visual_validate(self, video_file, events, behavior_name):
         # change video and keypoint file
         analysis = create_analysis(self.config)
-        analysis.visual_manager.generate_video_clips_from_events(video_file,
-                                                                events,
-                                                                behavior_name)
+        out_folder = os.path.join(self.config['evo_info']['data_folder'], 'inspection')
+        os.makedirs(out_folder, exist_ok=True)
+        analysis.visual_manager.generate_video_clips_from_events(
+            out_folder,
+            video_file,
+            events,
+            behavior_name)
 
     def update_namespace(self):
         # we need to manage the scope of the session
@@ -268,7 +274,9 @@ class Sandbox(SandboxBase):
         from amadeusgpt.implementation import AnimalBehaviorAnalysis
         self.exec_namespace['AnimalBehaviorAnalysis'] = AnimalBehaviorAnalysis
         from amadeusgpt.analysis_objects.relationship import Orientation
-        self.exec_namespace['Orientation'] = Orientation        
+        self.exec_namespace['Orientation'] = Orientation   
+        self.exec_namespace['List'] = typing.List
+        self.exec_namespace['BaseEvent'] = BaseEvent
 
     def code_execution(self):
         code = self.chat_channel.get_last_message()['code_history']
@@ -307,8 +315,6 @@ class Sandbox(SandboxBase):
         self.update_namespace()
 
         if isinstance(code, str):
-            exec(code,  globals())
-
             TaskProgramLibrary.register_task_program(creator="llm", 
                                                      parents = parents,
                                                      mutation_from = mutation_from)(code)
@@ -358,13 +364,11 @@ class EvoSandbox(Sandbox):
         ret = "```taskprograms\n"
         for name, task_program in self.task_program_library.items():            
             description = task_program.json_obj['docstring']
-            if name in self.scores:
-                ret +=f"{name}(config): \n{description}\n the fitness score is {self.scores.get(name, 0)}\n"
-            else:
-                ret +=f"{name}(config): \n{description}\n"
+            ret +=f"{name}(config):\n- description:{description}\n- fitness score:{self.scores.get(name, 0)}\n"         
 
         ret += "\n```"
-
+        print ('task program block')
+        print (ret)
         return ret
     
     def get_mutation_task_program(self):

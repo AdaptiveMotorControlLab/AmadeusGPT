@@ -1,14 +1,6 @@
-from asyncio import Task
-import copy
-import glob
-import inspect
-import os
-import pickle
-import re
-import subprocess
 import warnings
 import json
-from amadeusgpt import task_program_registry
+from amadeusgpt.programs import task_program_registry
 from amadeusgpt.config import Config
 from amadeusgpt.sandbox import Sandbox
 import openai
@@ -57,7 +49,7 @@ class AMADEUS:
         self.behavior_modules_str = ""
         ####
         from amadeusgpt.sandbox import Sandbox
-        from amadeusgpt.task_program_registry import TaskProgramLibrary
+        from amadeusgpt.programs.task_program_registry import TaskProgramLibrary
         from amadeusgpt.api_registry import CORE_API_REGISTRY
         task_programs = TaskProgramLibrary().get_task_programs()
                 
@@ -80,7 +72,7 @@ class AMADEUS:
    
 
 if __name__ == "__main__":
-    from amadeusgpt.task_program_registry import TaskProgramLibrary
+    from amadeusgpt.programs.task_program_registry import TaskProgramLibrary
     from amadeusgpt.api_registry import CORE_API_REGISTRY
     from amadeusgpt.implementation import AnimalBehaviorAnalysis
 

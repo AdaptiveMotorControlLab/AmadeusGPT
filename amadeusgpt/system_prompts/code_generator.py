@@ -46,9 +46,8 @@ captures behavior of animals that have relative speed less than -2
 def main(config):
     speed_events = get_relative_speed_less_than_neg_2_events(config)
     relative_head_angle_events = get_animals_animals_events(['relative_head_angle'], ['<=30'])
-    approach_events = get_composite_events([close_events,
+    approach_events = get_composite_events(close_events,
                                             speed_events,
-                                            orientation_events],
                                             composition_type="logical_and")
     return approach_events
 ```

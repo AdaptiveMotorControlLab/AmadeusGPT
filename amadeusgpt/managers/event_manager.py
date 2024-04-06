@@ -58,9 +58,8 @@ class EventManager(Manager):
         self.config = config
         self.object_manager = object_manager
         self.animal_manager = animal_manager
-        self.relationship_manager = relationship_manager
-        self.video_file_path = self.config["video_info"]["video_file_path"]
-        self.pixels_per_cm = self.config["video_info"]["pixels_per_cm"]
+        self.relationship_manager = relationship_manager        
+        self.video_file_path = self.config.get("video_info", {}).get("video_file_path", "")
         self.animals_object_events = []
         self.animals_animals_events = []
         self.animals_state_events = []
@@ -83,7 +82,7 @@ class EventManager(Manager):
         This parameter represents the name of the object of interest. It is expected to be a string.
         The accepted naming conventions include numeric strings (e.g., '0', '1', '2', ...), or
         the prefix 'ROI' followed by a number (e.g., 'ROI0', 'ROI1', ...). 
-        relation_query: str. Must be one of ['to_left', 'to_right', 'to_below', 'to_above', 'overlap', 'distance', 'angle', 'orientation']
+        relation_query: str. Must be one of ['overlap', 'distance', 'angle', 'orientation']
         comparison : str, Must be a comparison operator followed by a number like <50, optional
         bodypart_names: List[str], optional
            bodyparts of the animal
@@ -230,11 +229,11 @@ class EventManager(Manager):
         mask = relationship.query_relationship(relation_query)
      
         # determine whether the mask is a numpy of float or numpy of boolean
-        if mask.dtype == float:
+       
+        if mask.dtype !=bool:
             relation_string = 'mask' + comparison
             mask =  eval(relation_string)  
-
-         
+            
         sender_animal_name = relationship.sender_animal_name
         receiver_animal_names = set([relationship.receiver_animal_name])
         if relationship.object_name is not None:
@@ -249,7 +248,7 @@ class EventManager(Manager):
                                     object_names,
                                     smooth_window_size = smooth_window_size)
 
-
+       
         return events
                                      
     #@cache_decorator
@@ -266,13 +265,16 @@ class EventManager(Manager):
     )-> List[BaseEvent]:
         """
         The function is for capturing behaviors that involve multiple animals. Don't fill the bodypart_names and otheranimal_bodypart_names unless you know the names of the bodyparts.
-        Don't pass head as bodypart when querying relative_head_direction
+        When multiple queries are passed, they are combined as logical_and.
+        length of cross_animal_query_list must be equal to length of cross_animal_comparison_list.
         Parameters
         ----------        
-        cross_animal_query_list: chosen from ['to_left', 'to_right', 'to_below', 'to_above', 'overlap', 'distance', 'relative_speed', 'orientation', 'closest_distance', 'relative_angle', 'relative_head_angle']
-        list of queries describing relative states among animals. 
+        cross_animal_query_list: 
+        list of queries describing relative states among animals. Must be chosen from ["overlap", "distance", "relative_speed", "orientation", "closest_distance", "relative_angle", "relative_head_angle"]
         cross_animal_comparison_list:
-	    This list consists of comparison operators such as booling comparison '==True', '==False' or numerical comparison '<10', '>5', . Every comparison operator uniquely corresponds to an item in relation_query_list.
+	    This list consists of comparison operators.
+        For to_left, to_right etc., the comparison is '==False' or '==True'. For kinematics such as distance, relative_speed, relative_angle, the comparison is a numerical comparison such as '<10', '>5'.
+        For orientation, the comparison is a string such as '==Orientation.FRONT' or '==Orientation.BACK'.
         bodypart_names:
         list of bodyparts for the this animal. By default, it is None, which means all bodyparts are included. Don't assume the name of the bodyparts.
         otheranimal_bodypart_names: list[str], optional
@@ -292,8 +294,11 @@ class EventManager(Manager):
         get_animals_animals_events(cross_animal_query_list = ['relative_speed', 'relative_speed'], cross_animal_comparison_list = ['>3', '<10'])
 
         """
+
+        assert len(cross_animal_query_list) == len(cross_animal_comparison_list), "cross_animal_query_list and cross_animal_comparison_list must have the same length"
+
         if min_window is None:
-            min_window = 0
+            min_window = 3
         if max_window is None:
             max_window = 1000000
        
@@ -309,24 +314,25 @@ class EventManager(Manager):
                                                                 query, 
                                                                 comparison,                                                              
                                                                 smooth_window_size)
-                all_events.extend(events)
+                all_events.extend(events)       
         graph = EventGraph.init_from_list(all_events)
-        graphs = []
-        for animal_name in self.animal_manager.get_animal_names():
-            for receiver_animal_name in self.animal_manager.get_animal_names():
-                if animal_name != receiver_animal_name:
-                    subgraph = EventGraph.fuse_subgraph_by_kvs(
-                        graph,
-                        {'sender_animal_name': animal_name,
-                        'receiver_animal_names': set([receiver_animal_name])},
-                        number_of_overlap_for_fusion=0 if len(cross_animal_query_list) == 1 else len(cross_animal_query_list)
-                    )
-                    graphs.append(subgraph)
+        
+        if len(cross_animal_query_list)>1:
+            graphs = []
+            for animal_name in self.animal_manager.get_animal_names():
+                for receiver_animal_name in self.animal_manager.get_animal_names():
+                    if animal_name != receiver_animal_name:
+                        subgraph = EventGraph.fuse_subgraph_by_kvs(
+                            graph,
+                            {'sender_animal_name': animal_name,
+                            'receiver_animal_names': set([receiver_animal_name])},
+                            number_of_overlap_for_fusion=len(cross_animal_query_list)
+                        )
+                        graphs.append(subgraph)
               
-        graph = EventGraph.merge_subgraphs(graphs)
+            graph = EventGraph.merge_subgraphs(graphs)
         
         ret_events = graph.to_list()
-
         ret_events = Event.filter_events_by_duration(ret_events, min_window, max_window)
         
 
@@ -339,8 +345,12 @@ class EventManager(Manager):
                             composition_type: Literal["sequential", "logical_and", "logical_or"] = "logical_and",                  
                              ) -> List[BaseEvent]:
         """
-        Parameters:
-        events_list: must be more than one list of events     
+        This function is for combining two sets of events.
+        The meaning of comosition_type:
+        'logical_and': two behaviors happen at the same time.
+        'logical_or': one of the behaviors happen
+        'sequential': the second behavior happens after the first behavior.
+
         Returns
         -------
         List[BaseEvent]                    
