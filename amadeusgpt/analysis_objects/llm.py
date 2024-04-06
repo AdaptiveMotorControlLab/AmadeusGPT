@@ -75,15 +75,15 @@ class LLM(AnalysisObject):
                     "max_tokens": self.max_tokens,
                     "stop": None,
                     "top_p": 1,
-                    "temperature": 0.0,
+                    "temperature": 0.1,
                 } 
 
                 response = client.chat.completions.create(**json_data)
 
-                self.prompt_tokens += response.usage.prompt_tokens
-                self.completion_tokens += response.usage.completion_tokens
-                self.total_tokens += self.prompt_tokens + self.completion_tokens
-                print ('current total tokens', self.total_tokens)
+                LLM.prompt_tokens += response.usage.prompt_tokens
+                LLM.completion_tokens += response.usage.completion_tokens
+                LLM.total_tokens = LLM.prompt_tokens + LLM.completion_tokens
+                print ('current total tokens', LLM.total_tokens)
                 #TODO we need to calculate the actual dollar cost
                 break
             
@@ -240,11 +240,10 @@ class MutationLLM(LLM):
     def update_system_prompt(self, sandbox):
         from amadeusgpt.system_prompts.mutation import _get_system_prompt
         core_api_docs = sandbox.get_core_api_docs()
-
         task_program_docs = sandbox.get_task_program_docs()
-        task_program_to_be_mutated = sandbox.get_mutation_task_program()
+        self.system_prompt = _get_system_prompt(core_api_docs, task_program_docs)
 
-        self.system_prompt = _get_system_prompt(core_api_docs, task_program_docs, task_program_to_be_mutated)
+
         # update both history and context window        
         self.update_history("system", self.system_prompt)
 
@@ -252,15 +251,15 @@ class MutationLLM(LLM):
         #TODO maybe we don't need to keep the history
         """
         Speak to the chat channel
-        """ 
+        """               
         query = "Now write the function for the new behavior. Make sure your code is within```{Code here}``\n"
         self.update_system_prompt(sandbox)
         self.update_history("user", query, replace = True)
-
+               
         response = self.connect_gpt(self.context_window, max_tokens=2000)                
+       
         text = response.choices[0].message.content.strip() 
-        sandbox.chat_channel.chain_of_thought.append(response)
-
+        sandbox.chat_channel.chain_of_thought.append(response)            
         return text
 
 class BreedLLM(LLM):

@@ -1,12 +1,10 @@
-from sympy import use
 from amadeusgpt.managers import (Manager, AnimalManager,
 ObjectManager,RelationshipManager, 
 EventManager, VisualManager, ModelManager, GUIManager)
 import random
 random.seed(78)
-
 from pydantic import BaseModel
-from typing import Dict, List, Any, Union
+from typing import Dict
 import ast
 from .api_registry import DEFAULT_REGISTRY, CORE_API_REGISTRY
 """
@@ -30,7 +28,7 @@ class AnimalBehaviorAnalysis:
     """
     
     def __init__(self, config, use_cache = False):
-
+      
         self.model_manager = ModelManager(config)
         # animal manager needs keypoint_file_path and model_manager for pose
         self.animal_manager = AnimalManager(config, self.model_manager)
@@ -119,6 +117,6 @@ if __name__ == "__main__":
         "object_info": object_config,
         "video_info": video_config,
         "sam_info": sam_config,
-        "dlc_info": dlc_config,
+        "keypoint_info": dlc_config,
         "task_program_info": task_program_config
     }

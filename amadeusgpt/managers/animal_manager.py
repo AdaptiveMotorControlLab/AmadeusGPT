@@ -6,7 +6,7 @@ from numpy import ndarray
 import pandas as pd
 from typing import List, Dict, Optional
 from amadeusgpt.api_registry import register_class_methods, register_core_api
-
+import json
 
 
 def get_orientation_vector(cls, b1_name, b2_name):
@@ -71,12 +71,12 @@ class AnimalManager(Manager):
         self.config = config
         self.model_manager = model_manager
         self.animals: List[AnimalSeq] = []
-        self.keypoint_file_path = config['dlc_info']['keypoint_file_path']
+        self.keypoint_file_path = config['keypoint_info']['keypoint_file_path']
         if self.keypoint_file_path.endswith('.h5'):
             all_keypoints = self._process_keypoint_file_from_h5()
-        else:
+        elif self.keypoint_file_path.endswith('.json'):
             # could be coco format
-            pass
+            all_keypoints = self._process_keypoint_file_from_json()
         for individual_id in range(self.n_individuals):
             animal_name = f'animal_{individual_id}'
             # by default, we initialize all animals with the same keypoints and all the keypoint names
@@ -84,19 +84,18 @@ class AnimalManager(Manager):
             animalseq = AnimalSeq(animal_name, 
                                 all_keypoints[:, individual_id],
                                 self.keypoint_names)
-            if 'body_orientation_keypoints' in config['dlc_info']:
-                animalseq.set_body_orientation_keypoints(config['dlc_info']['body_orientation_keypoints'])
-            if 'head_orientation_keypoints' in config['dlc_info']:
-                animalseq.set_head_orientation_keypoints(config['dlc_info']['head_orientation_keypoints'])
+            if 'body_orientation_keypoints' in config['keypoint_info']:
+                animalseq.set_body_orientation_keypoints(config['keypoint_info']['body_orientation_keypoints'])
+            if 'head_orientation_keypoints' in config['keypoint_info']:
+                animalseq.set_head_orientation_keypoints(config['keypoint_info']['head_orientation_keypoints'])
 
-            self.animals.append(animalseq)
-
-   
+            self.animals.append(animalseq)   
 
     def _process_keypoint_file_from_h5(self) -> ndarray:
         df = pd.read_hdf(self.keypoint_file_path)
         self.full_keypoint_names = list(df.columns.get_level_values("bodyparts").unique())
         self.keypoint_names = [k for k in self.full_keypoint_names]
+
         if len(df.columns.levels) > 3:
             self.n_individuals = len(df.columns.levels[1])
         else:
@@ -112,9 +111,26 @@ class AnimalManager(Manager):
         df_array = reject_outlier_keypoints(df_array)
         df_array = ast_fillna_2d(df_array)
         return df_array        
+    def _process_keypoint_file_from_json(self) -> ndarray:
+        # default as the mabe predicted keypoints from mmpose-superanimal-topviewmouse
+        # {'0': ['bbox':[], 'keypoints':[]}
+        with open(self.keypoint_file_path, 'r') as f:
+            data = json.load(f)
 
-       
-
+        self.n_individuals = 3
+        self.n_frames = len(data)
+        self.n_kpts = 27
+        self.keypoint_names = ['nose', 'left_ear', 'right_ear', 'left_ear_tip', 'right_ear_tip', 'left_eye', 'right_eye', 'neck', 'mid_back', 'mouse_center', 'mid_backend', 'mid_backend2', 'mid_backend3', 'tail_base', 'tail1', 'tail2', 'tail3', 'tail4', 'tail5', 'left_shoulder', 'left_midside', 'left_hip', 'right_shoulder',
+                                'right_midside', 'right_hip', 'tail_end', 'head_midpoint']
+        
+        keypoints = np.ones((self.n_frames, self.n_individuals, self.n_kpts, 2)) * np.nan
+        for frame_id, frame_data in data.items():
+            frame_id = int(frame_id)
+            for individual_id, individual_data in enumerate(frame_data):
+                if individual_id > self.n_individuals - 1:
+                    continue
+                keypoints[frame_id, individual_id] = np.array(individual_data['keypoints'])[...,:2]
+        return keypoints
     
     @register_core_api
     def get_data_length(self) -> int:
@@ -135,8 +151,10 @@ class AnimalManager(Manager):
         """
         return [animal.get_name() for animal in self.animals]
 
-    def get_animals_by_names(self, names:List[str])-> List[AnimalSeq]:
-        return [self.animals[name] for name in names]
+    def get_animal_by_name(self, name:str)-> AnimalSeq:
+        animal_names = self.get_animal_names()
+        index = animal_names.index(name)
+        return self.animals[index]
     
 
     @register_core_api

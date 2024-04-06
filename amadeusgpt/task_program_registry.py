@@ -125,7 +125,7 @@ class TaskProgram:
     def validate(self):
         pass
 
-    def __call__(self, config, namespace) -> Any:
+    def __call__(self, config, namespace) -> Any:        
         function_name = self.json_obj['name']
         if self.json_obj['source_code'] is not None:
             exec(self.json_obj['source_code'], namespace)
@@ -135,7 +135,6 @@ class TaskProgram:
             assert self.json_obj['func_pointer'] is not None
             function = self.json_obj['func_pointer']
             namespace[function_name] = function
-
         call_str = f"{function_name}(config)"
         exec(f"result = {call_str}", namespace)
         result = namespace['result']
@@ -169,8 +168,7 @@ class TaskProgramLibrary:
                                             id,  
                                             creator=creator,
                                             parents=parents,
-                                            mutation_from=mutation_from)
-                
+                                            mutation_from=mutation_from)              
                 cls.LIBRARY[json_obj['name']] = task_program
                 return func  # It's common to return the original function unmodified
            
@@ -184,6 +182,15 @@ class TaskProgramLibrary:
                 
                 cls.LIBRARY[data_json['name']] = task_program
                 return task_program
+            elif isinstance(func, str):
+                json_obj = func2json(func)
+                id = len(cls.LIBRARY)
+                task_program = TaskProgram(json_obj, 
+                                            id,  
+                                            creator=creator,
+                                            parents=parents,
+                                            mutation_from=mutation_from)
+                cls.LIBRARY[json_obj['name']] = task_program
         return decorator
               
     @classmethod

@@ -30,14 +30,14 @@ def get_chase_events(config):
 def get_oral_genital_contact_events(config):
     """
     This behavior called is "oral genital contact". This behavior describes animals' closest distance between 
-    one animal’s "nose" and other animal’s bodyparts "tail base" is less than 15.   
+    one animal’s "nose" and other animal’s bodyparts "tail_base" is less than 15.   
     """
 
     analysis = AnimalBehaviorAnalysis(config)
     get_oral_genital_contact_events = analysis.event_manager.get_animals_animals_events(['closest_distance'],
                                                                                          ['<15'],
                                                                                          bodypart_names=['nose'],
-                                                                                         otheranimal_bodypart_names=['tail base'])
+                                                                                         otheranimal_bodypart_names=['tail_base'])
     return get_oral_genital_contact_events
     
                                                                                         
@@ -113,14 +113,14 @@ def get_watching_events(config):
 def get_oral_ear_contact_events(config):
     """      
     This behavior is called "oral ear contact". This behavior describes animals' closest distance between
-    one animal’s "nose" and other animal’s bodyparts "left ear" and "right ear" is less than 10. The smooth window for the events is 5 and min window is 15.  
+    one animal’s "nose" and other animal’s bodyparts "left_ear" and "right_ear" is less than 10. The smooth window for the events is 5 and min window is 15.  
     """
 
     analysis = AnimalBehaviorAnalysis(config)
     get_oral_ear_contact_events = analysis.event_manager.get_animals_animals_events(['closest_distance', 'closest_distance'],
                                                                                          ['<10', '<10'],
                                                                                          bodypart_names=['nose'],
-                                                                                         otheranimal_bodypart_names=['left ear', 'right ear'],
+                                                                                         otheranimal_bodypart_names=['left_ear', 'right_ear'],
                                                                                         min_window = 15,
                                                                                         smooth_window_size= 5)
     return get_oral_ear_contact_events

@@ -13,6 +13,9 @@ class Config:
     def __repr__(self):
         return repr(self.data)
     
+    def __setitem__(self, key, value):
+        self.data[key] = value
+
     def get(self, key, default=None):
         return self.data.get(key, default)
 
@@ -57,6 +60,8 @@ class Config:
         """
         return self.data[key] 
     
+    def copy(self):
+        return Config(self.config_file_path, self.default_config)
 
     def __str__(self):
         """

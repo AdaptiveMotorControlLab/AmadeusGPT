@@ -217,6 +217,8 @@ class Sandbox(SandboxBase):
         self.update_namespace()
     
 
+
+
     def get_task_program_docs(self):
         ret = "```taskprograms\n"
         for name, task_program in self.task_program_library.items():
@@ -229,7 +231,20 @@ class Sandbox(SandboxBase):
     def get_user_query(self):
         return self.chat_channel.get_last_message()['user_query']
   
-    
+    def update_config(self, config):
+        self.config = config
+        self.update_namespace()
+
+    def copy(self):
+        return Sandbox(self.config, self.api_registry)
+
+    def visual_validate(self, video_file, events, behavior_name):
+        # change video and keypoint file
+        analysis = create_analysis(self.config)
+        analysis.visual_manager.generate_video_clips_from_events(video_file,
+                                                                events,
+                                                                behavior_name)
+
     def update_namespace(self):
         # we need to manage the scope of the session
         # there are potentially new variables, new task programs, new apis
@@ -268,6 +283,23 @@ class Sandbox(SandboxBase):
         result = self.exec_namespace['result']
 
     
+    def get_function_name_from_string(self, code):
+        import ast
+   
+        # Parse the string into an AST
+        parsed_ast = ast.parse(code)
+
+        # Initialize a variable to hold the function name
+        function_name = None
+
+        # Traverse the AST
+        for node in ast.walk(parsed_ast):
+            if isinstance(node, ast.FunctionDef):
+                function_name = node.name
+                break
+
+        return function_name
+
     def register_task_program(self,
                             code, 
                             parents = None, 
@@ -276,6 +308,7 @@ class Sandbox(SandboxBase):
 
         if isinstance(code, str):
             exec(code,  globals())
+
             TaskProgramLibrary.register_task_program(creator="llm", 
                                                      parents = parents,
                                                      mutation_from = mutation_from)(code)
@@ -308,6 +341,7 @@ class EvoSandbox(Sandbox):
         # name of the program
         self.program_to_mutate = None
         self.breed_info = None
+        self.scores = {}
   
     def update_program_to_mutate(self, program_name):
         self.program_to_mutate = program_name
@@ -324,8 +358,13 @@ class EvoSandbox(Sandbox):
         ret = "```taskprograms\n"
         for name, task_program in self.task_program_library.items():            
             description = task_program.json_obj['docstring']
-            ret +=f"{name}(config): \n{description}\n"
+            if name in self.scores:
+                ret +=f"{name}(config): \n{description}\n the fitness score is {self.scores.get(name, 0)}\n"
+            else:
+                ret +=f"{name}(config): \n{description}\n"
+
         ret += "\n```"
+
         return ret
     
     def get_mutation_task_program(self):
