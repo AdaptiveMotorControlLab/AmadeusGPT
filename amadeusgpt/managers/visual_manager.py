@@ -1,4 +1,6 @@
+from calendar import c
 from amadeusgpt.analysis_objects.visualization import BaseVisualization, GraphVisualization, KeypointVisualization, SceneVisualization, EventVisualization, GraphVisualization
+from amadeusgpt.managers.model_manager import ModelManager
 from .base import Manager
 from .animal_manager import AnimalManager
 from .object_manager import ObjectManager
@@ -10,7 +12,8 @@ from amadeusgpt.api_registry import register_class_methods, register_core_api
 from amadeusgpt.analysis_objects.event import BaseEvent
 from matplotlib.patches import Wedge
 import cv2
-
+import os
+import glob
 
 def mask2distance(locations):
     assert len(locations.shape) == 2
@@ -29,11 +32,58 @@ class VisualManager(Manager):
                  ):
         super().__init__(config)    
         self.config = config
-        self.video_file_path = config['video_info']['video_file_path']
+        self.video_file_path = config.get('video_info', {}).get('video_file_path', '')
         self.animal_manager = animal_manager
         self.object_manager = object_manager
 
-  
+    def sanity_check_files(self, 
+                           video_folder, 
+                           video_type, 
+                           keypoint_type):
+        """
+        Check whether the keypoints match the videos by plotting the keypoints on the video
+        """
+        os.makedirs(os.path.join(video_folder,
+                                 'sanity_check'), exist_ok=True)
+        
+        sanity_check_folder = os.path.join(video_folder, 'sanity_check')
+        video_files = sorted(glob.glob(f'{video_folder}/*{video_type}'))
+        keypoint_files = sorted(glob.glob(f'{video_folder}/*{keypoint_type}'))
+        print (video_folder)
+        print (video_files, keypoint_files)
+        # assert video file and keypoint file match
+        assert len(video_files) == len(keypoint_files)
+        print (video_files, keypoint_files)
+        for video_file, keypoint_file in zip(video_files, keypoint_files):
+            video_name = video_file.split('/')[-1].replace(video_type, '')
+            keypoint_name = keypoint_file.split('/')[-1].replace(keypoint_type, '')
+            assert video_name == keypoint_name
+                
+            # plot the keypoints on the video
+            temp_config = {'video_info': 
+                            {'video_file_path': video_file},
+                            'keypoint_info':
+                            {'keypoint_file_path': keypoint_file},
+                            'sam_info': {}}
+            animal_manager = AnimalManager(temp_config, ModelManager(temp_config))
+                                           
+            # generate videos with keypoints
+            keypoints = animal_manager.get_keypoints()
+            # keypoints are in the format of (n_frames, n_individuals, n_keypoints, 2)
+            for frame_number, keypoints_per_frame in enumerate(keypoints):
+                if frame_number > 5:
+                    break                
+                cap = cv2.VideoCapture(video_file)
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+                ret, frame = cap.read()
+                for keypoints in keypoints_per_frame:
+                    kp = np.nanmean(keypoints, axis=0)
+                    print ('kp', kp.shape)
+                    print (kp)
+                    cv2.circle(frame, (int(kp[0]), int(kp[1])), 3, (0, 0, 255), -1)
+                cv2.imwrite(os.path.join(sanity_check_folder, f'{video_name}_{frame_number}.png'), frame)        
+
+
     def get_scene_visualization(self,                                 
                                  scene_frame_number: int,
                                  axs: Optional[plt.Axes] = None,
@@ -269,7 +319,11 @@ class VisualManager(Manager):
         return super().get_serializeable_list_names()
     
 
-    def write_video(self, video_file_path, out_name, events):
+    def write_video(self,
+                    out_folder, 
+                    video_file_path, 
+                    out_name, 
+                    events):
         cap = cv2.VideoCapture(video_file_path)
             
         data = []
@@ -298,7 +352,7 @@ class VisualManager(Manager):
             return 
         
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Adjust the codec as needed
-        out = cv2.VideoWriter(f'{out_name}', fourcc, 30.0, (int(cap.get(3)), int(cap.get(4))))
+        out = cv2.VideoWriter(os.path.join(out_folder, f'{out_name}'), fourcc, 30.0, (int(cap.get(3)), int(cap.get(4))))
 
         for triple in data:
             time_slice = triple['time_slice']
@@ -346,9 +400,11 @@ class VisualManager(Manager):
         out.release()
         cv2.destroyAllWindows()        
 
-    def generate_video_clips_from_events(self, video_file, 
-                                         events: List[BaseEvent],
-                                           behavior_name):
+    def generate_video_clips_from_events(self,
+                                        out_folder,
+                                        video_file, 
+                                        events: List[BaseEvent],
+                                        behavior_name):
         """
         This function takes a list of events and generates video clips from the events
         1) For the same events, we first group events based on the video
@@ -359,8 +415,10 @@ class VisualManager(Manager):
         videoname = video_file.split('/')[-1].replace('.mp4', '').replace('.avi', '')            
         video_name = f'{videoname}_{behavior_name}_video.mp4' 
         
-        self.write_video(video_file,
-                        video_name,
-                        events)
+        self.write_video(
+            out_folder,
+            video_file,
+            video_name,
+            events)
 
     

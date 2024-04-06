@@ -31,8 +31,8 @@ def calc_orientation_in_egocentric_animal(animal_seq, p):
     orientation = np.zeros(theta.shape[0])
     np.place(orientation, np.logical_or(theta >= 330, theta <= 30), Orientation.FRONT)
     np.place(orientation, np.logical_and(theta >= 150, theta <= 210), Orientation.BACK)
-    np.place(orientation, np.logical_and(theta > 30, theta < 150), Orientation.LEFT)
-    np.place(orientation, np.logical_and(theta > 210, theta < 330), Orientation.RIGHT)
+    np.place(orientation, np.logical_and(theta > 30, theta < 150), Orientation.RIGHT)
+    np.place(orientation, np.logical_and(theta > 210, theta < 330), Orientation.LEFT)
     return orientation
 
 
@@ -117,11 +117,7 @@ class AnimalObjectRelationship(Relationship):
             # the keypoints of animal get updated when we update the roi bodypart names
             animal.update_roi_keypoint_names(self.sender_animal_bodyparts_names)
 
-        c = other_obj.get_center()
-        to_left = animal.get_center()[..., 0] <= other_obj.get_xmin()
-        to_right = animal.get_center()[..., 0] >= other_obj.get_xmax()
-        to_below = animal.get_center()[..., 1] >= other_obj.get_ymax()
-        to_above = animal.get_center()[..., 1] <= other_obj.get_ymin()
+        c = other_obj.get_center()     
 
         distance = np.linalg.norm(animal.get_center() - c, axis=1)
         overlap = other_obj.Path.contains_points(animal.get_center())
@@ -129,11 +125,7 @@ class AnimalObjectRelationship(Relationship):
         if animal.support_body_orientation:
             orientation = calc_orientation_in_egocentric_animal(animal, other_obj.get_center())
       
-        ret = {
-            "to_left": to_left,
-            "to_right": to_right,
-            "to_below": to_below,
-            "to_above": to_above,
+        ret = {         
             "distance": distance,
             "overlap": overlap,
         }
@@ -164,23 +156,7 @@ class AnimalAnimalRelationship(Relationship):
         self.sender_animal_bodyparts_names == other.sender_animal_bodyparts_names and \
         self.receiver_animal_bodyparts_names == other.receiver_animal_bodyparts_names
     
-
-    @classmethod
-    def get_valid_inter_individual_relationship_queries(cls):
-        return [
-            "to_left",
-            "to_right",
-            "to_below",
-            "to_above",
-            "overlap",
-            "distance",
-            "orientation",
-            "relative_speed",
-            "closest_distance",
-            "relative_angle",
-            "relative_head_angle",
-        ]        
-
+    
     def _animal_animal_relationship(self, 
                                     sender_animal: AnimalSeq,
                                     receiver_animal: AnimalSeq,                                   
@@ -193,12 +169,9 @@ class AnimalAnimalRelationship(Relationship):
         if self.receiver_animal_bodyparts_names is not None:
             receiver_animal.update_roi_keypoint_by_names(self.receiver_animal_bodyparts_names)
 
-
-        to_left = sender_animal.get_xmax() <= receiver_animal.get_xmin()
-        to_right = sender_animal.get_xmin() >= receiver_animal.get_xmax()
-        to_below = sender_animal.get_ymin() >= receiver_animal.get_ymax()
-        to_above = sender_animal.get_ymax() <= receiver_animal.get_ymin()
+        # other animal is to the left of this animal       
         distance = np.linalg.norm(sender_animal.get_center() - receiver_animal.get_center(), axis=1)
+
         # I have _coords for both this and other because people could want a subset of animal keypoints
         overlap = []
         # we only do nan to num here because doing it in other places give bad looking trajectory
@@ -236,11 +209,7 @@ class AnimalAnimalRelationship(Relationship):
         closest_distance = np.nanmin(
             get_pairwise_distance(sender_animal.keypoints, receiver_animal.keypoints), axis=(1, 2)
         )
-        ret =  {
-            "to_left": to_left,
-            "to_right": to_right,
-            "to_below": to_below,
-            "to_above": to_above,
+        ret =  {          
             "distance": distance,
             "overlap": overlap,
             "closest_distance": closest_distance,

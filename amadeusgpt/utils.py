@@ -303,9 +303,7 @@ def func2json(func):
         # Use the AST to extract the function's name
         func_name = func_def.name        
         # Extract the docstring directly from the AST
-        docstring = ast.get_docstring(func_def)       
-        print ('check docstring')
-        print (docstring)
+        docstring = ast.get_docstring(func_def)              
         # Remove the docstring node if present
         if func_def.body and isinstance(func_def.body[0], ast.Expr) and isinstance(func_def.body[0].value, (ast.Str, ast.Constant)):
             func_def.body.pop(0)
