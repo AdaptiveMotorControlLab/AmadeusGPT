@@ -1,4 +1,5 @@
 
+from dis import disco
 from amadeusgpt.system_prompts import mutation
 from amadeusgpt.task_program_registry import TaskProgram, TaskProgramLibrary
 from amadeusgpt.sandbox import EvoSandbox
@@ -12,6 +13,11 @@ import functools
 from functools import partial
 import time
 import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import glob
+from collections import defaultdict
+import numpy as np
+
 random.seed(time.time() * os.getpid())
 
 def preset_args(**preset_kwargs):
@@ -49,6 +55,9 @@ class BaseEvolution:
 
     def __init__(self, config):
         self.config = config
+        self.train_folder = config['evo_info']['train_folder']
+        self.video_type = config['evo_info']['video_type']
+        self.keypoint_type = config['evo_info']['keypoint_type']
 
     def evaluate(self):
         pass
@@ -88,6 +97,16 @@ class BaseEvolution:
         pass
 
 
+
+# def single_evaluate(config, keypoint_file, task_program, sandbox):
+#     print(f'evaluating {task_program["name"]} on {keypoint_file}')
+#     # Adjusting the config for the current file
+#     config['keypoint_info']['keypoint_file_path'] = keypoint_file
+#     config['video_info']['video_file_path'] = keypoint_file.replace('.json', '.avi')
+#     sandbox.update_config(config)
+#     events = task_program(config, sandbox.exec_namespace)
+#     return keypoint_file, task_program['name'], len(events)
+    
 class EasyEvolution(BaseEvolution):
     def __init__(self, config):
         super().__init__(config)
@@ -96,28 +115,57 @@ class EasyEvolution(BaseEvolution):
         self.breed_llm = BreedLLM(config)
         self.task_program_library = TaskProgramLibrary().get_task_programs()
         # keep track of the fitness scores of each task program
-        self.scores = {}
+        # the key should be the video file name -> task program name -> score
+        self.scores = defaultdict(dict)
         # cache the results of task programs in scores
-        self.cache = {}
+        # the key should be the video file name -> task program name -> events
+        self.cache = defaultdict(dict)
         self.sandbox = EvoSandbox(
             config,
             CORE_API_REGISTRY)
+        self.video2keypointfile = {}
 
     def events_duration(self, events):
         temp = [event.duration_in_seconds for event in events]
         return sum(temp)
 
+    def calculate_fitness(self):
+        # the fitness score of the behavior is determined by many factors
+        # 1) total duration of the behavior
+        # 2) number of videos it occurs
+        total_duration = defaultdict(int)
+        number_of_videos = defaultdict(int)
+        for video in self.cache:
+            for behavior_name in self.cache[video]:               
+                total_duration[behavior_name] += self.events_duration(self.cache[video][behavior_name])
+                if total_duration[behavior_name] > 0:
+                    number_of_videos[behavior_name] += 1
+        behaviors = set()
+        for video in self.cache:
+            for behavior_name in self.cache[video]:
+                behaviors.add(behavior_name)
+        self.debug = {}
+        for behavior_name in behaviors:
+            self.scores[behavior_name] = total_duration[behavior_name] * number_of_videos[behavior_name]
+            self.debug[behavior_name] = f'''
+total:{total_duration[behavior_name]} 
+#video:{number_of_videos[behavior_name]}
+score:{self.scores[behavior_name]}
+'''       
+        
+
     def mutate(self):        
         mutation_response = self.mutation_llm.speak(self.sandbox)
+        print (mutation_response)
         # get the mutated task program
         pattern = r"```python(.*?)```"
         function_code = re.findall(pattern, mutation_response, re.DOTALL)[0]
-        print ('mutated function')
-        print (function_code)
-        parent_generation = TaskProgramLibrary[self.sandbox.program_to_mutate]['generation']
-        self.sandbox.register_task_program(function_code,
-                                           mutation_from = self.sandbox.program_to_mutate,
-                                           generation = parent_generation+1)
+       
+        #parent_generation = self.task_program_library[self.sandbox.program_to_mutate]['generation']
+        self.sandbox.scores = self.scores
+        self.sandbox.register_task_program(function_code)
+                                           #mutation_from = self.sandbox.program_to_mutate)
+                                           
     
     def get_breed_function(self):
         breed_program.__globals__.update(self.sandbox.exec_namespace)
@@ -160,52 +208,129 @@ class EasyEvolution(BaseEvolution):
 
        
     def select_for_mutation(self):
-        survivals = list(self.scores.keys())
-        # generate a random number from 0 to len(survivals)
-        # return the task program name
-        index = random.randint(0, len(survivals)-1)     
-        return survivals[index]
+      
+        ranked_survivals = sorted(self.scores.keys(), key=lambda x: self.scores[x], reverse=True)
+        ranked_survivals = ranked_survivals[:3]
+        index = random.randint(0, len(ranked_survivals)-1)     
+        return ranked_survivals[index]
 
     def select_for_breed(self, num_participants = 2):
-        survivals = list(self.scores.keys())
-        # select num_participants from survivals
-        indices = random.sample(range(0, len(survivals)), num_participants)
-        return [survivals[i] for i in indices]    
+        ranked_survivals = sorted(self.scores.keys(), key=lambda x: self.scores[x], reverse=True)
+        ranked_survivals = ranked_survivals[:3]
+
+        indices = random.sample(range(0, len(ranked_survivals)), num_participants)
+        return [ranked_survivals[i] for i in indices]    
 
 
     def train(self):
         self.evaluate() 
-        for i in range(2):
-            print (f'training iteration {i}')
-            mutate_candidate = self.select_for_mutation()
-            print (f'selecting {mutate_candidate} {self.scores[mutate_candidate]} for mutation')
-            self.sandbox.update_program_to_mutate(mutate_candidate)
-            self.mutate()            
-            breed_participants = self.select_for_breed()
-            print (f'selecting {breed_participants} for breeding')
-            self.breed(breed_participants)
-            self.evaluate()                        
+        for i in range(5):
+            try:
+                print (f'training iteration {i}')
+                #mutate_candidate = self.select_for_mutation()
+                #print (f'selecting {mutate_candidate} for mutation')
+                #self.sandbox.update_program_to_mutate(mutate_candidate)
+                self.mutate()            
+                breed_participants = self.select_for_breed()
+                print (f'selecting {breed_participants} for breeding')
+                self.breed(breed_participants)
+                self.evaluate()
+                TaskProgramLibrary.save('task_program_checkpoint.json')
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                continue              
+   
+
+    
+    # def parallel_evaluate(self):
+    #     train_files = glob.glob('../../tests/mabe_samples/train/*.json')
+    #     test_files = glob.glob('../../tests/mabe_samples/test/*.json')
+    #     config = Config('../../tests/MABe_evo.yaml')
+
+    #     # Assuming self.task_program_library is a dictionary of task programs
+    #     # and self.sandbox is properly initialized and can be deep copied for thread safety
+
+    #     # Use a ProcessPoolExecutor to run tasks in parallel
+    #     with ProcessPoolExecutor() as executor:
+    #         # Creating a list to hold futures
+    #         futures = []
+    #         for name, task_program in self.task_program_library.items():
+    #             for keypoint_file in train_files:
+    #                 # Submit tasks to the executor
+    #                 futures.append(executor.submit(single_evaluate, config.copy(), keypoint_file, task_program, self.sandbox.copy()))
+
+    #         # Processing results as they complete
+    #         for future in as_completed(futures):
+    #             keypoint_file, task_name, events_len = future.result()
+    #             print(keypoint_file, task_name, events_len)
+
+    def info_gain(self):
+        discovered_behaviors = []
+        for name, task_program in self.task_program_library.items():                
+            if task_program['creator'] != 'human':
+                discovered_behaviors.append(name)
+        scores = np.array([self.scores[name] for name in discovered_behaviors])
+
+        for behavior_name in discovered_behaviors:
+            print (behavior_name, self.debug[behavior_name])
+
+        print (scores)        
+        print ('success rate', np.sum(~np.isnan(scores)) / len(scores)) 
+
+        # we only look at created ones
+        for video in self.cache:
+            for task_program_name in self.cache[video]:
+                task_program = self.task_program_library[task_program_name]
+                # if task_program['creator'] == 'human':
+                #     continue
+                if not np.isnan(self.scores[task_program_name]):
+                    video_file_path = os.path.join(self.train_folder,video + self.video_type)
+                    config['keypoint_info']['keypoint_file_path'] = self.video2keypointfile[video]
+                    config['video_info']['video_file_path'] = video_file_path
+                    self.sandbox.update_config(config)
+                    self.sandbox.visual_validate(video_file_path, self.cache[video][task_program_name], task_program_name)   
+        
 
     def evaluate(self):
-        # run each task program and assign the fitness score
-        # let's check whether this works first
-        for name, task_program in self.task_program_library.items():           
-            if name not in self.scores:
-                # call the function
-                events = task_program(self.config, self.sandbox.exec_namespace)
-                if self.events_duration(events) > 1:
-                    task_program['duration'] = round(self.events_duration(events), 2)
-                    self.scores[name] = round(self.events_duration(events), 2)
-                    self.cache[name] = events
-                    print (task_program.json_obj)
+        # this is to evaluate many videos in different processes
+        import glob
+        train_files = glob.glob(self.train_folder + f'/*{self.keypoint_type}')[:1]
+        print (train_files)
+        for name, task_program in self.task_program_library.items():
+            for keypoint_file in train_files:
+                videoname = keypoint_file.split('/')[-1].replace(self.keypoint_type, '')
+                if videoname in self.cache and name in self.cache[videoname]:
+                    continue
+                # just replacing stuff in the config
+                config['keypoint_info']['keypoint_file_path'] = keypoint_file
+                config['video_info']['video_file_path'] = os.path.join(self.train_folder,keypoint_file.replace(self.keypoint_type, self.video_type))
+                self.video2keypointfile[videoname] = keypoint_file
+                self.sandbox.update_config(config)
+                try:
+                    events = task_program(config, self.sandbox.exec_namespace)
+                    assert events is not None
+                    self.cache[videoname][name] = events                    
+                except Exception as e:
+                    import traceback
+                    traceback.print_exc()
+                    print ('something is wrong with task program', name)
+                    print ('deleting it')
+                    del self.task_program_library[name]
+                
+        self.calculate_fitness()
+        self.info_gain()
+        
+       
+    
 
-            print ('scores', self.scores)
 if __name__ == "__main__":
     from amadeusgpt.config import Config
     from amadeusgpt.common_task_programs import register_common_task_programs
-    config = Config('../../tests/MABe.yaml')
+    config = Config('../../tests/MABe_evo.yaml')
     register_common_task_programs()
     evo = EasyEvolution(config)
+   
     evo.train()
-    TaskProgramLibrary.save('task_program_checkpoint.json')
+    
     

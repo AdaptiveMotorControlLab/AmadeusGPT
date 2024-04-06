@@ -269,49 +269,98 @@ class VisualManager(Manager):
         return super().get_serializeable_list_names()
     
 
-    def write_video(self, video_file_path, out_name, time_slices):
+    def write_video(self, video_file_path, out_name, events):
         cap = cv2.VideoCapture(video_file_path)
+            
+        data = []
+        for event in events:
+            # mark who is the initiator
+            # get the keypoints of sender and receiver(s)
+            # get the x,y of the keypoint
+            # get the time slice, sorted by time            
+            sender_animal_name = event.sender_animal_name
+            receiver_animal_names = event.receiver_animal_names
+            time_slices = (event.start, event.end)
+            sender_keypoints = self.animal_manager.get_animal_by_name(sender_animal_name).get_keypoints()
+            receiver_keypoints = [self.animal_manager.get_animal_by_name(receiver_animal_name).get_keypoints() for receiver_animal_name in receiver_animal_names]
+            sender_keypoints = np.nanmean(sender_keypoints, axis=1)
+            sender_speeds = self.animal_manager.get_animal_by_name(sender_animal_name).get_speed()
+
+            receiver_keypoints = [np.nanmean(receiver_keypoints, axis=1) for receiver_keypoints in receiver_keypoints]
+
+            data.append({'time_slice': time_slices,
+                        'sender_keypoints': sender_keypoints,
+                        'receiver_keypoints': receiver_keypoints})                         
+        
+        total_duration = sum([event.duration_in_seconds for event in events])
+        
+        if total_duration < 0.5:
+            return 
+        
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Adjust the codec as needed
         out = cv2.VideoWriter(f'{out_name}', fourcc, 30.0, (int(cap.get(3)), int(cap.get(4))))
-        current_frame = 0
-        write_mode = False
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
 
-            # Check if the current frame is within any of the specified intervals
-            for start_frame, end_frame in time_slices:
-                if start_frame <= current_frame <= end_frame:
-                    write_mode = True
+        for triple in data:
+            time_slice = triple['time_slice']
+            sender_keypoints = triple['sender_keypoints']
+            receiver_keypoints = triple['receiver_keypoints']
+            cap.set(cv2.CAP_PROP_POS_FRAMES, time_slice[0])
+            offset = 0
+            
+            while cap.isOpened():
+                current_frame = time_slice[0] + offset
+                ret, frame = cap.read()
+                if not ret:
                     break
-            else:  # Not in any interval
-                write_mode = False
+                if time_slice[0] <= current_frame < time_slice[1]:
+                    # select the keypoint based on the frame number
+                    sender_location = sender_keypoints[current_frame]
+                    # put the text "sender" and "receiver" on corresponding location
+                    sender_speed = np.nanmean(sender_speeds[current_frame])
+                    sender_location = sender_location.astype(int)
+                    cv2.putText(frame, 'sender', (sender_location[0], sender_location[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2, cv2.LINE_AA)
+                    speed_text = f"Sender Speed {sender_speed:.2f} units/frame"
+                    speed_text_location = (frame.shape[1] - 200, frame.shape[0] - 50)  # 200 pixels wide space, 30 pixels from the bottom
+                    cv2.putText(frame, speed_text, speed_text_location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
+                    for receiver_id, receiver_location in enumerate(receiver_keypoints):
+                        receiver_location = receiver_location[current_frame].astype(int)
+            
+                        # Calculate the distance between sender and receiver
+                        distance = np.linalg.norm(sender_location - receiver_location)
+                        # Format the distance to display only 2 decimal places
+                        distance_text = f"Dist(receiver{receiver_id}) {distance:.2f} units"                        
+                        
+                        distance_text_location = (frame.shape[1] - 200, frame.shape[0] - 15 * (receiver_id + 1))  # 200 pixels wide space, 10 pixels from the bottom
+                                                
+                        cv2.putText(frame, distance_text, distance_text_location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
 
-            # Write the frame if it's within an interval
-            if write_mode:
-                out.write(frame)
+                        cv2.putText(frame, 'receiver', (receiver_location[0], receiver_location[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2, cv2.LINE_AA)
 
-            current_frame += 1
+                    out.write(frame)
+                offset += 1
+                if current_frame == time_slice[1]:
+                    break
 
         # Release everything when job is finished
         cap.release()
         out.release()
         cv2.destroyAllWindows()        
 
-    def generate_video_clips_from_events(self, events: List[BaseEvent], behavior_name = None):
+    def generate_video_clips_from_events(self, video_file, 
+                                         events: List[BaseEvent],
+                                           behavior_name):
         """
         This function takes a list of events and generates video clips from the events
+        1) For the same events, we first group events based on the video
+        2) For the same event on the same video, we plot the animal name and the "sender" of the event
+        3) Then we write those videos to the disk
         """
-        # assume all events come form the same video
-        video_file_path = events[0].video_file_path
-        for animal_name in self.animal_manager.get_animal_names():
-            time_slices = []
-            for event in events:
-                if event.sender_animal_name == animal_name:
-                    time_slices.append((event.start, event.end))
-            video_name = f'{animal_name}_{behavior_name}_video.mp4' if behavior_name else f'{animal_name}_video.mp4'
-            self.write_video(video_file_path,
-                             video_name,
-                            time_slices)
-                                                   
+        
+        videoname = video_file.split('/')[-1].replace('.mp4', '').replace('.avi', '')            
+        video_name = f'{videoname}_{behavior_name}_video.mp4' 
+        
+        self.write_video(video_file,
+                        video_name,
+                        events)
+
+    

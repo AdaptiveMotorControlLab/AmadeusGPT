@@ -82,6 +82,17 @@ class Event(BaseEvent):
             assert isinstance(object_names, set), "object_names must be a set"
         self.object_names = object_names
 
+    def __str__(self):
+        return f'''
+sender: {self.sender_animal_name}
+receiver: {self.receiver_animal_names}
+object: {self.object_names}
+duration_in_seconds: {self.duration_in_seconds}
+duration_in_frames: {self.duration_in_frames}
+start: {self.start}
+end: {self.end}
+'''
+    
 
     def __hash__(self):
         # Generate a hash based on a tuple of sorted (attribute, value) pairs
@@ -159,7 +170,7 @@ class Event(BaseEvent):
         """
         masks = [event.generate_mask() for event in events]
         _sum = np.sum(masks, axis = 0)
-        print ('max in sum', np.max(_sum))
+        return np.max(_sum)
 
 
     @classmethod
@@ -194,7 +205,8 @@ class Event(BaseEvent):
         Each segment of the mask might have multiple receiver animals and object names
         Returns
         """
-        mask = smooth_boolean_mask(mask, smooth_window_size)
+        if smooth_window_size is not None:
+            mask = smooth_boolean_mask(mask, smooth_window_size)
         blocks = cls.blockfy(mask)
         events = []
         
@@ -243,7 +255,7 @@ class Event(BaseEvent):
         Concatenate two events into one, fill the gap between two events if there are
         """
         assert early_event.sender_animal_name == late_event.sender_animal_name
-        assert early_event.end <= late_event.start
+
         receiver_animal_names = early_event.receiver_animal_names.union(late_event.receiver_animal_names)
         object_names = early_event.object_names.union(late_event.object_names)
         new_event = Event(early_event.start,
@@ -295,6 +307,7 @@ class EventGraph:
             ret.extend(cur_node.children)
             cur_node = cur_node.next
         ret = sorted(ret, key=lambda x: x.start)
+        ret = [e for e in ret if e.duration_in_frames > 1]
         return ret
     @property
     def animal_names(self):
@@ -406,51 +419,55 @@ class EventGraph:
         self.n_nodes+=1
         
 
- 
-
     @classmethod
     def fuse_subgraph_by_kvs(cls,
                         graph: "EventGraph",
                         merge_kvs: Dict[str, Any],
                         number_of_overlap_for_fusion: int = 0,
-
+                        allow_more_than_2_overlap:bool = False
                     ) -> "EventGraph":
         """
+        number_of_overlap_for_fusion is a parameter for logical and.
+        For example, if there are two conditions to be met in the masks we look for locations that have overlap as 2
         """       
-               
+        # retrieve all events that satisfy the conditions (k=v)    
         events = graph.traverse_by_kvs(merge_kvs)
-        if number_of_overlap_for_fusion == 0:
-            new_graph = cls.init_from_list(events)
-            masks = [event.generate_mask() for event in events] 
-            _sum = np.sum(masks, axis = 0)          
+        if not allow_more_than_2_overlap:
+            assert Event.check_max_in_sum(events) <= 2
+                           
+        new_graph = cls() 
+        if len(events) == 0:
+            return new_graph
+        masks = [event.generate_mask() for event in events]         
+        _sum = np.sum(masks, axis = 0)          
 
-        else:
+        
+        mask = np.zeros_like(_sum, dtype=bool)
+        # the fusion only happens at where at least two events overlap
+        # in case there are many events overlap, 
+        # if the events come from one single task program, there is no overlap
+        # so the overlap must come from different task programs
 
-            new_graph = cls() 
-            if len(events) == 0:
-                return new_graph
-            masks = [event.generate_mask() for event in events]         
-            _sum = np.sum(masks, axis = 0)
+        mask[(_sum >= number_of_overlap_for_fusion) & (_sum > 1)] = True
+        events = Event.mask2events(mask,
+                                        events[0].video_file_path,
+                                        events[0].sender_animal_name,
+                                        receiver_animal_names = set.union(*[event.receiver_animal_names for event in events]),
+                                        object_names = set.union(*[event.object_names for event in events])
+                                        )     
+        for event in events:
+            new_graph.insert_node(Node(event.start, [event]))       
 
-            mask = np.zeros_like(_sum, dtype=bool)
-            # the fusion only happens at where at least two events overlap
-            # in case there are many events overlap, 
-            mask[(_sum == number_of_overlap_for_fusion) & (_sum > 1)] = True
-            events = Event.mask2events(mask,
-                                            events[0].video_file_path,
-                                            events[0].sender_animal_name,
-                                            receiver_animal_names = set.union(*[event.receiver_animal_names for event in events]),
-                                            object_names = set.union(*[event.object_names for event in events])
-                                            )     
-            for event in events:
-                new_graph.insert_node(Node(event.start, [event]))       
+        assert Event.check_max_in_sum(events) == 1
+
 
         return new_graph
 
+    
     @classmethod
     def merge_subgraphs(cls, graph_list: List["EventGraph"])-> "EventGraph":
         """
-        Merge graphs into one graph
+        Merge graphs into one graph. There is no fusion. Nodes are just added based on the start time
         """
         graph = cls()
         for g in graph_list:
@@ -502,7 +519,10 @@ class EventGraph:
                 if j < len(events1) - 1 and events1[j+1].end <= event2.start:
                     continue
                 else:
-                    if event1.end <= event2.start:
+                    # this is strict continuous
+                    if event1.end >= event2.start and event1.end <= event2.end:
+                    # this is not strict continuous
+                    #if event1.end <= event2.start:
                         new_event = Event.concat_two_events(event1, event2)
                         graph.insert_node(Node(new_event.start, [new_event]))
                         break                

@@ -1,3 +1,4 @@
+from amadeusgpt.analysis_objects import event
 from amadeusgpt.analysis_objects.relationship import Relationship
 from amadeusgpt.analysis_objects.event import EventGraph
 from amadeusgpt.utils import timer_decorator
@@ -63,7 +64,7 @@ class EventManager(Manager):
         self.animals_object_events = []
         self.animals_animals_events = []
         self.animals_state_events = []
-    @register_core_api
+    #@register_core_api
     #@cache_decorator
     def get_animals_object_events(
         self,
@@ -180,6 +181,14 @@ class EventManager(Manager):
         --------
         # A task program that captures events where animal moving faster than 3 pixels across frames.       
         """
+        if min_window is None:
+            min_window = 0
+        if max_window is None:
+            max_window = 1000000
+        if smooth_window_size is None:
+            smooth_window_size = 3
+
+
         if bodypart_names is not None:
             self.animal_manager.update_roi_keypoint_by_names(bodypart_names)
         ret_events = []
@@ -194,7 +203,7 @@ class EventManager(Manager):
             relation_string = "state" + comparison
 
             mask = eval(relation_string)
-         
+
             events = Event.mask2events(mask,
                                         self.video_file_path,
                                         sender_animal_name,
@@ -282,8 +291,11 @@ class EventManager(Manager):
         To capture a range for a numerical query  (e.g., relative_speed) between 3 and 10, one can do:
         get_animals_animals_events(cross_animal_query_list = ['relative_speed', 'relative_speed'], cross_animal_comparison_list = ['>3', '<10'])
 
-
         """
+        if min_window is None:
+            min_window = 0
+        if max_window is None:
+            max_window = 1000000
        
         animals_animals_relationships = self.relationship_manager.get_animals_animals_relationships(
             sender_animal_bodyparts_names=bodypart_names,
@@ -292,7 +304,6 @@ class EventManager(Manager):
         all_events = []
         for relationship in animals_animals_relationships:            
             for query, comparison in zip(cross_animal_query_list, cross_animal_comparison_list):
-
                 events = self.get_events_from_relationship( 
                                                                 relationship,
                                                                 query, 
@@ -323,12 +334,9 @@ class EventManager(Manager):
 
     @register_core_api
     def get_composite_events(self,
-                            events_list:Optional[List[List[BaseEvent]]] = [],
-                            composition_type: Literal["sequential", "logical_and", "logical_or"] = "logical_and",
-                            merge_keys: Optional[List[str]] = None, 
-                            min_window = 11,
-                            max_window = 1000000,
-                            smooth_window_size = 3
+                            events_A: List[BaseEvent],
+                            events_B: List[BaseEvent],
+                            composition_type: Literal["sequential", "logical_and", "logical_or"] = "logical_and",                  
                              ) -> List[BaseEvent]:
         """
         Parameters:
@@ -337,9 +345,8 @@ class EventManager(Manager):
         -------
         List[BaseEvent]                    
         """
-        assert len(events_list) > 1, "You need to provide at least two events to merge"
         assert composition_type in ["sequential", "logical_and", "logical_or"], "composition_type must be either 'sequential' or 'logical_or', or 'logical_and'"
-
+        events_list = [events_A, events_B]
         if composition_type == "sequential":
             graph_list = [EventGraph.init_from_list(events) for events in events_list]
             graphs = []
@@ -366,42 +373,53 @@ class EventManager(Manager):
                 all_events.extend(events)
             graph = EventGraph.init_from_list(all_events)
             graphs = []
-            if merge_keys is None:                
-                for animal_name in self.animal_manager.get_animal_names():
-                    subgraph = EventGraph.fuse_subgraph_by_kvs( 
-                                        graph,
-                                        {'sender_animal_name': animal_name},
-                                        number_of_overlap_for_fusion=len(events_list)
-                    )
-                    graphs.append(subgraph)
-                
-            else:
-                
-                for animal_name in self.animal_manager.get_animal_names():
-                    if "receiver_animal_names" in merge_keys:
-                        receiver_animal_names = [animal_name for animal_name in self.animal_manager.get_animal_names()]                        
-                        for receiver_animal_name in receiver_animal_names:
-                            if animal_name != receiver_animal_name:
-                                receiver_animal_name = set([receiver_animal_name])
-                                subgraph = EventGraph.fuse_subgraph_by_kvs( 
-                                                        graph,
-                                                        {'sender_animal_name': animal_name, 
-                                                        'receiver_animal_names': receiver_animal_name},
-                                                        number_of_overlap_for_fusion=len(events_list)
-                                    )
-                               
-                               
-                                graphs.append(subgraph)
-                    if "object_names" in merge_keys:
-                        for object_name in self.object_manager.get_object_names():
-                            subgraph = EventGraph.fuse_subgraph_by_kvs(
-                                                graph,   
+          
+            # we first fuse events from different task programs that involve animal-animal interactions             
+            for animal_name in self.animal_manager.get_animal_names():
+                receiver_animal_names = [animal_name for animal_name in self.animal_manager.get_animal_names()]                        
+                for receiver_animal_name in receiver_animal_names:
+                    if animal_name != receiver_animal_name:
+                        receiver_animal_name = set([receiver_animal_name])
+                        animal_animal_subgraph = EventGraph.fuse_subgraph_by_kvs( 
+                                                graph,
                                                 {'sender_animal_name': animal_name, 
-                                                'object_names': object_name},
-                                                number_of_overlap_for_fusion=len(events_list)
-                            )
-                            graphs.append(subgraph)
+                                                'receiver_animal_names': receiver_animal_name},
+                                                number_of_overlap_for_fusion=2
+                            )                                                
+                        graphs.append(animal_animal_subgraph)
+            # we then fuse events from different task programs that involve animal-object interactions
+            for object_name in self.object_manager.get_object_names():
+                print ('object name', object_name)
+                animal_object_subgraph = EventGraph.fuse_subgraph_by_kvs(
+                                    graph,   
+                                    {'sender_animal_name': animal_name, 
+                                    'object_names': object_name},
+                                    number_of_overlap_for_fusion=2
+                )
+                graphs.append(animal_object_subgraph)
+
+            # fuse events from different task programs that involve animal states
+            for animal_name in self.animal_manager.get_animal_names():               
+                animal_state_subgraph = EventGraph.fuse_subgraph_by_kvs(
+                    graph,
+                    {'sender_animal_name': animal_name,
+                    'receiver_animal_names': set([animal_name])},
+                    number_of_overlap_for_fusion=2
+                )
+                graphs.append(animal_state_subgraph)
+
             graph = EventGraph.merge_subgraphs(graphs)
+            graphs = []
+            for animal_name in self.animal_manager.get_animal_names():
+                subgraph = EventGraph.fuse_subgraph_by_kvs(
+                    graph,
+                    {'sender_animal_name': animal_name},
+                    number_of_overlap_for_fusion=2,
+                    allow_more_than_2_overlap = True
+                )
+                graphs.append(subgraph)
+            graph = EventGraph.merge_subgraphs(graphs)
+
             return graph.to_list()  
     
     def get_serializeable_list_names(self) -> List[str]:

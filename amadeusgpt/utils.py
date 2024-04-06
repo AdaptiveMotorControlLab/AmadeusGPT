@@ -1,4 +1,5 @@
 import copy
+from pydoc import doc
 import re
 from itertools import groupby
 from operator import itemgetter
@@ -80,6 +81,8 @@ def moving_variance(x, window_size):
 def smooth_boolean_mask(x: Sequence, window_size: int):
     # `window_size` should be at least twice as large as the
     # minimal number of consecutive frames to be smoothed out.
+    if window_size % 2 == 0:
+        window_size += 1
     return moving_average(x, window_size) > 0.5
 
 
@@ -297,15 +300,12 @@ def func2json(func):
         # Parse the function string to an AST
         parsed = ast.parse(func_str)
         func_def = parsed.body[0]
-
         # Use the AST to extract the function's name
-        func_name = func_def.name
-
-        # Extract the function's signature from the AST
-        
+        func_name = func_def.name        
         # Extract the docstring directly from the AST
-        docstring = ast.get_docstring(parsed)
-
+        docstring = ast.get_docstring(func_def)       
+        print ('check docstring')
+        print (docstring)
         # Remove the docstring node if present
         if func_def.body and isinstance(func_def.body[0], ast.Expr) and isinstance(func_def.body[0].value, (ast.Str, ast.Constant)):
             func_def.body.pop(0)
