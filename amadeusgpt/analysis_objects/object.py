@@ -321,22 +321,28 @@ class AnimalSeq(Animal):
 
         return self.state[query]
    
+    def get_velocity(self)-> ndarray:
+        keypoints = self.get_keypoints()
+        velocity = np.diff(keypoints, axis=0) / 30
+        velocity = np.concatenate([np.zeros((1,) + velocity.shape[1:]), velocity])
+        assert len(velocity.shape) == 3
+        return velocity
+
     def get_speed(self)-> ndarray:
         keypoints = self.get_keypoints()
-        speed = (
+        velocity = (
             np.diff(keypoints, axis=0) / 30
         )  # divided by frame rate to get speed in pixels/second
         # Pad velocities to match the original shape
-        speed = np.concatenate([np.zeros((1,) + speed.shape[1:]), speed])
+        velocity = np.concatenate([np.zeros((1,) + velocity.shape[1:]), velocity])
         # Compute the speed from the velocity
-        speed = np.sqrt(np.sum(np.square(speed), axis=-1, keepdims=True))
+        speed = np.linalg.norm(velocity, axis=-1)
+        speed = np.expand_dims(speed, axis = -1)
+        assert len(speed.shape) == 3
         return speed
 
     def get_acceleration(self)-> ndarray:
-        keypoints = self.get_keypoints()
-        # Calculate differences in keypoints between frames (velocity)
-        velocities = np.diff(keypoints, axis=0) / 30
-        # Calculate differences in velocities between frames (acceleration)
+        velocities = self.get_velocity()      
         accelerations = (
             np.diff(velocities, axis=0) / 30
         )  # divided by frame rate to get acceleration in pixels/second^2
@@ -344,14 +350,13 @@ class AnimalSeq(Animal):
         accelerations = np.concatenate(
             [np.zeros((2,) + accelerations.shape[1:]), accelerations]
         )
-        # Compute the magnitude of the acceleration from the acceleration vectors
-        magnitudes = np.sqrt(np.sum(np.square(accelerations), axis=-1, keepdims=True))
-        return magnitudes
+        assert len(accelerations.shape) == 3
+        return accelerations
     def get_bodypart_wise_relation(self):
         keypoints = self.get_keypoints()
         diff = keypoints[..., np.newaxis, :, :] - keypoints[..., :, np.newaxis, :]
         sq_dist = np.sum(diff**2, axis=-1)
-        distances = np.sqrt(sq_dist)
+        distances = np.sqrt(sq_dist)        
         return distances
     
 

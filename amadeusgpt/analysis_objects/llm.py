@@ -241,8 +241,8 @@ class MutationLLM(LLM):
         from amadeusgpt.system_prompts.mutation import _get_system_prompt
         core_api_docs = sandbox.get_core_api_docs()
         task_program_docs = sandbox.get_task_program_docs()
-        self.system_prompt = _get_system_prompt(core_api_docs, task_program_docs)
-
+        useful_info = sandbox.get_useful_info()
+        self.system_prompt = _get_system_prompt(core_api_docs, task_program_docs, useful_info)
 
         # update both history and context window        
         self.update_history("system", self.system_prompt)
@@ -252,7 +252,8 @@ class MutationLLM(LLM):
         """
         Speak to the chat channel
         """               
-        query = "Now write the function for the new behavior. Make sure your code is within```{Code here}``\n"
+        #query = "Please start. Make sure you provide one task program a time. Thanks a million!"
+        query = "Please start. Thanks a million!"
         self.update_system_prompt(sandbox)
         self.update_history("user", query, replace = True)
                

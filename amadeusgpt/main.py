@@ -2,7 +2,7 @@ import warnings
 import json
 from amadeusgpt.programs import task_program_registry
 from amadeusgpt.config import Config
-from amadeusgpt.sandbox import Sandbox
+from amadeusgpt.programs.sandbox import Sandbox
 import openai
 import amadeusgpt
 
@@ -48,9 +48,9 @@ class AMADEUS:
         self.context_window_dict = {}
         self.behavior_modules_str = ""
         ####
-        from amadeusgpt.sandbox import Sandbox
+        from amadeusgpt.programs.sandbox import Sandbox
         from amadeusgpt.programs.task_program_registry import TaskProgramLibrary
-        from amadeusgpt.api_registry import CORE_API_REGISTRY
+        from amadeusgpt.programs.api_registry import CORE_API_REGISTRY
         task_programs = TaskProgramLibrary().get_task_programs()
                 
         self.sandbox = Sandbox(
@@ -73,7 +73,7 @@ class AMADEUS:
 
 if __name__ == "__main__":
     from amadeusgpt.programs.task_program_registry import TaskProgramLibrary
-    from amadeusgpt.api_registry import CORE_API_REGISTRY
+    from amadeusgpt.programs.api_registry import CORE_API_REGISTRY
     from amadeusgpt.implementation import AnimalBehaviorAnalysis
 
     @TaskProgramLibrary.register_task_program(creator="human")

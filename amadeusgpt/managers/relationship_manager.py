@@ -6,7 +6,7 @@ from .base import Manager, cache_decorator
 from .animal_manager import AnimalManager
 from .object_manager import ObjectManager
 from typing import List, Any, Dict, Union
-from amadeusgpt.api_registry import register_class_methods, register_core_api
+from amadeusgpt.programs.api_registry import register_class_methods, register_core_api
 from cachetools import LRUCache, cached
 from cachetools.keys import hashkey
 

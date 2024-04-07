@@ -1,4 +1,5 @@
 from calendar import c
+from amadeusgpt.analysis_objects.object import AnimalSeq
 from amadeusgpt.analysis_objects.visualization import BaseVisualization, GraphVisualization, KeypointVisualization, SceneVisualization, EventVisualization, GraphVisualization
 from amadeusgpt.managers.model_manager import ModelManager
 from .base import Manager
@@ -8,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import Dict, Any, List, Union, Optional
 from collections import defaultdict
-from amadeusgpt.api_registry import register_class_methods, register_core_api
+from amadeusgpt.programs.api_registry import register_class_methods, register_core_api
 from amadeusgpt.analysis_objects.event import BaseEvent
 from matplotlib.patches import Wedge
 import cv2
@@ -48,9 +49,7 @@ class VisualManager(Manager):
         
         sanity_check_folder = os.path.join(video_folder, 'sanity_check')
         video_files = sorted(glob.glob(f'{video_folder}/*{video_type}'))
-        keypoint_files = sorted(glob.glob(f'{video_folder}/*{keypoint_type}'))
-        print (video_folder)
-        print (video_files, keypoint_files)
+        keypoint_files = sorted(glob.glob(f'{video_folder}/*{keypoint_type}'))      
         # assert video file and keypoint file match
         assert len(video_files) == len(keypoint_files)
         print (video_files, keypoint_files)
@@ -77,9 +76,7 @@ class VisualManager(Manager):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
                 ret, frame = cap.read()
                 for keypoints in keypoints_per_frame:
-                    kp = np.nanmean(keypoints, axis=0)
-                    print ('kp', kp.shape)
-                    print (kp)
+                    kp = np.nanmean(keypoints, axis=0)                    
                     cv2.circle(frame, (int(kp[0]), int(kp[1])), 3, (0, 0, 255), -1)
                 cv2.imwrite(os.path.join(sanity_check_folder, f'{video_name}_{frame_number}.png'), frame)        
 
@@ -154,7 +151,7 @@ class VisualManager(Manager):
             plt.show()
                 
 
-    @register_core_api
+    #@register_core_api
     def get_keypoint_visualization(self, 
                                     render:bool = False,
                                     bodypart_names: Optional[List[str]] = None,
@@ -247,7 +244,7 @@ class VisualManager(Manager):
         pass
         
 
-    @register_core_api
+    #@register_core_api
     def get_animal_animal_visualization(self,
                                    events: List[BaseEvent],
                                    render:bool = False,
@@ -319,6 +316,43 @@ class VisualManager(Manager):
         return super().get_serializeable_list_names()
     
 
+    def sender_visual_cone_on_frame(self,
+                             sender_animal: AnimalSeq, 
+                             frame : np.ndarray, 
+                             current_frame_id: int):
+        """
+        This function will draw a cone on the frame to show the orientation of the sender animal
+        """                             
+        ARROW_LENGTH = 20
+        CONE_WIDTH = 30
+        CONE_LENGTH = 70
+
+        color = '#fcf6bd'
+        cs_ = sender_animal.calc_head_cs()[current_frame_id]
+
+        origin = tuple(cs_[:2, 2].astype(int))
+
+        xhat = cs_[:2, 0] * ARROW_LENGTH
+        yhat = -cs_[:2, 1] * ARROW_LENGTH
+        arrow_tip = (origin[0] + int(xhat[0]), origin[1] + int(yhat[0]))
+        cv2.arrowedLine(frame, origin, arrow_tip, cv2.cvtColor(np.uint8([[[int(color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4)]]]), cv2.COLOR_RGB2BGR)[0][0].tolist(), 2, tipLength=0.5)
+
+        # Calculate cone vertices
+        cone_direction = np.array([xhat[0], yhat[0]])
+        cone_direction_norm = cone_direction / np.linalg.norm(cone_direction)
+        left_vertex = origin + np.dot(cv2.getRotationMatrix2D((0, 0), CONE_WIDTH / 2, CONE_LENGTH)[:2, :2], cone_direction_norm).astype(int)
+        right_vertex = origin + np.dot(cv2.getRotationMatrix2D((0, 0), -CONE_WIDTH / 2, CONE_LENGTH)[:2, :2], cone_direction_norm).astype(int)
+
+        # Draw cone
+        pts = np.array([origin, tuple(left_vertex), tuple(right_vertex)], np.int32)
+        pts = pts.reshape((-1, 1, 2))
+        cv2.polylines(frame, [pts], isClosed=True, color=cv2.cvtColor(np.uint8([[[int(color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4)]]]), cv2.COLOR_RGB2BGR)[0][0].tolist(), thickness=2)            
+
+
+        return frame
+
+        
+
     def write_video(self,
                     out_folder, 
                     video_file_path, 
@@ -344,6 +378,7 @@ class VisualManager(Manager):
 
             data.append({'time_slice': time_slices,
                         'sender_keypoints': sender_keypoints,
+                        'sender_animal_name': sender_animal_name,
                         'receiver_keypoints': receiver_keypoints})                         
         
         total_duration = sum([event.duration_in_seconds for event in events])
@@ -353,9 +388,10 @@ class VisualManager(Manager):
         
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Adjust the codec as needed
         out = cv2.VideoWriter(os.path.join(out_folder, f'{out_name}'), fourcc, 30.0, (int(cap.get(3)), int(cap.get(4))))
-
+       
         for triple in data:
             time_slice = triple['time_slice']
+            sender_animal_name = triple['sender_animal_name']
             sender_keypoints = triple['sender_keypoints']
             receiver_keypoints = triple['receiver_keypoints']
             cap.set(cv2.CAP_PROP_POS_FRAMES, time_slice[0])
@@ -366,15 +402,21 @@ class VisualManager(Manager):
                 ret, frame = cap.read()
                 if not ret:
                     break
+
                 if time_slice[0] <= current_frame < time_slice[1]:
                     # select the keypoint based on the frame number
+
+                    frame = self.sender_visual_cone_on_frame(self.animal_manager.get_animal_by_name(sender_animal_name), 
+                                                             frame, current_frame)
+
                     sender_location = sender_keypoints[current_frame]
+
                     # put the text "sender" and "receiver" on corresponding location
                     sender_speed = np.nanmean(sender_speeds[current_frame])
                     sender_location = sender_location.astype(int)
                     cv2.putText(frame, 'sender', (sender_location[0], sender_location[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2, cv2.LINE_AA)
                     speed_text = f"Sender Speed {sender_speed:.2f} units/frame"
-                    speed_text_location = (frame.shape[1] - 200, frame.shape[0] - 50)  # 200 pixels wide space, 30 pixels from the bottom
+                    speed_text_location = (frame.shape[1] - 400, frame.shape[0] - 50)  # 200 pixels wide space, 30 pixels from the bottom
                     cv2.putText(frame, speed_text, speed_text_location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
                     for receiver_id, receiver_location in enumerate(receiver_keypoints):
                         receiver_location = receiver_location[current_frame].astype(int)
@@ -384,7 +426,7 @@ class VisualManager(Manager):
                         # Format the distance to display only 2 decimal places
                         distance_text = f"Dist(receiver{receiver_id}) {distance:.2f} units"                        
                         
-                        distance_text_location = (frame.shape[1] - 200, frame.shape[0] - 15 * (receiver_id + 1))  # 200 pixels wide space, 10 pixels from the bottom
+                        distance_text_location = (frame.shape[1] - 400, frame.shape[0] - 15 * (receiver_id + 1))  # 200 pixels wide space, 10 pixels from the bottom
                                                 
                         cv2.putText(frame, distance_text, distance_text_location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
 

@@ -2,7 +2,7 @@ from .base import Manager
 from .model_manager import ModelManager
 from typing import List, Dict,Any
 from amadeusgpt.analysis_objects.object import Object, ROIObject 
-from amadeusgpt.api_registry import register_class_methods, register_core_api
+from amadeusgpt.programs.api_registry import register_class_methods, register_core_api
 
 @register_class_methods
 class ObjectManager(Manager):

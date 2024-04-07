@@ -434,7 +434,7 @@ class EventGraph:
         events = graph.traverse_by_kvs(merge_kvs)
         if not allow_more_than_2_overlap:
             assert Event.check_max_in_sum(events) <= number_of_overlap_for_fusion, f"Detected overlap {Event.check_max_in_sum(events)}. But we only allow {number_of_overlap_for_fusion} overlap for fusion."
-        print ('max in sum', Event.check_max_in_sum(events))
+
         new_graph = cls() 
         if len(events) == 0:
             return new_graph

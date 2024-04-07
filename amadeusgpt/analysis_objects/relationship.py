@@ -218,6 +218,7 @@ class AnimalAnimalRelationship(Relationship):
 
         if head_angles is not None:
             ret["relative_head_angle"] = head_angles
+            #print ('head angle', head_angles)
         if angles is not None:
             ret["relative_angle"] = angles
         if orientation is not None:

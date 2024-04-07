@@ -6,7 +6,7 @@ random.seed(78)
 from pydantic import BaseModel
 from typing import Dict
 import ast
-from .api_registry import DEFAULT_REGISTRY, CORE_API_REGISTRY
+from .programs.api_registry import DEFAULT_REGISTRY, CORE_API_REGISTRY
 """
 write a class called FuncObj that inhertis from pydantic BaseModel that takes a function string,
 use AST to parse the function string to input and output types, function name, args, kwargs, and function body

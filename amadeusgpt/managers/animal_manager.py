@@ -5,7 +5,7 @@ import numpy as np
 from numpy import ndarray
 import pandas as pd
 from typing import List, Dict, Optional
-from amadeusgpt.api_registry import register_class_methods, register_core_api
+from amadeusgpt.programs.api_registry import register_class_methods, register_core_api
 import json
 
 
@@ -160,7 +160,7 @@ class AnimalManager(Manager):
     @register_core_api
     def get_keypoints(self) -> ndarray:
         """
-        Get the keypoints.
+        Get the keypoints of animals. The shape is of shape  n_frames, n_individuals, n_kpts, n_dims
         """
         ret =  np.stack([animal.get_keypoints() for animal in self.animals], axis = 1)
 
@@ -169,18 +169,26 @@ class AnimalManager(Manager):
     def get_speed(self, 
                   ) -> ndarray:
         """
-        Get the speed of all animals. The shape is of shape  n_frames, n_individuals, n_kpts, n_dims
-        """
-        
+        Get the speed of all animals. The shape is of shape  n_frames, n_individuals, n_kpts, 1
+        The speed is an unsigned scalar value.
+        """        
         return np.stack([animal.get_speed() for animal in self.animals], axis = 1)
-
     
+    @register_core_api
+    def get_velocity(self) -> ndarray:
+        """
+        Get the velocity. The shape is of shape  n_frames, n_individuals, n_kpts, 2
+        The velocity is a vector.
+        """
+        return np.stack([animal.get_velocity() for animal in self.animals], axis = 1)
+
     @register_core_api
     def get_acceleration(self) -> ndarray:
         """
-        Get the acceleration.
+        Get the acceleration. The shape is of shape  n_frames, n_individuals, n_kpts, 2
+        The acceleration is a vector.
         """
-        return np.array([animal.get_acceleration() for animal in self.animals])
+        return np.stack([animal.get_acceleration() for animal in self.animals], axis = 1)
 
 
     @register_core_api
@@ -202,8 +210,7 @@ class AnimalManager(Manager):
         """
         return self.full_keypoint_names
 
-    def query_animal_states(self, animal_name :str, query: str) -> ndarray:
-                
+    def query_animal_states(self, animal_name :str, query: str) -> ndarray:                
         for animal in self.animals:
             if animal.get_name() == animal_name:
                 return animal.query_states(query)
