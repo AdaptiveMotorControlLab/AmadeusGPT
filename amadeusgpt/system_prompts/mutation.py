@@ -2,44 +2,56 @@ from os import system
 
 
 def _get_system_prompt(core_api_docs, 
-                       task_program_docs
+                       task_program_docs,
+                       useful_info,
                        ):
     system_prompt = f"""
 You are an expert in both animal behavior and you understand how to write code. 
 
 You will be provided with information that are organized in following blocks:
-coreapidocs: this block contains information about the core apis that can help capture behaviors. They do not contain implementation details but they give you ideas what behaviors you can capture.
-taskprograms: this block contains the description of the behaivors we alreay know. Make sure you don't repeat the same behavior.
-Following are information you have. 
-{core_api_docs}\n{task_program_docs}\n
-
-
-In taskprograms block, we have functions that can capture behaviors. 
-At the end of each task program, we have fitness score that is a product of duration of the captured behavior and the number of times the behavior is observed across videos.
-A 0 fitness score means the behavior cannot be captured with the current task program. You need to either modify the task program or write a new task program to capture the behavior.
-
-Modification trick:
-
-If the fitness score is 0, you can try to modify the task program by changing the parameters of the function. Maybe the distance was too far, the speed was set too fast etc.
-
-New task program trick:
-
-Try to come up with a new behavior that is not captured by the existing task programs. 
-
+coreapidocs: this block contains information about the core apis that can help capture behaviors. They do not contain implementation details but you should use them wisely. 
+taskprograms: this block contains the description of the behaivors we alreay know how to capture.
+useful_info: this block contains information that can help you understand the context of the problem.
+Following are coreapidocs block and taskprograms block
+{core_api_docs}\n{task_program_docs}\n{useful_info}\n
 
 An example of task program looks like following:
-
 def get_oral_oral_contact_events(config)->List[BaseEvent]:
     '''
     This behavior is called "oral oral contact". This behavior describes animals' closest distance between 
-    one animal’s "nose" and other animal’s bodyparts "nose" is less than 15.
+    one animal’s "nose" and other animal’s bodyparts "nose" is less than 15 and larger than 0.
     '''
     analysis = AnimalBehaviorAnalysis(config)
-    get_oral_oral_contact_events = analysis.get_animals_animals_events(['closest_distance'],
-                                                                                         ['<15'],
-                                                                                         bodypart_names=['nose'],
-                                                                                         otheranimal_bodypart_names=['nose'])
-    return get_oral_oral_contact_events
+    
+    oral_oral_contact_events = analysis.get_animals_animals_events(['closest_distance>0', 'closest_distance<15'],
+                                                                    bodypart_names=['nose'],
+                                                                    otheranimal_bodypart_names=['nose'])
+
+    return oral_oral_contact_events
+
+You can also craft a task program from a binary mask using Event.init_from_mask(mask) method.
+However, you are not allowed to turn events back to binary mask and do further processing.
+Make sure you don't access any attribtues and functions that are not defined in the api docs.
+Below is an example of how you can craft a task program from a binary mask:
+def get_moving_fast_and_oral_oral_contact_events(config)->List[BaseEvent]:
+    '''
+    This behavior is called "moving fast and oral oral contact". This behavior describes animals' speed is faster than 10 pixels per frame while maintaining contact   
+    '''
+    analysis = AnimalBehaviorAnalysis(config)
+    # speed is of shape (n_frames, n_individuals, n_kpts, n_dim)
+    speed = analysis.get_speed()   
+    speed = np.nanmean(speed, axis=(2,3))  
+    mask = speed > 10
+    # the mask must be a binary mask of shape (n_frames, n_individuals)
+    moving_fast_events = analysis.from_mask(mask)
+    contact_events = get_oral_oral_contact_events(config)
+    moving_fast_and_contact_events = analysis.get_composite_events(moving_fast_events,
+                                                                     contact_events,
+                                                                     composition_type="logical_and")
+
+
+    return moving_fast_and_contact_events
+
 
 Query about orientation should use the following class:
 
@@ -49,7 +61,7 @@ class Orientation(IntEnum):
     LEFT = 3 
     RIGHT = 4 
     
-Note that the orientation is other animal relative to the this initiating animal.
+Note that the orientation is egocentric to the initiating animal.
 For example, if the orientation is FRONT, it means the other animal is in front of the initiating animal.
 
 Rules you should follow when you provide you answer:
@@ -63,10 +75,19 @@ Rules you should follow when you provide you answer:
 8) Note relative speed or relative angle are relative. If you want to describe a behavior where the sender animal initiating the behavior, you should also use get_animals_state_events
 9) Note to avoid contradiction when using logical_and or multiple queries in animals_animals_events. For example, one animal cannot be both in the left and in the right of the other animal etc.
 
-Provide your answer in the following order:
-1) Your strategy of how you can capture behavior that gives non-zero fitness score
-2) State whether you are modifying an existing task program or creating a new one. Put the description of the behavior, and justify why it's doable with api docs.
-3) Your code
+At the end of each task program, we have fitness score that is a product of duration of the captured behavior and the number of times the behavior is observed across videos.
+A 0 fitness score means the behavior cannot be captured with the current task program. You need to either modify the task program or write a new task program to capture the behavior.
+
+Format your answer as follows:
+
+1) Strategy: 
+    - Your strategy of how you should create more task programs that gives non-zero fitness score.
+2) Modify or create new task program:
+    - If you try to modify an existing task program that gives 0 fitness score. You can use the useful info to change the parameters such as speed or distance. Don't keep modifying the same task program.
+    - If you want to create a new task program, you can use the existing task programs as reference. You can reuse the existing task programs and combine them to create a new task program.
+    - You should be able to 
+3) Your task program code:
+    - Make sure your task programs follows the same style of existing task programs such as having a name, description and return type.
 
 Make sure your text are short, concise and clear.
 

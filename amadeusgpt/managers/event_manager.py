@@ -9,9 +9,10 @@ from .relationship_manager import RelationshipManager
 import numpy as np
 from typing import List, Dict, Any, Union, Set, Optional, Literal
 from amadeusgpt.analysis_objects.event import BaseEvent, Event
-from amadeusgpt.api_registry import register_class_methods, register_core_api
+from amadeusgpt.programs.api_registry import register_class_methods, register_core_api
 from .base import Manager, cache_decorator
 from amadeusgpt.analysis_objects.relationship import Orientation
+import re
 
 def find_complement_number(string):
     digits = ""
@@ -159,8 +160,7 @@ class EventManager(Manager):
     @register_core_api
     def get_animals_state_events(
         self,
-        query_name : str,
-        comparison : str,
+        query: str,
         bodypart_names: Optional[List[str]] = None,
         min_window:Optional[int]=0,
         max_window:Optional[int]=1000000,
@@ -169,10 +169,11 @@ class EventManager(Manager):
         """
         Parameters
         ----------
-        query_name: str
-            Must be one of ['speed', 'acceleration', 'bodypart_pairwise_distance']
-        comparison: str
-            Must be a numerical comparison such as  ['<10', '>5']
+        query: str
+            Take the form of {type_of_query}{operator}{value}
+            Examples are:
+            'speed>3', 'acceleration>5', 'bodypart_pairwise_distance<10'
+            The allowed type of query is chosen from ["speed", "acceleration", "bodypart_pairwise_distance"]       
         Returns
         -------
         List[BaseEvent]
@@ -191,14 +192,19 @@ class EventManager(Manager):
         if bodypart_names is not None:
             self.animal_manager.update_roi_keypoint_by_names(bodypart_names)
         ret_events = []
+        pattern = r"(==|<=|>=|<|>)"
+        comparison_operator = re.findall(pattern, query)[0]
+        query_name = query.split(comparison_operator)[0]
+        comparison = comparison_operator + ''.join(query.split(comparison_operator)[1:])
 
         for sender_animal_name in self.animal_manager.get_animal_names():
             # to construct the events
+            
             state = self.animal_manager.query_animal_states(sender_animal_name, query_name)
+            # must be of shape (n_frames, n_kpts, n_dim)
+            assert len(state.shape) == 3, f"state shape is {state.shape}. It must be of shape (n_frames, n_kpts, n_dim)"
             if len(state.shape) == 3:
-                # the mask must be 2D. For example, if the user asks the speed of the animal. We make it the average of the speed of all the bodyparts
-                state = np.nanmedian(state, axis=1)
-
+                state = np.nanmedian(state, axis=(1,2))
             relation_string = "state" + comparison
 
             mask = eval(relation_string)
@@ -256,7 +262,6 @@ class EventManager(Manager):
     def get_animals_animals_events(
         self,
         cross_animal_query_list: List = [],
-        cross_animal_comparison_list: List = [],
         bodypart_names: Optional[Union[List[str], None]]=None,
         otheranimal_bodypart_names: Optional[Union[List[str], None]] = None,
         min_window:int = 11,
@@ -265,24 +270,24 @@ class EventManager(Manager):
     )-> List[BaseEvent]:
         """
         The function is for capturing behaviors that involve multiple animals. Don't fill the bodypart_names and otheranimal_bodypart_names unless you know the names of the bodyparts.
-        When multiple queries are passed, they are combined as logical_and.
-        length of cross_animal_query_list must be equal to length of cross_animal_comparison_list.
+        When multiple queries are passed, they are combined as logical_and, not logical_or or sequential.
+
         Parameters
         ----------        
         cross_animal_query_list: 
-        list of queries describing relative states among animals. Must be chosen from ["overlap", "distance", "relative_speed", "orientation", "closest_distance", "relative_angle", "relative_head_angle"]
-        cross_animal_comparison_list:
-	    This list consists of comparison operators.
-        For to_left, to_right etc., the comparison is '==False' or '==True'. For kinematics such as distance, relative_speed, relative_angle, the comparison is a numerical comparison such as '<10', '>5'.
-        For orientation, the comparison is a string such as '==Orientation.FRONT' or '==Orientation.BACK'.
+        list of queries describing conditions among animals. It takes form of {type_of_query}{operator}{value}
+        Examples are:
+        'orientation==Orientation.FRONT', 'orientation==Orientation.BACK', 'distance<10', 'relative_angle>30',
+        The allowed type of query is chosen from ["overlap", "distance", "relative_speed", "orientation", "closest_distance", "relative_angle", "relative_head_angle"] 
         bodypart_names:
-        list of bodyparts for the this animal. By default, it is None, which means all bodyparts are included. Don't assume the name of the bodyparts.
+        list of bodyparts for the this animal. By default, it is None, which means all bodyparts are included. 
+        If set, the given bodyparts will be the "ROI" bodyparts that are used for the queries.
         otheranimal_bodypart_names: list[str], optional
-        list of bodyparts for the other animals. By default, it is None, which means all bodyparts are included. Don't assume the name of the bodyparts
+        list of bodyparts for the other animals. By default, it is None, which means all bodyparts are included. 
+        If set, the given bodyparts will be the "ROI" bodyparts that are used for the queries.
         min_window: int, optional, default 11
         Only include events that are longer than min_window
         max_window: int, optional, default 100000
-
         smooth_window_size: int, optional
         smooth window size for smoothing the events.
         Returns
@@ -295,8 +300,6 @@ class EventManager(Manager):
 
         """
 
-        assert len(cross_animal_query_list) == len(cross_animal_comparison_list), "cross_animal_query_list and cross_animal_comparison_list must have the same length"
-
         if min_window is None:
             min_window = 3
         if max_window is None:
@@ -306,15 +309,24 @@ class EventManager(Manager):
             sender_animal_bodyparts_names=bodypart_names,
             receiver_animal_bodyparts_names=otheranimal_bodypart_names
         )
+        print ('cross_animal_query_list', cross_animal_query_list)
+        pattern = r"(==|<=|>=|<|>)"
         all_events = []
         for relationship in animals_animals_relationships:            
-            for query, comparison in zip(cross_animal_query_list, cross_animal_comparison_list):
+            for query in cross_animal_query_list:
+                # assert that query must contain one of the operators
+                # find the operator 
+                
+                comparison_operator = re.findall(pattern, query)[0]
+                _query = query.split(comparison_operator)[0]               
+                _comparison = comparison_operator + ''.join(query.split(comparison_operator)[1:])
+
                 events = self.get_events_from_relationship( 
-                                                                relationship,
-                                                                query, 
-                                                                comparison,                                                              
-                                                                smooth_window_size)
-                all_events.extend(events)       
+                                                            relationship,
+                                                            _query, 
+                                                            _comparison,                                                              
+                                                            smooth_window_size)
+                all_events.extend(events)
         graph = EventGraph.init_from_list(all_events)
         
         if len(cross_animal_query_list)>1:
@@ -432,5 +444,37 @@ class EventManager(Manager):
 
             return graph.to_list()  
     
+    @register_core_api
+    def from_mask(self, 
+                  mask_tensor: np.ndarray,
+                  impacted_animal : Optional[List[str]] = None,
+                  impacted_object: Optional[List[str]] = None
+                  ) -> List[BaseEvent]:
+        """
+        This function expects to take a binary mask of shape (n_frames, n_individuals) to describe a condition for the behavior and returns a list of events.
+        If the behavior impacts other animals, the impacted_animal should be set.
+        If the behavior impacts objects, the impacted_object should be set.  
+        Returns
+        -------
+        List[BaseEvent]      
+        """
+        # mask is of shape (n_frames, n_individuals)
+        impacted_animal = impacted_animal or []
+        impacted_object = impacted_object or []
+        ret = []
+        for animal_id, animal_name in enumerate(self.animal_manager.get_animal_names()):
+            mask = mask_tensor[:, animal_id] 
+            
+            events = Event.mask2events(mask, 
+                                        self.video_file_path, 
+                                        animal_name,
+                                        set(impacted_animal),
+                                        set(impacted_object),
+                                        smooth_window_size = 3)
+            ret.extend(events)
+        return ret
+
+
     def get_serializeable_list_names(self) -> List[str]:
         return ["animals_object_events", "animals_animals_events", "animals_state_events"]
+

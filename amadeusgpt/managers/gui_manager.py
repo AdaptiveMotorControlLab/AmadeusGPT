@@ -5,7 +5,7 @@ import cv2
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import numpy as np 
-from amadeusgpt.api_registry import register_class_methods, register_core_api
+from amadeusgpt.programs.api_registry import register_class_methods, register_core_api
 from matplotlib.widgets import Button, PolygonSelector
 from matplotlib.path import Path
 from .base import Manager

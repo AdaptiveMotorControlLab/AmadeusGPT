@@ -1,9 +1,8 @@
 
-from dis import disco
 from amadeusgpt.system_prompts import mutation
 from amadeusgpt.programs.task_program_registry import TaskProgram, TaskProgramLibrary
-from amadeusgpt.sandbox import EvoSandbox
-from amadeusgpt.api_registry import CORE_API_REGISTRY
+from amadeusgpt.programs.sandbox import EvoSandbox
+from amadeusgpt.programs.api_registry import CORE_API_REGISTRY
 from amadeusgpt.analysis_objects.analysis_factory import create_analysis
 from amadeusgpt.analysis_objects.llm import MutationLLM, CodeGenerationLLM, BreedLLM
 import re
@@ -17,6 +16,9 @@ import os
 from collections import defaultdict
 import numpy as np
 import glob
+import json 
+from tqdm import tqdm
+
 
 random.seed(time.time() * os.getpid())
 
@@ -118,9 +120,10 @@ class EasyEvolution(BaseEvolution):
         # the key should be the video file name -> task program name -> events
         self.cache = defaultdict(dict)
         self.sandbox = EvoSandbox(
-            config,
-            CORE_API_REGISTRY)
+            config)            
         self.video2keypointfile = {}
+
+        TaskProgramLibrary.bind_exec_namespace(self.sandbox.exec_namespace)
 
     def events_duration(self, events):
         temp = [event.duration_in_seconds for event in events]
@@ -222,8 +225,20 @@ score:{self.scores[behavior_name]}
         return [ranked_survivals[i] for i in indices]    
 
 
+    def log_checkopint(self):
+        TaskProgramLibrary.save(os.path.join(self.config['evo_info']['data_folder'],
+                                                    'inspection',
+                                                    'task_program_checkpoint.json'))
+        
+        with open (os.path.join(self.config['evo_info']['data_folder'],
+                                'inspection',
+                                'api_docs.json'), 'w') as f:
+            json.dump(CORE_API_REGISTRY, f, indent=4)
+
+
     def train(self):
-        self.evaluate()                               
+        # initial evaluation to provide initial scores
+        self.evaluate()
         for i in range(4):
             try:
                 print (f'training iteration {i}')
@@ -231,17 +246,16 @@ score:{self.scores[behavior_name]}
                 #print (f'selecting {mutate_candidate} for mutation')
                 #self.sandbox.update_program_to_mutate(mutate_candidate)
                 self.mutate()            
-                breed_participants = self.select_for_breed()
-                print (f'selecting {breed_participants} for breeding')
-                self.breed(breed_participants)
+                # breed_participants = self.select_for_breed()
+                # print (f'selecting {breed_participants} for breeding')
+                # self.breed(breed_participants)
                 self.evaluate()
-                TaskProgramLibrary.save('task_program_checkpoint.json')
+                self.log_checkopint()
+               
             except Exception as e:
                 import traceback
                 traceback.print_exc()
-                continue  
-                        
-           
+                continue                                     
 
     def info_gain(self):
         discovered_behaviors = []
@@ -270,7 +284,7 @@ score:{self.scores[behavior_name]}
                     config['video_info']['video_file_path'] = video_file_path
                     self.sandbox.update_config(config)
                     # need to optimize if there are many videos
-                    self.sandbox.visual_validate(video_file_path, self.cache[video][task_program_name], task_program_name)   
+                    #self.sandbox.visual_validate(video_file_path, self.cache[video][task_program_name], task_program_name)   
         
 
     def evaluate(self):
@@ -280,26 +294,29 @@ score:{self.scores[behavior_name]}
         keypoint_type = self.config['evo_info']['keypoint_type']
         video_type = self.config['evo_info']['video_type']
         train_files = glob.glob(train_folder + f'/*{keypoint_type}')
-        for name, task_program in list(self.task_program_library.items()):
-            for keypoint_file in train_files:
-                videoname = keypoint_file.split('/')[-1].replace(keypoint_type, '')
-                if videoname in self.cache and name in self.cache[videoname]:
-                    continue
-                # just replacing stuff in the config
-                config['keypoint_info']['keypoint_file_path'] = keypoint_file
-                config['video_info']['video_file_path'] = os.path.join(train_folder,keypoint_file.replace(keypoint_type, video_type))
-                self.video2keypointfile[videoname] = keypoint_file
-                self.sandbox.update_config(config)
-                try:
-                    events = task_program(config, self.sandbox.exec_namespace)                  
-                    assert events is not None
-                    self.cache[videoname][name] = events                    
-                except Exception as e:
-                    import traceback
-                    traceback.print_exc()
-                    print ('something is wrong with task program', name)                    
-                    self.task_program_library.pop(name)
-                
+        total_iterations = len(train_files) * len(self.task_program_library)
+        with tqdm(total=total_iterations, desc="Total progress") as pbar:
+            for name, task_program in list(self.task_program_library.items()):
+                for keypoint_file in train_files:
+                    videoname = keypoint_file.split('/')[-1].replace(keypoint_type, '')
+                    if videoname in self.cache and name in self.cache[videoname]:
+                        pbar.update(1)
+                        continue
+                    # just replacing stuff in the config
+                    config['keypoint_info']['keypoint_file_path'] = keypoint_file
+                    config['video_info']['video_file_path'] = os.path.join(train_folder,keypoint_file.replace(keypoint_type, video_type))
+                    self.video2keypointfile[videoname] = keypoint_file
+                    self.sandbox.update_config(config)
+                    try:
+                        events = task_program(config)
+                        assert events is not None
+                        self.cache[videoname][name] = events                    
+                    except Exception as e:
+                        import traceback
+                        traceback.print_exc()
+                        print ('something is wrong with task program', name)                    
+                        self.task_program_library.pop(name)
+                    pbar.update(1)
         self.calculate_fitness()
         self.info_gain()
         
