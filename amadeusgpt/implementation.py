@@ -34,7 +34,11 @@ class AnimalBehaviorAnalysis:
         self.animal_manager = AnimalManager(config, self.model_manager)
                
         # object manager needs sam_info, seriralized pickle objects
-        self.object_manager =  ObjectManager(config, self.model_manager)
+        self.object_manager =  ObjectManager(config, 
+                                             self.model_manager,
+                                             self.animal_manager)
+
+                                             
         # relationship manager needs animal_manager and object_manager
         self.relationship_manager = RelationshipManager(config, 
                                                         self.animal_manager,
@@ -88,35 +92,7 @@ class AnimalBehaviorAnalysis:
 
 
 if __name__ == "__main__":
-    sam_config = {
-        "ckpt_path": "path/to/ckpt",
-        "model_type": "sam",
-        "scene_frame_number": 100        
-    }
-    dlc_config = {
-        "model_name": "",
-        "model_checkpoint": "",
-        "keypoint_file_path": "path/to/keypoint/file"
-    }
-    video_config = {
-        "video_file_path": "path/to/video/file",
-        "frame_number": 100,
-        "pixels_per_cm": 8
-    }
+    
 
-    task_program_config = {
-        "save_path": "",
-        "load_path": "",
-        "load_from_disk": False
-    }
-
-
-    object_config = {"load_objects_from_disk": False}
-
-    config = {
-        "object_info": object_config,
-        "video_info": video_config,
-        "sam_info": sam_config,
-        "keypoint_info": dlc_config,
-        "task_program_info": task_program_config
-    }
+    pass
+  

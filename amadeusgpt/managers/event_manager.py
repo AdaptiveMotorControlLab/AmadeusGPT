@@ -64,56 +64,34 @@ class EventManager(Manager):
         self.animals_object_events = []
         self.animals_animals_events = []
         self.animals_state_events = []
-    #@register_core_api
-    #@cache_decorator
+    @register_core_api
+    @cache_decorator
     def get_animals_object_events(
         self,
         object_name: str,
-        relation_query: str,
-        comparison: Optional[str] = None,
-        negate=False,
+        query: str,
+        negate:Optional[bool]=False,
         bodypart_names: Optional[Union[List[str], None]] = None,
         min_window: int = 0,
         max_window: int = 1000000,
-        smooth_window_size = 3,
+        smooth_window_size: int = 3,
     ) -> List[BaseEvent]:
         """
         This function is only used when there is object with name involved in the queries.               
         object_name : str
         This parameter represents the name of the object of interest. It is expected to be a string.
-        The accepted naming conventions include numeric strings (e.g., '0', '1', '2', ...), or
-        the prefix 'ROI' followed by a number (e.g., 'ROI0', 'ROI1', ...). 
-        relation_query: str. Must be one of ['overlap', 'distance', 'angle', 'orientation']
-        comparison : str, Must be a comparison operator followed by a number like <50, optional
+        query: str. Examples are 'overlap == True', 'distance==30', 'angle<20', 
         bodypart_names: List[str], optional
-           bodyparts of the animal
+           bodyparts of the animal. Default to be None which means all keypoints of the animal are considered.
         min_window: min length of the event to include
         max_window: max length of the event to include
         negate: bool, default false
            whether to negate the spatial events. For example, if negate is set True, inside roi would be outside roi
-        """        
-        # ugly fix for ROI
-        if (
-            object_name not in self.object_manager.get_object_names()
-        ):
-            raise ValueError(f"{object_name} is not defined. You need to define or draw the ROI first. Please do not write code before the user provides the ROI")
-        # we only use numbers to represent objects for now
-        object_name = object_name.replace("object", "")
+        """
+        pattern = r"(==|<=|>=|<|>)"
         if bodypart_names is not None:
             self.animal_manager.update_roi_keypoint_by_names(bodypart_names)
-
-        # TODO add angles between two animals' axis
-        is_numeric_query = False
-        if relation_query in [
-            "distance",
-            "relative_angle",
-            "orientation",
-            "closest_distance",
-            "relative_head_angle",
-            "relative_speed",
-        ]:
-            is_numeric_query = True            
-                    
+                                    
         animals_objects_relations = self.relationship_manager.get_animals_objects_relationships(animal_bodyparts_names=bodypart_names)
        
         ret_events = []
@@ -122,21 +100,14 @@ class EventManager(Manager):
                 continue
             # to construct the events
             mask:List[bool] = None
-            sender_animal_name = animal_objects_relationship.sender_animal_name
-
-            if is_numeric_query:
-                numeric_quantity  = animal_objects_relationship.query_relationship(relation_query)
-                # e.g. "250 >= 10"
-                relation_string = "numeric_quantity" + comparison
-                mask = eval(relation_string)            
-                mask = process_animal_object_relation(relation_query, comparison, mask)
-            else:
-                object_names = self.object_manager.get_object_names()
-                assert (
-                    object_name in object_names
-                ), f"{object_name} not in available list of objects. Available objects are {object_names}"
-                mask = animal_objects_relationship.query_relationship(relation_query)
-
+            sender_animal_name = animal_objects_relationship.sender_animal_name            
+            comparison_operator = re.findall(pattern, query)[0].strip()
+            _query = query.split(comparison_operator)[0].strip()
+            _comparison = comparison_operator + ''.join(query.split(comparison_operator)[1:])           
+            numeric_quantity  = animal_objects_relationship.query_relationship(_query)
+            relation_string = "numeric_quantity" + _comparison
+            mask = eval(relation_string)
+            mask = process_animal_object_relation(_query, _comparison, mask)          
 
             events: List[BaseEvent] = Event.mask2events(mask, 
                                                         self.video_file_path, 
@@ -170,16 +141,14 @@ class EventManager(Manager):
         Parameters
         ----------
         query: str
-            Take the form of {type_of_query}{operator}{value}
-            Examples are:
-            'speed>3', 'acceleration>5', 'bodypart_pairwise_distance<10'
-            The allowed type of query is chosen from ["speed", "acceleration", "bodypart_pairwise_distance"]       
+            Takes the form of {type_of_query}{comparison operator}{numerical value}. 
+            For example, at 'speed>50', type_of_query is 'speed', comparison operator is '>', and numerical value is 50.
+            There can only be one compasion operator in the query.
         Returns
         -------
-        List[BaseEvent]
-        Examples that create task programs using this API. 
+        List[BaseEvent]        
         --------
-        # A task program that captures events where animal moving faster than 3 pixels across frames.       
+        
         """
         if min_window is None:
             min_window = 0
@@ -206,7 +175,6 @@ class EventManager(Manager):
             if len(state.shape) == 3:
                 state = np.nanmedian(state, axis=(1,2))
             relation_string = "state" + comparison
-
             mask = eval(relation_string)
 
             events = Event.mask2events(mask,
@@ -309,7 +277,6 @@ class EventManager(Manager):
             sender_animal_bodyparts_names=bodypart_names,
             receiver_animal_bodyparts_names=otheranimal_bodypart_names
         )
-        print ('cross_animal_query_list', cross_animal_query_list)
         pattern = r"(==|<=|>=|<|>)"
         all_events = []
         for relationship in animals_animals_relationships:            
@@ -320,7 +287,6 @@ class EventManager(Manager):
                 comparison_operator = re.findall(pattern, query)[0]
                 _query = query.split(comparison_operator)[0]               
                 _comparison = comparison_operator + ''.join(query.split(comparison_operator)[1:])
-
                 events = self.get_events_from_relationship( 
                                                             relationship,
                                                             _query, 
@@ -328,6 +294,8 @@ class EventManager(Manager):
                                                             smooth_window_size)
                 all_events.extend(events)
         graph = EventGraph.init_from_list(all_events)
+     
+        ###
         
         if len(cross_animal_query_list)>1:
             graphs = []
@@ -354,11 +322,19 @@ class EventManager(Manager):
     def get_composite_events(self,
                             events_A: List[BaseEvent],
                             events_B: List[BaseEvent],
-                            composition_type: Literal["sequential", "logical_and", "logical_or"] = "logical_and",                  
+                            composition_type: Literal["sequential", "logical_and", "logical_or"] = "logical_and",
+                            max_interval_between_sequential_events: int = 15,
+                            min_window: int = 15,
+                            max_window: int = 100000,
                              ) -> List[BaseEvent]:
         """
         This function is for combining two sets of events.
-        The meaning of comosition_type:
+        Parameters
+        ----------
+        events_A: The first events to combine. When composition type is 'sequential', this event happens first.
+        events_B: The second events to combine. When composition type is 'sequential', this event happens second.
+        max_interval_between_sequential_events: int, optional, default 15
+        comopsition_type:
         'logical_and': two behaviors happen at the same time.
         'logical_or': one of the behaviors happen
         'sequential': the second behavior happens after the first behavior.
@@ -372,22 +348,24 @@ class EventManager(Manager):
         if composition_type == "sequential":
             graph_list = [EventGraph.init_from_list(events) for events in events_list]
             graphs = []
+            count = 0
             for animal_name in self.animal_manager.get_animal_names():
-                for i in range(1, len(graph_list)):            
+                for i in range(1, len(graph_list)):
+                    count+=1                    
                     sub_graph = EventGraph.concat_graphs(graph_list[i-1], 
-                                                         graph_list[i],
-                                                         {'sender_animal_name': animal_name}
-                    )
+                                                        graph_list[i],                                                         
+                                                        {'sender_animal_name': animal_name},                                                            
+                                                        max_interval_between_sequential_events)
                     graphs.append(sub_graph)
+
             graph = EventGraph.merge_subgraphs(graphs)
-            return graph.to_list()
         
         elif composition_type == "logical_or":
             all_events = []
             for events in events_list:
                 all_events.extend(events)
-
-            return all_events                
+            ret = Event.filter_events_by_duration(all_events, min_window, max_window)
+            return ret                
 
         elif composition_type == "logical_and":
             all_events = []
@@ -411,7 +389,7 @@ class EventManager(Manager):
                         graphs.append(animal_animal_subgraph)
             # we then fuse events from different task programs that involve animal-object interactions
             for object_name in self.object_manager.get_object_names():
-                print ('object name', object_name)
+
                 animal_object_subgraph = EventGraph.fuse_subgraph_by_kvs(
                                     graph,   
                                     {'sender_animal_name': animal_name, 
@@ -441,37 +419,52 @@ class EventManager(Manager):
                 )
                 graphs.append(subgraph)
             graph = EventGraph.merge_subgraphs(graphs)
-
-            return graph.to_list()  
+        ret = graph.to_list()
+        ret = Event.filter_events_by_duration(ret, min_window, max_window)        
+        return ret 
     
-    @register_core_api
+    #@register_core_api
     def from_mask(self, 
                   mask_tensor: np.ndarray,
-                  impacted_animal : Optional[List[str]] = None,
-                  impacted_object: Optional[List[str]] = None
                   ) -> List[BaseEvent]:
         """
-        This function expects to take a binary mask of shape (n_frames, n_individuals) to describe a condition for the behavior and returns a list of events.
-        If the behavior impacts other animals, the impacted_animal should be set.
-        If the behavior impacts objects, the impacted_object should be set.  
+
+        This function expects to take a binary mask to describe a condition for the behavior and returns a list of events.
+        For animal-animal interaction, it expects shape of  (n_frames, n_individuals, n_individuals) 
+        For condition about animals' own states, it expects shape of (n_frames, n_individuals)
         Returns
         -------
         List[BaseEvent]      
         """
+        assert len(mask_tensor.shape) == 2 or len(mask_tensor.shape) == 3, "mask_tensor must be of shape (n_frames, n_individuals) or (n_frames, n_individuals, n_individuals)"
         # mask is of shape (n_frames, n_individuals)
-        impacted_animal = impacted_animal or []
-        impacted_object = impacted_object or []
         ret = []
-        for animal_id, animal_name in enumerate(self.animal_manager.get_animal_names()):
-            mask = mask_tensor[:, animal_id] 
-            
-            events = Event.mask2events(mask, 
-                                        self.video_file_path, 
-                                        animal_name,
-                                        set(impacted_animal),
-                                        set(impacted_object),
-                                        smooth_window_size = 3)
-            ret.extend(events)
+        assert self.config['video_info']['video_file_path'] == self.video_file_path
+        if len(mask_tensor.shape) == 2:
+            for animal_id, animal_name in enumerate(self.animal_manager.get_animal_names()):
+                mask = mask_tensor[:, animal_id]
+                events = Event.mask2events(mask, 
+                                            self.video_file_path, 
+                                            animal_name,
+                                            set([]),
+                                            set([]),
+                                            smooth_window_size = 3)
+                ret.extend(events)
+         
+        elif len(mask_tensor.shape) == 3:
+            for animal_id, animal_name in enumerate(self.animal_manager.get_animal_names()):
+                for other_animal_id, other_animal_name in enumerate(self.animal_manager.get_animal_names()):
+                    if animal_id == other_animal_id:
+                        continue
+                    mask = mask_tensor[:, animal_id, other_animal_id]
+
+                    events = Event.mask2events(mask, 
+                                                self.video_file_path, 
+                                                animal_name,
+                                                set([other_animal_name]),
+                                                set([]),
+                                                smooth_window_size = 3)
+                    ret.extend(events)
         return ret
 
 

@@ -169,7 +169,7 @@ class AnimalManager(Manager):
     def get_speed(self, 
                   ) -> ndarray:
         """
-        Get the speed of all animals. The shape is of shape  n_frames, n_individuals, n_kpts, 1
+        Get the speed of all animals. The shape is  (n_frames, n_individuals, n_kpts, 1) # 1 is the scalar speed
         The speed is an unsigned scalar value.
         """        
         return np.stack([animal.get_speed() for animal in self.animals], axis = 1)
@@ -177,7 +177,7 @@ class AnimalManager(Manager):
     @register_core_api
     def get_velocity(self) -> ndarray:
         """
-        Get the velocity. The shape is of shape  n_frames, n_individuals, n_kpts, 2
+        Get the velocity. The shape is (n_frames, n_individuals, n_kpts, 2) # 2 is the x and y components
         The velocity is a vector.
         """
         return np.stack([animal.get_velocity() for animal in self.animals], axis = 1)
@@ -185,8 +185,8 @@ class AnimalManager(Manager):
     @register_core_api
     def get_acceleration(self) -> ndarray:
         """
-        Get the acceleration. The shape is of shape  n_frames, n_individuals, n_kpts, 2
-        The acceleration is a vector.
+        Get the acceleration. The shape is of shape  (n_frames, n_individuals, n_kpts, 2) # 2 is the x and y components
+        The acceleration is a vector. 
         """
         return np.stack([animal.get_acceleration() for animal in self.animals], axis = 1)
 

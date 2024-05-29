@@ -1,5 +1,3 @@
-
-from amadeusgpt.system_prompts import mutation
 from amadeusgpt.programs.task_program_registry import TaskProgram, TaskProgramLibrary
 from amadeusgpt.programs.sandbox import EvoSandbox
 from amadeusgpt.programs.api_registry import CORE_API_REGISTRY
@@ -7,10 +5,7 @@ from amadeusgpt.analysis_objects.analysis_factory import create_analysis
 from amadeusgpt.analysis_objects.llm import MutationLLM, CodeGenerationLLM, BreedLLM
 import re
 import random
-import ast
-from itertools import combinations
 import functools
-from functools import partial
 import time
 import os
 from collections import defaultdict
@@ -54,57 +49,9 @@ class BaseEvolution:
     breed: breed two task programs. LLM is used for new naming and description
 
     """
-
-
     def __init__(self, config):
         self.config = config
-    def evaluate(self):
-        pass
-
-    def select_for_breed(self):
-        pass
-
-    def select_for_mutation(self):
-        pass
-
-    def breed(self):
-        pass    
-
-    def mutate(self, task_program):
-        # ask a mutation LLM to mutate a task program description        
-        pass
-
-    def rank(self):
-        pass
-
-    def step(self):
-        
-        # rank
-
-        # select for mutation
-
-        # mutate
-
-        # select for breeding
-
-        # breed
-
-        # evaluation
-
-        pass
-    def train(self):
-        pass
-
-
-
-# def single_evaluate(config, keypoint_file, task_program, sandbox):
-#     print(f'evaluating {task_program["name"]} on {keypoint_file}')
-#     # Adjusting the config for the current file
-#     config['keypoint_info']['keypoint_file_path'] = keypoint_file
-#     config['video_info']['video_file_path'] = keypoint_file.replace('.json', '.avi')
-#     sandbox.update_config(config)
-#     events = task_program(config, sandbox.exec_namespace)
-#     return keypoint_file, task_program['name'], len(events)
+   
     
 class EasyEvolution(BaseEvolution):
     def __init__(self, config):
@@ -118,7 +65,6 @@ class EasyEvolution(BaseEvolution):
         self.scores = defaultdict(dict)
         # cache the results of task programs in scores
         # the key should be the video file name -> task program name -> events
-        self.cache = defaultdict(dict)
         self.sandbox = EvoSandbox(
             config)            
         self.video2keypointfile = {}
@@ -138,93 +84,77 @@ class EasyEvolution(BaseEvolution):
         # 2) number of videos it occurs
         total_duration = defaultdict(int)
         number_of_videos = defaultdict(int)
-        for video in self.cache:
-            for behavior_name in self.cache[video]:               
-                total_duration[behavior_name] += self.events_duration(self.cache[video][behavior_name])
+        for video in TaskProgram.cache:
+            for behavior_name in TaskProgram.cache[video]:               
+                total_duration[behavior_name] += self.events_duration(TaskProgram.cache[video][behavior_name])
                 if total_duration[behavior_name] > 0:
                     number_of_videos[behavior_name] += 1
         behaviors = set()
-        for video in self.cache:
-            for behavior_name in self.cache[video]:
+        for video in TaskProgram.cache:
+            for behavior_name in TaskProgram.cache[video]:
                 behaviors.add(behavior_name)
-        self.debug = {}
+        detailed_scores = {}
         for behavior_name in behaviors:
             self.scores[behavior_name] = round(total_duration[behavior_name] * number_of_videos[behavior_name],1)
-            self.debug[behavior_name] = f'''
-total:{total_duration[behavior_name]} 
-#video:{number_of_videos[behavior_name]}
-score:{self.scores[behavior_name]}
-'''     
+            detailed_scores[behavior_name] = f'''
+total duration in seconds:{round(total_duration[behavior_name],2)} 
+number of video occured:{number_of_videos[behavior_name]}
+'''            
         # update the sandbox with the new scores  
-        self.sandbox.scores = self.scores
-
-    def mutate(self):        
+        self.sandbox.scores = self.scores       
+        self.sandbox.detailed_scores = detailed_scores
+    
+    def mutate(self, autonomous = False):        
         mutation_response = self.mutation_llm.speak(self.sandbox)
         print (mutation_response)
         # get the mutated task program
         pattern = r"```python(.*?)```"
         function_code = re.findall(pattern, mutation_response, re.DOTALL)[0]
-       
-        #parent_generation = self.task_program_library[self.sandbox.program_to_mutate]['generation']        
+        if autonomous:
+            json_pattern = r"```json(.*?)```"
+            json_string = re.findall(json_pattern, mutation_response, re.DOTALL)[0]
+            json_obj = json.loads(json_string)
+            mutate_from = json_obj['mutate_from']
+            combine_with = json_obj['combine_with']
+            print ('LLM autonomously selecting')
+            print ('mutate from', mutate_from)
+            print ('combine with', combine_with)
+
         self.sandbox.register_task_program(function_code)
-                                           #mutation_from = self.sandbox.program_to_mutate)
-                                           
-    
-    def get_breed_function(self):
-        breed_program.__globals__.update(self.sandbox.exec_namespace)
-        return breed_program
-        #return breed_program(self.config, events1, events2, composition_type)
+                                                                                      
+               
+    def select_for_mutation(self) -> str:
+        """
+        This returns the name of the task program that is selected for mutation
+        """
+        keys, scores = [],[]
+        for key, value in self.scores.items():
+            keys.append(key)
+            scores.append(value)
 
-    def breed(self, participans):
-        pairs = list(combinations(participans, 2))
-        composition_types = ['logical_and', 'sequential']
-        for pair in pairs:
-            for composition_type in composition_types:
-                name1, name2  = pair[0], pair[1]
-                events1, events2 = self.cache[name1], self.cache[name2]
-                docs1, docs2 = self.task_program_library[name1]['docstring'], self.task_program_library[name2]['docstring']
-                breed_func = self.get_breed_function()#events1, events2, composition_type=composition_type)
-                breed_func = preset_args(events1 = events1, events2 = events2, composition_type = composition_type)(breed_func)
-                new_events = breed_func(self.config)
-                # inspect the source code for the breed function
+        keys = np.array(keys)
+        scores = np.array(scores)       
+        total_score = sum(scores)
+        probabilities = [score / total_score for score in scores]
+        selected_keys = np.random.choice(keys, size=2, replace=False, p=probabilities)
+        return selected_keys[0], selected_keys[1]
 
-                # get the new description from the llm
-                self.sandbox.update_breed_info(docs1, docs2, composition_type)
-                template_function = self.breed_llm.speak(self.sandbox)
-                template_function = template_function.replace('<template>', 'return []')                
-                pattern = r"```python(.*?)```"
-                function_code = re.findall(pattern, template_function, re.DOTALL)[0]
-                ast_info = ast.parse(function_code)
-                # get function name from ast_info
-                function_name = ast_info.body[0].name
-                docstring = ast.get_docstring(ast_info.body[0])
+    def select_mutation_strategy(self, autonomous = False):
 
-                json_obj = {
-                    'name': function_name,
-                    'source_code': None,
-                    'docstring': docstring,
-                    'func_pointer': partial(breed_func)
+        is_high_risk =  random.random() < 0.0
+        if is_high_risk:
+            return {}
+        else:
+            mutation_candidate, breed_candidate = self.select_for_mutation()            
+            if autonomous:
+                return {
+                    'autonomous': True
                 }
-
-                self.sandbox.register_task_program(json_obj,
-                                                   parents=[name1, name2])
-
-       
-    def select_for_mutation(self):
-      
-        ranked_survivals = sorted(self.scores.keys(), key=lambda x: self.scores[x], reverse=True)
-        ranked_survivals = ranked_survivals[:3]
-        index = random.randint(0, len(ranked_survivals)-1)     
-        return ranked_survivals[index]
-
-    def select_for_breed(self, num_participants = 2):
-        ranked_survivals = sorted(self.scores.keys(), key=lambda x: self.scores[x], reverse=True)
-        ranked_survivals = ranked_survivals[:10]
-
-        indices = random.sample(range(0, len(ranked_survivals)), num_participants)
-        return [ranked_survivals[i] for i in indices]    
-
-
+            else:
+                return {
+                    'to_mutate': mutation_candidate,
+                    'to_breed': breed_candidate}
+    
     def log_checkopint(self):
         TaskProgramLibrary.save(os.path.join(self.config['evo_info']['data_folder'],
                                                     'inspection',
@@ -235,20 +165,24 @@ score:{self.scores[behavior_name]}
                                 'api_docs.json'), 'w') as f:
             json.dump(CORE_API_REGISTRY, f, indent=4)
 
+    def load_checkpoint(self):
+        TaskProgramLibrary.load(os.path.join(self.config['evo_info']['data_folder'],
+                                                    'inspection',
+                                                    'task_program_checkpoint.json'))
+        
+       
 
-    def train(self):
+
+    def train(self, autonomous = False):
         # initial evaluation to provide initial scores
         self.evaluate()
-        for i in range(4):
+        for i in range(10):
             try:
                 print (f'training iteration {i}')
-                #mutate_candidate = self.select_for_mutation()
-                #print (f'selecting {mutate_candidate} for mutation')
-                #self.sandbox.update_program_to_mutate(mutate_candidate)
-                self.mutate()            
-                # breed_participants = self.select_for_breed()
-                # print (f'selecting {breed_participants} for breeding')
-                # self.breed(breed_participants)
+                # select the mutation strategy
+                self.sandbox.mutation_strategy_info = self.select_mutation_strategy(autonomous=autonomous)
+                self.mutate(autonomous=autonomous)
+            
                 self.evaluate()
                 self.log_checkopint()
                
@@ -273,8 +207,8 @@ score:{self.scores[behavior_name]}
                                     'train')
         video_type = self.config['evo_info']['video_type']
         # we only look at created ones
-        for video in self.cache:
-            for task_program_name in self.cache[video]:
+        for video in TaskProgram.cache:
+            for task_program_name in TaskProgram.cache[video]:
                 task_program = self.task_program_library[task_program_name]
                 # if task_program['creator'] == 'human':
                 #     continue
@@ -284,7 +218,7 @@ score:{self.scores[behavior_name]}
                     config['video_info']['video_file_path'] = video_file_path
                     self.sandbox.update_config(config)
                     # need to optimize if there are many videos
-                    #self.sandbox.visual_validate(video_file_path, self.cache[video][task_program_name], task_program_name)   
+                    self.sandbox.visual_validate(video_file_path, TaskProgram.cache[video][task_program_name], task_program_name)   
         
 
     def evaluate(self):
@@ -299,7 +233,7 @@ score:{self.scores[behavior_name]}
             for name, task_program in list(self.task_program_library.items()):
                 for keypoint_file in train_files:
                     videoname = keypoint_file.split('/')[-1].replace(keypoint_type, '')
-                    if videoname in self.cache and name in self.cache[videoname]:
+                    if videoname in TaskProgram.cache and name in TaskProgram.cache[videoname]:
                         pbar.update(1)
                         continue
                     # just replacing stuff in the config
@@ -310,7 +244,7 @@ score:{self.scores[behavior_name]}
                     try:
                         events = task_program(config)
                         assert events is not None
-                        self.cache[videoname][name] = events                    
+                        TaskProgram.cache[videoname][name] = events                    
                     except Exception as e:
                         import traceback
                         traceback.print_exc()

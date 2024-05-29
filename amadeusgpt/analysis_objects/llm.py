@@ -239,11 +239,7 @@ class MutationLLM(LLM):
 
     def update_system_prompt(self, sandbox):
         from amadeusgpt.system_prompts.mutation import _get_system_prompt
-        core_api_docs = sandbox.get_core_api_docs()
-        task_program_docs = sandbox.get_task_program_docs()
-        useful_info = sandbox.get_useful_info()
-        self.system_prompt = _get_system_prompt(core_api_docs, task_program_docs, useful_info)
-
+        self.system_prompt = _get_system_prompt(sandbox)
         # update both history and context window        
         self.update_history("system", self.system_prompt)
 
@@ -257,8 +253,7 @@ class MutationLLM(LLM):
         self.update_system_prompt(sandbox)
         self.update_history("user", query, replace = True)
                
-        response = self.connect_gpt(self.context_window, max_tokens=2000)                
-       
+        response = self.connect_gpt(self.context_window, max_tokens=4000)
         text = response.choices[0].message.content.strip() 
         sandbox.chat_channel.chain_of_thought.append(response)            
         return text

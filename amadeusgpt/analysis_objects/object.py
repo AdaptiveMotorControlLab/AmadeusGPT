@@ -202,7 +202,20 @@ class ROIObject(Object):
             np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1))
         )
         self.center = np.array([np.mean(vertices[:, 0]), np.mean(vertices[:, 1])])        
+
+class GridObject(Object):
+    def __init__(self, name: str, region):
+        super().__init__(name)
+        self.region = region
+        self.x_min = region["x"]
+        self.y_min = region["y"]
+        self.x_max = region["x"] + region["w"]
+        self.y_max = region["y"] + region["h"]
+        self.center = np.array([self.x_min + region["w"] / 2, self.y_min + region["h"] / 2])
         
+        self.Path = self.points2Path([[self.x_min, self.y_min], [self.x_max, self.y_min], [self.x_max, self.y_max], [self.x_min, self.y_max]])
+        self.points = np.array([[self.x_min, self.y_min], [self.x_max, self.y_min], [self.x_max, self.y_max], [self.x_min, self.y_max]])
+        self.area = region["w"] * region["h"]
 
 class Animal(Object):        
     def get_keypoint_names(self):
@@ -239,7 +252,7 @@ class AnimalSeq(Animal):
         # self.keypoints are updated by indices of keypoint names given
         keypoint_indices = [keypoint_names.index(name) for name in keypoint_names]
         self.keypoints = self.whole_body[:, keypoint_indices]
-
+        self.center = np.nanmedian(self.whole_body, axis=1)
 
     def update_roi_keypoint_by_names(self, keypoint_names: List[str]):
         # update self.keypoints based on keypoint names given
@@ -348,10 +361,12 @@ class AnimalSeq(Animal):
         )  # divided by frame rate to get acceleration in pixels/second^2
         # Pad accelerations to match the original shape
         accelerations = np.concatenate(
-            [np.zeros((2,) + accelerations.shape[1:]), accelerations]
+            [np.zeros((1,) + accelerations.shape[1:]), accelerations], axis = 0
         )
         assert len(accelerations.shape) == 3
         return accelerations
+   
+
     def get_bodypart_wise_relation(self):
         keypoints = self.get_keypoints()
         diff = keypoints[..., np.newaxis, :, :] - keypoints[..., :, np.newaxis, :]

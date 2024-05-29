@@ -1,60 +1,131 @@
 from os import system
 
+def generate_core_api_block(core_api_docs):
+    return f"""coreapidocs: this block contains information about the core apis that can help capture behaviors. Make sure you don't access any functions or attributes not defined in the core api docs.
+{core_api_docs}\n"""
 
-def _get_system_prompt(core_api_docs, 
-                       task_program_docs,
-                       useful_info,
-                       ):
-    system_prompt = f"""
-You are an expert in both animal behavior and you understand how to write code. 
+def generate_task_program_block(task_program_docs):
+    return f"""taskprograms: this block contains the description of the behaivors we alreay know how to capture. 
+{task_program_docs}\n"""
 
-You will be provided with information that are organized in following blocks:
-coreapidocs: this block contains information about the core apis that can help capture behaviors. They do not contain implementation details but you should use them wisely. 
-taskprograms: this block contains the description of the behaivors we alreay know how to capture.
-useful_info: this block contains information that can help you understand the context of the problem.
-Following are coreapidocs block and taskprograms block
-{core_api_docs}\n{task_program_docs}\n{useful_info}\n
+def generate_useful_info_block(useful_info):
+    return f"""useful_info: this block contains information that can help you understand the context of the problem. 
+    When you write task program about behaviors, e.g, fast vs. slow, far vs. close,  make sure you use the information in this block.
+{useful_info}\n"""
 
-An example of task program looks like following:
-def get_oral_oral_contact_events(config)->List[BaseEvent]:
+def generate_grid_info_block(grid_labels, occupation_heatmap):
+    ret =  f"""
+    This block describes the spatial information of the environment. Each grid is a suqare area with a name. 
+    The animal can be in one of the grids. The occupation heatmap shows the occupation of the grids (in terms of percentage of time).
+    You can create task programs that the activities of animals in different grids.
+    grid_labels:\n {grid_labels}
+    occupation_heatmap:\n {occupation_heatmap}
+    """
+    print ('grid block')
+    print (ret)
+    return ret
+
+def get_action_1_example():
+    return """
+Action 1: 
+    Slightly change an existing task program '{to_mutate}' and make a new task program. Then you combine it with another existing task program '{to_breed}' by directly reusing the program from the variable task_programs. 
+
+Example for Action 1:
+
+This task program "get_approaches_then_contact_events" modifies the distance threshold of task program "get_approach_events" and 
+combine it with an existing task program "get_contact_events" from a global variable 'task_programs'. You don't need to describe the existing task programs in the taskprograms block.
+
+```python
+def get_approaches_then_contact_events(config):
     '''
-    This behavior is called "oral oral contact". This behavior describes animals' closest distance between 
-    one animal’s "nose" and other animal’s bodyparts "nose" is less than 15 and larger than 0.
+    This behavior is called "get_approach_and_contact". 
+    This behavior describes animals moving from at least 50 pixels away to less than 8 pixels away and than make contact that is described in "get_contact_events".
     '''
     analysis = AnimalBehaviorAnalysis(config)
-    
-    oral_oral_contact_events = analysis.get_animals_animals_events(['closest_distance>0', 'closest_distance<15'],
-                                                                    bodypart_names=['nose'],
-                                                                    otheranimal_bodypart_names=['nose'])
+    distance_events = analysis.get_animals_animals_events(['distance>50'])
 
-    return oral_oral_contact_events
+    close_distance_events = analysis.get_animals_animals_events(['distance<8'])
 
-You can also craft a task program from a binary mask using Event.init_from_mask(mask) method.
-However, you are not allowed to turn events back to binary mask and do further processing.
-Make sure you don't access any attribtues and functions that are not defined in the api docs.
-Below is an example of how you can craft a task program from a binary mask:
-def get_moving_fast_and_oral_oral_contact_events(config)->List[BaseEvent]:
+    # max_interval_between_sequential_events is the maximum interval between two events. Setting it higher might link two remote events together and likely give you a behavior that is not natural.
+    approaches_events = analysis.get_composite_events(distance_events,
+                                                                    close_distance_events,
+                                                                    composition_type="sequential", 
+                                                                    max_interval_between_sequential_events = 15)
+    # retrieve an existing task program get_contact_events
+    global task_programs
+    contact_events = task_programs['get_contact_events'](config) 
+
+    approach_then_contact_events = analysis.get_composite_events(approaches_events,
+                                                                    contact_events,
+                                                                    composition_type="sequential") 
+
+    return approach_then_contact_events
+```
+"""
+
+
+def modify_behavior(to_mutate = '', to_breed = '', autonomous = False):
+    header = ""
+    #     if autonomous:
+    #         header = """
+    # Your task is
+
+    # 1) pick one existing task program from taskprograms block as the candidate to mutate. So you change it to make a new task program. You should make larger changes if task programs created by you are too similar to the original task programs.
+    # 2) pick one existing task program from taskprograms block as the candidate to combine with the one above. So you combine the two task programs to make a new task program. You must directly reuse the to-combine program from the variable task_programs.
+
+    # """
+
+    header = f"""Your action space for you to write task programs has following actions: 
+    Action:
+        Since grids are special objects, we can use get_animals_object_events() to capture behaviors related to grids. 
+        You will be given information about the available grids and the heatmaps. Use heatmaps as your guideline when you propose a new task program.
+        
+    """
+
+    strategy = f"""
+    {header}
+    Make sure your task program has the same input and return types of other task programs. Make sure it also includes the description of the behavior.
+
+    Example for the action:
+
+    This task program "get_B2_to_C2_events" describes the behavior that animals move from grid B2 to grid C3.
+
+    def get_B2_to_C3_events(config):
+        analysis = AnimalBehaviorAnalysis(config)
+
+        B2_events = analysis.get_animals_object_events('B2', 'overlap == True')
+        C3_events = analysis.get_animals_object_events('C3', 'overlap == True')
+        B2_to_C3_events = analysis.get_composite_events(B2_events, C3_events, composition_type="sequential")
+        return B2_to_C3_events
+
+
+    """
+    return strategy
+
+def get_social_interaction_example():
+    return 
+"""
+An example of task program looks like following. Note it takes one and only config as input and it returns a list of BaseEvent.
+```python
+def get_approaches_events(config)->List[BaseEvent]:
     '''
-    This behavior is called "moving fast and oral oral contact". This behavior describes animals' speed is faster than 10 pixels per frame while maintaining contact   
+    This behavior is called "approach". This behavior describes animals moving from at least 40 pixels away to less than 8 pixels away.
     '''
     analysis = AnimalBehaviorAnalysis(config)
-    # speed is of shape (n_frames, n_individuals, n_kpts, n_dim)
-    speed = analysis.get_speed()   
-    speed = np.nanmean(speed, axis=(2,3))  
-    mask = speed > 10
-    # the mask must be a binary mask of shape (n_frames, n_individuals)
-    moving_fast_events = analysis.from_mask(mask)
-    contact_events = get_oral_oral_contact_events(config)
-    moving_fast_and_contact_events = analysis.get_composite_events(moving_fast_events,
-                                                                     contact_events,
-                                                                     composition_type="logical_and")
+    distance_events = analysis.get_animals_animals_events(['distance>40'])
+
+    close_distance_events = analysis.get_animals_animals_events(['distance<8'])
+
+    # max_interval_between_sequential_events is set to 40 to allow slightly longter interval between distance events and close distance events to ensure we capture long enough approach events.    
+    approaches_events = analysis.get_composite_events(distance_events,
+                                                                    close_distance_events,
+                                                                    composition_type="sequential",
+                                                                    max_interval_between_sequential_events = 40)
 
 
-    return moving_fast_and_contact_events
-
+    return approaches_events
 
 Query about orientation should use the following class:
-
 class Orientation(IntEnum):
     FRONT = 1 
     BACK = 2 
@@ -62,35 +133,87 @@ class Orientation(IntEnum):
     RIGHT = 4 
     
 Note that the orientation is egocentric to the initiating animal.
-For example, if the orientation is FRONT, it means the other animal is in front of the initiating animal.
+For example, if we are describing a behavior that says 'this behavior involves animals watching animals in front of them', the orientation (animals being watched) is set to be FRONT.
+If the animals are watching other animals in their left, the orientation is set to LEFT.    
+"""
 
-Rules you should follow when you provide you answer:
-1) don't use functions or attribtes not defined in the api docs
-2) Don't combine two existing behaviors into one.
-3) Make sure you pre-define what distance is considered close/far and what speed is considered fast/slow.
-4) Make your answer concise
-5) Don't try to access config or other variables that are not defined in the api docs
-6) You can assume the minimum window size is 3,  max window 1000 and the smooth window size is 5
-7) keep in mind animals_animals_events can only be used to capture logical_and. Sequential and logical_or are only possible with get_composite_events.
-8) Note relative speed or relative angle are relative. If you want to describe a behavior where the sender animal initiating the behavior, you should also use get_animals_state_events
-9) Note to avoid contradiction when using logical_and or multiple queries in animals_animals_events. For example, one animal cannot be both in the left and in the right of the other animal etc.
 
-At the end of each task program, we have fitness score that is a product of duration of the captured behavior and the number of times the behavior is observed across videos.
-A 0 fitness score means the behavior cannot be captured with the current task program. You need to either modify the task program or write a new task program to capture the behavior.
+def select_strategy(strategy_info):
+    ret = ''
+    if 'to_mutate' in strategy_info:
+        ret =  modify_behavior(to_mutate = strategy_info['to_mutate'],
+                               to_breed = strategy_info['to_breed'])
+    elif 'autonomous' in strategy_info:
+        ret =  modify_behavior(autonomous = True)  
+    # print ('selection strategy')
+    # print (ret)
 
-Format your answer as follows:
+    return ret
 
-1) Strategy: 
-    - Your strategy of how you should create more task programs that gives non-zero fitness score.
-2) Modify or create new task program:
-    - If you try to modify an existing task program that gives 0 fitness score. You can use the useful info to change the parameters such as speed or distance. Don't keep modifying the same task program.
-    - If you want to create a new task program, you can use the existing task programs as reference. You can reuse the existing task programs and combine them to create a new task program.
-    - You should be able to 
-3) Your task program code:
-    - Make sure your task programs follows the same style of existing task programs such as having a name, description and return type.
+def _get_system_prompt(sandbox
+                       ):
+    
+    core_api_docs = sandbox.get_core_api_docs()
+    task_program_docs = sandbox.get_task_program_docs()
+    
+    grid_labels, occupation_heatmap = sandbox.get_grid_info()    
 
-Make sure your text are short, concise and clear.
+    useful_info = sandbox.get_useful_info()
+    mutation_strategy_info = sandbox.mutation_strategy_info
+    
 
+    system_prompt = f"""
+You are an expert in animal behavior and are also good at python coding.
+You have task programs that are functions that can capture behaviors from videos.
+You treat every task program as an individual in evolution process. Each task program has its own fitness that is positively correlated with the number of videos it occured and the total duration in seconds.
+Your GOAL is to 'evolve' task programs by using mutation and combination, similar to sexual production in biology. Over time, you should create diverse task programs that occur in many videos and have long durations and they are different from original ones.
+You are provided with primitive task programs, as the seed of the evolution. You have access to task programs you created in the past.
+
+You are provided with information that are organized in following blocks:
+{generate_core_api_block(core_api_docs)}
+{generate_task_program_block(task_program_docs)}
+{generate_grid_info_block(grid_labels, occupation_heatmap)}
+
+
+There are 3 and only 3 ways to combine events using get_composite_events.
+'logical_and': to combine events if they happen at the same time. e.g., chase and follow can be combined using logical_and to be chase_and_follow. Get_animals_animals_events() is by default doing this.
+'logical_or':  to combine events if one of the behaviors happen, e.g., chase and follow can be combined using logical_or to be chase_or_follow.
+'sequential': One event happens after the other.  e.g., approach and leave can be combined using sequential to be approach_then_leave.
+
+Coding style:
+Don't import any new modules. Don't use apis under AnimalBehaviorAnalysis if they are not defined in the api docs.
+
+Below is actions you can take:
+{select_strategy(mutation_strategy_info)}
+
+Format your answers as following:
+
+1) Observation
+    Describe your observations on the outcomes of task programs. Make sure you distinguish primitive task programs and those created by you.
+    Analyze their total number of videos and the total duration in seconds and insights you drawed.
+
+2) Reflection    
+    Reflect whether you are making progress in achieving your goal that is to create novel, diverse task programs that occur in many videos and have long durations.
+    Based on your reflection, you should:
+    - comment why those task programs you created didn't succeed if they didn't and adjust your strategy accordingly.
+    - comment whether your mutation is too conversavetiive. If they are, you should make larger changes to the task programs by larger changes or combining them with more complicate task programs.
+
+3) Plans
+Comment how you take your reflection into actionable plans
+
+Write down the name of the task program you proposed.
+
+```json  
+    proposed : '' # filled if you 
+```
+
+4) Actions 
+Here you turn your plans to actions by writing task program code
+Make sure you write and only write one function for the task program.
+
+```python
+   # Your code starts here
+```
 
 """
     return system_prompt
