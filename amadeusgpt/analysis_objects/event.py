@@ -27,7 +27,7 @@ class BaseEvent(AnalysisObject):
         assert os.path.exists(self.video_file_path), f"the video file {video_file_path} does not exist"
         self.frame_length = get_video_length(self.video_file_path)     
 
-        duration_in_frames = self.end - self.start + 1
+        duration_in_frames = self.end - self.start
         self.duration_in_frames = duration_in_frames
         duration_in_seconds  = round( duration_in_frames / get_fps(self.video_file_path), 2)
         if duration_in_seconds < 0:
@@ -240,7 +240,6 @@ end: {self.end}
         if unit == "seconds":
             min_duration = int(min_duration * get_fps(events[0].video_file_path))
             max_duration = int(max_duration * get_fps(events[0].video_file_path))
-
             return [event for event in events if event.duration_in_seconds >= min_duration and event.duration_in_seconds <= max_duration]
         else:
             min_duration = int(min_duration)
@@ -250,14 +249,18 @@ end: {self.end}
         
     @classmethod
     # UNDER CONSTRUCTION
-    def concat_two_events(cls, early_event: BaseEvent, late_event: BaseEvent) -> Union[None, BaseEvent]:
+    def concat_two_events(cls,
+                           early_event: BaseEvent,
+                           late_event: BaseEvent,
+                           ) -> Union[None, BaseEvent]:
         """
         Concatenate two events into one, fill the gap between two events if there are
         """
         assert early_event.sender_animal_name == late_event.sender_animal_name
 
-        receiver_animal_names = early_event.receiver_animal_names.union(late_event.receiver_animal_names)
-        object_names = early_event.object_names.union(late_event.object_names)
+        object_names = early_event.object_names
+        receiver_animal_names = early_event.receiver_animal_names
+
         new_event = Event(early_event.start,
                           late_event.end,
                           early_event.video_file_path,
@@ -308,6 +311,7 @@ class EventGraph:
             cur_node = cur_node.next
         ret = sorted(ret, key=lambda x: x.start)
         ret = [e for e in ret if e.duration_in_frames > 1]
+                   
         return ret
     @property
     def animal_names(self):
@@ -420,6 +424,31 @@ class EventGraph:
         
 
     @classmethod
+    def animal_group_subgraph(cls,
+                                graph: "EventGraph",
+                                n_individuals: int):
+        """
+        WIP
+        Retrieve the subgraph where multiple animals satisfy the same condition at the same time.        
+        """
+        events = graph.to_list()
+        animals = set([event.sender_animal_name for event in events])
+        masks = []
+        for idx, animal_name in enumerate(animals):
+            events_animal = [event for event in events if event.sender_animal_name == animal_name]
+            # find the overlapping between events_animal_a and events_animal_b
+            mask = Event.events2onemask(events_animal)
+            masks.append(mask)
+        masks = np.concatenate(masks, axis = 0)
+        _sum = np.sum(masks, axis = 0)
+        ret = np.zeros_like(mask, dtype = bool)
+        ret[_sum == n_individuals] = True
+        # get where _sum 
+        return cls.init_from_mask(ret, events[0].video_file_path, events[0].sender_animal_name, set(), set())
+
+
+
+    @classmethod
     def fuse_subgraph_by_kvs(cls,
                         graph: "EventGraph",
                         merge_kvs: Dict[str, Any],
@@ -443,8 +472,8 @@ class EventGraph:
 
         mask = np.zeros_like(_sum, dtype=bool)
         # in case there are many events overlap, 
-        # if the events come from one single task program, there is no overlap
-        # so the overlap must come from different task programs
+        # if the events come from one single condition, there is no overlap
+        # so the overlap must come from different conditions
 
         mask[(_sum >= number_of_overlap_for_fusion)] = True
         events = Event.mask2events(mask,
@@ -500,6 +529,7 @@ class EventGraph:
                         graph1: "EventGraph",
                         graph2: "EventGraph",
                         merge_kvs: Dict[str, Any],
+                        max_interval_between_sequential_events
                         ) -> "EventGraph":
         """
         Concatenate two graphs in a sequential manner
@@ -510,8 +540,13 @@ class EventGraph:
         events1 = graph1.traverse_by_kvs(merge_kvs)
         events2 = graph2.traverse_by_kvs(merge_kvs)
 
+        secure_events1 = []
+        secure_events2 = []
+
+
         for i, event2 in enumerate(events2):
             for j, event1 in enumerate(events1):
+                
                 # skip if event1 is not the closest event to event2
                 if j < len(events1) - 1 and events1[j+1].end <= event2.start:
                     continue
@@ -519,11 +554,21 @@ class EventGraph:
                     # this is strict continuous
                     #if event1.end >= event2.start and event1.end <= event2.end:
                     # this is not strict continuous
-                    if event1.end <= event2.start:
+                    if  event1.duration_in_frames > 0 and \
+                        event1.end <= event2.start and \
+                        event2.start - event1.end <= max_interval_between_sequential_events:
+                        secure_events1.append(event1)
+                        secure_events2.append(event2)
                         new_event = Event.concat_two_events(event1, event2)
                         graph.insert_node(Node(new_event.start, [new_event]))
                         break                
-        
+        # print ('check secure events1')
+        # for event in secure_events1:
+        #     print (event)
+        # print ('check secure events2')
+        # for event in secure_events2:
+        #     print (event)
+
         return graph
 
 

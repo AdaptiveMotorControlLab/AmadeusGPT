@@ -82,8 +82,8 @@ class Relationship(AnalysisObject):
         self.data[key] = value
     def get_name(self):
         return self.__name__
-    def query_relationship(self, relation_query:str) -> ndarray:
-        ret =  self.data[relation_query]   
+    def query_relationship(self, query_name:str) -> ndarray:       
+        ret =  self.data[query_name]   
         return ret
 
     def summary(self):
@@ -202,10 +202,10 @@ class AnimalAnimalRelationship(Relationship):
             head_cs_inv.append(mouse_cs_inv)
             head_angles = calc_angle_in_egocentric_animal(head_cs_inv, sender_animal.get_center())
 
-        relative_speed = np.diff(np.linalg.norm(sender_animal.get_center() - receiver_animal.get_center(), axis=-1))
-        relative_speed = np.pad(relative_speed, (0, 1), mode="constant")
-
-        
+        relative_velocity = sender_animal.get_velocity() - receiver_animal.get_velocity()
+        relative_velocity_magnitude = np.linalg.norm(relative_velocity, axis=2)
+        # Then, average these magnitudes over all keypoints for each frame
+        relative_speed = np.nanmean(relative_velocity_magnitude, axis=1)
         closest_distance = np.nanmin(
             get_pairwise_distance(sender_animal.keypoints, receiver_animal.keypoints), axis=(1, 2)
         )

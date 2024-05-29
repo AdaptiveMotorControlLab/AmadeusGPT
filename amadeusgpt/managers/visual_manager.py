@@ -14,6 +14,7 @@ from amadeusgpt.analysis_objects.event import BaseEvent
 from matplotlib.patches import Wedge
 import cv2
 import os
+import json 
 import glob
 
 def mask2distance(locations):
@@ -36,6 +37,9 @@ class VisualManager(Manager):
         self.video_file_path = config.get('video_info', {}).get('video_file_path', '')
         self.animal_manager = animal_manager
         self.object_manager = object_manager
+
+
+
 
     def sanity_check_files(self, 
                            video_folder, 
@@ -80,6 +84,7 @@ class VisualManager(Manager):
                     cv2.circle(frame, (int(kp[0]), int(kp[1])), 3, (0, 0, 255), -1)
                 cv2.imwrite(os.path.join(sanity_check_folder, f'{video_name}_{frame_number}.png'), frame)        
 
+    
 
     def get_scene_visualization(self,                                 
                                  scene_frame_number: int,
@@ -316,6 +321,20 @@ class VisualManager(Manager):
         return super().get_serializeable_list_names()
     
 
+    def plot_chessboard_regions(self,
+                                frame : np.ndarray):
+        objects = self.object_manager.get_chessboard_region_objects()
+
+        for obj in objects:
+            x_min, y_min, x_max, y_max = obj.x_min, obj.y_min, obj.x_max, obj.y_max
+            center = (int((x_min + x_max) / 2), int((y_min + y_max) / 2))
+            region_name = obj.get_name()
+            cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+            cv2.putText(frame, region_name, center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
+        return frame
+
+                                
+
     def sender_visual_cone_on_frame(self,
                              sender_animal: AnimalSeq, 
                              frame : np.ndarray, 
@@ -370,19 +389,23 @@ class VisualManager(Manager):
             receiver_animal_names = event.receiver_animal_names
             time_slices = (event.start, event.end)
             sender_keypoints = self.animal_manager.get_animal_by_name(sender_animal_name).get_keypoints()
-            receiver_keypoints = [self.animal_manager.get_animal_by_name(receiver_animal_name).get_keypoints() for receiver_animal_name in receiver_animal_names]
+            
             sender_keypoints = np.nanmean(sender_keypoints, axis=1)
             sender_speeds = self.animal_manager.get_animal_by_name(sender_animal_name).get_speed()
-
+            
+            receiver_keypoints = [self.animal_manager.get_animal_by_name(receiver_animal_name).get_keypoints() for receiver_animal_name in receiver_animal_names]
             receiver_keypoints = [np.nanmean(receiver_keypoints, axis=1) for receiver_keypoints in receiver_keypoints]
 
-            data.append({'time_slice': time_slices,
+            data.append({
+                'start_time': time_slices[0],
+                'time_slice': time_slices,
+                         'receiver_animal_names': list(receiver_animal_names),
                         'sender_keypoints': sender_keypoints,
                         'sender_animal_name': sender_animal_name,
-                        'receiver_keypoints': receiver_keypoints})                         
-        
+                        'receiver_keypoints': receiver_keypoints})
+            # sort the data by start_time        
+        data = sorted(data, key=lambda x: x['start_time'])
         total_duration = sum([event.duration_in_seconds for event in events])
-        
         if total_duration < 0.5:
             return 
         
@@ -400,6 +423,7 @@ class VisualManager(Manager):
             while cap.isOpened():
                 current_frame = time_slice[0] + offset
                 ret, frame = cap.read()
+                frame = self.plot_chessboard_regions(frame)
                 if not ret:
                     break
 
@@ -417,6 +441,10 @@ class VisualManager(Manager):
                     cv2.putText(frame, 'sender', (sender_location[0], sender_location[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2, cv2.LINE_AA)
                     speed_text = f"Sender Speed {sender_speed:.2f} units/frame"
                     speed_text_location = (frame.shape[1] - 400, frame.shape[0] - 50)  # 200 pixels wide space, 30 pixels from the bottom
+
+                    # put the frame index in the upper right
+                    cv2.putText(frame, f"Frame {current_frame}", (frame.shape[1] - 200, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
+
                     cv2.putText(frame, speed_text, speed_text_location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
                     for receiver_id, receiver_location in enumerate(receiver_keypoints):
                         receiver_location = receiver_location[current_frame].astype(int)
@@ -429,7 +457,6 @@ class VisualManager(Manager):
                         distance_text_location = (frame.shape[1] - 400, frame.shape[0] - 15 * (receiver_id + 1))  # 200 pixels wide space, 10 pixels from the bottom
                                                 
                         cv2.putText(frame, distance_text, distance_text_location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
-
                         cv2.putText(frame, 'receiver', (receiver_location[0], receiver_location[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2, cv2.LINE_AA)
 
                     out.write(frame)

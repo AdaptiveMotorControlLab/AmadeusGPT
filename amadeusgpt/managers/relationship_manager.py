@@ -28,6 +28,8 @@ class RelationshipManager(Manager):
         self._cache = {}
         self.use_cache = use_cache
 
+    
+
     @cache_decorator
     def get_animals_objects_relationships(self,
                                           animal_bodyparts_names: Union[List[str], None] = None) -> List[Relationship]:
@@ -35,11 +37,11 @@ class RelationshipManager(Manager):
         # roi, sam, animals are all objects
         roi_objs = self.object_manager.get_roi_objects()
         seg_objs = self.object_manager.get_seg_objects()
-
+        grid_objs = self.object_manager.get_grid_objects()
         animals = self.animal_manager.get_animals()
 
         # there might be other objs
-        objs = roi_objs + seg_objs
+        objs = roi_objs + seg_objs + grid_objs
 
         # the key optimization opportunity here is to make following block faster
         # I don't know if we can vectorize the operations below. Maybe not.
