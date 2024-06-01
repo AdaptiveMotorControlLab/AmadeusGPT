@@ -581,7 +581,6 @@ def update_df_data(new_item, index_to_update, df, csv_file):
     return csv_file, df
 
 
-@st.cache_data(persist="disk")
 def get_scene_image(example):
     if AnimalBehaviorAnalysis.get_video_file_path() is not None:
         scene_image = Scene.get_scene_frame()
@@ -599,7 +598,6 @@ def get_scene_image(example):
         return get_scene_image(example)
 
 
-@st.cache_data(persist="disk")
 def get_sam_image(example):
     if AnimalBehaviorAnalysis.get_video_file_path():
         seg_objects = AnimalBehaviorAnalysis.get_seg_objects()        
