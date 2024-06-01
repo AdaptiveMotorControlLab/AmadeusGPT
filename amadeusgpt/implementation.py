@@ -22,8 +22,6 @@ from pathlib import Path
 import cv2
 import matplotlib.path as mpath
 import msgpack
-from moviepy.video.io.ffmpeg_writer import FFMPEG_VideoWriter
-from moviepy.video.io.VideoFileClip import VideoFileClip
 from PIL import Image
 from pycocotools import mask as mask_decoder
 from scipy.signal import savgol_filter
@@ -1393,26 +1391,21 @@ class AnimalBehaviorAnalysis:
         """
         assert kin_type in ["location", "velocity", "acceleration", "speed"]
         ret = None
-        import dlc2kinematics
+
 
         df = Database.get(type(self).__name__, "df")
         n_kpts = Database.get(type(self).__name__, "n_kpts")
         n_individuals = Database.get(type(self).__name__, "n_individuals")
 
         if kin_type == "velocity":
-            ret = dlc2kinematics.compute_velocity(df, bodyparts=bodyparts)
+            ret = AnimalBehaviorAnalysis.get_velocity()
 
         elif kin_type == "acceleration":
-            ret = dlc2kinematics.compute_acceleration(df, bodyparts=bodyparts)
+            ret = AnimalBehaviorAnalysis.get_acceleration()
 
         elif kin_type == "speed":
-            ret = dlc2kinematics.compute_speed(df, bodyparts=bodyparts)
-        elif kin_type == "location":
-            if bodyparts[0] == "all":
-                mask = np.ones(df.shape[1], dtype=bool)
-            else:
-                mask = df.columns.get_level_values("bodyparts").isin(bodyparts)
-            ret = df.loc[:, mask]
+            ret = AnimalBehaviorAnalysis.get_speed()
+
         else:
             raise ValueError(f"{kin_type} is not supported")
         n_kpts = len(bodyparts) if bodyparts != ["all"] else n_kpts
@@ -2772,30 +2765,4 @@ class AnimalBehaviorAnalysis:
 
         return AnimalAnimalEvent(ret_events)
 
-    def generate_videos_by_events(self, events: List[Event]):
-        """
-        Examples
-        --------
-        >>> # find where the animal is to the left of object 6 and create videos for those events
-        >>> def task_program():
-        >>>     behavior_analysis = AnimalBehaviorAnalysis()
-        >>>     left_to_object_events = behavior_analysis.animals_object_events('6', ['to_left'])
-        >>>     behavior_analysis.generate_videos_by_events(left_to_object_events)
-        >>>     return
-        """
-        video_file_path = AnimalBehaviorAnalysis.get_video_file_path()
-        clip = VideoFileClip(video_file_path)
-        fps = clip.fps
-        for event_id, event in enumerate(events):
-            start_frame = np.where(event.mask)[0][0]
-            end_frame = np.where(event.mask)[0][-1]
-            start_in_seconds = start_frame / fps
-            end_in_seconds = end_frame / fps
-            output_file = f"event{event_id}.mp4"
-            trimmed_clip = clip.subclip(start_in_seconds, end_in_seconds)
-            writer = FFMPEG_VideoWriter(
-                output_file, trimmed_clip.size, fps=trimmed_clip.fps
-            )
-            trimmed_clip.write_videofile(output_file)
-            print(f"generated video at {output_file}")
-        return None
+    

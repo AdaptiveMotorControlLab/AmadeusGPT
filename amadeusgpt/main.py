@@ -45,18 +45,6 @@ from amadeusgpt.logger import AmadeusLogger
 
 ############
 # all these are for safe execution of generated code
-from amadeusgpt.amadeus_security import check_code
-from RestrictedPython import (
-    compile_restricted,
-    safe_globals,
-    safe_builtins,
-    utility_builtins,
-    limited_builtins,
-)
-from RestrictedPython.Guards import (
-    guarded_unpack_sequence,
-    guarded_iter_unpack_sequence,
-)
 
 ############
 

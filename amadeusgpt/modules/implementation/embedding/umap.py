@@ -1,6 +1,5 @@
 import numpy as np
-import umap
-from umap.umap_ import UMAP
+import umap.umap_ as umap
 from amadeusgpt.implementation import AnimalBehaviorAnalysis
 from .transform import align_poses
 
@@ -10,7 +9,7 @@ def compute_embedding_with_umap_and_plot_embedding(
 ):
     features = inputs.reshape(inputs.shape[0], -1)
     features = np.nan_to_num(features)
-    reducer = UMAP(n_components=n_dimension, min_dist=0.5)
+    reducer = umap.UMAP()(n_components=n_dimension, min_dist=0.5)
     embedding = reducer.fit_transform(features)
 
     behavior_analysis = AnimalBehaviorAnalysis()
