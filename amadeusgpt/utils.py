@@ -265,6 +265,7 @@ def parse_error_message_from_python():
     return traceback_str
 
 def validate_openai_api_key(key):
+    print ('inside validate_openai_api_key')
     import openai
 
     openai.api_key = key

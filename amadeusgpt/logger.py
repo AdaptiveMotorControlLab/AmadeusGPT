@@ -1,7 +1,6 @@
 #from google.cloud import firestore
 import os
 import streamlit as st
-import psutil
 from datetime import datetime
 import platform
 import logging

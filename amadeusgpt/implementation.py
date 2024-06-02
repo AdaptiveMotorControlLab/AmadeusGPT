@@ -1,17 +1,14 @@
-from amadeusgpt.managers import (Manager, AnimalManager,
-ObjectManager,RelationshipManager, 
+from amadeusgpt.managers import (Manager, AnimalManager, ObjectManager,RelationshipManager, 
 EventManager, VisualManager, ModelManager, GUIManager)
 import random
 random.seed(78)
-from pydantic import BaseModel
 from typing import Dict
-import ast
 from .programs.api_registry import DEFAULT_REGISTRY, CORE_API_REGISTRY
 """
 write a class called FuncObj that inhertis from pydantic BaseModel that takes a function string,
 use AST to parse the function string to input and output types, function name, args, kwargs, and function body
 """
-class FuncObj(BaseModel):
+class FuncObj:
     function_string: str
     input_type: Dict[str, str]
     output_type: Dict[str, str]
