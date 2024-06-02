@@ -34,7 +34,7 @@ conda env create -f conda/amadesuGPT.yml
 conda activate amadeusgpt
 pip install -e .[streamlit]
 ```
-After the installation, you can do 
+- After the installation, you can do 
 
 ```bash
 conda activate amadeusgpt
