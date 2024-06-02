@@ -25,9 +25,7 @@
   
 ## Install & Run AmadeusGPT🎻
 
-- We prepare installation script install.sh 
-
-Modify the bash script to fit your own
+- We prepare installation script install.sh. Make sure you modify the bash script to fit your own.
 ```bash
 #!/bin/bash
 # replace this with your own conda path
@@ -47,7 +45,8 @@ conda activate amadeusgpt
 ```bash
 make app
 ```
-- You can use AmadeusGPT directly in python: iPython, Jupyter Notebooks, Google Colab, etc. For a quick start, see our `\examples` directory that hosts demo data and a Jupyter Notebook! Enjoy!
+- You can use AmadeusGPT directly in python: iPython, Jupyter Notebooks etc. For a quick start, see our `\examples` directory that hosts demo data and a Jupyter Notebook! Enjoy!
+-  Note if you use Google Colab, you still need to clone the repo (to access the demo data and installation script) and run installation script (after modifying the conda path)
 
 ## Citation
 
