@@ -1,14 +1,11 @@
-from sympy import use
 from amadeusgpt.analysis_objects.relationship import AnimalAnimalRelationship, AnimalObjectRelationship, Relationship
-from amadeusgpt.analysis_objects.object import Animal
-from amadeusgpt.utils import timer_decorator
 from .base import Manager, cache_decorator
 from .animal_manager import AnimalManager
 from .object_manager import ObjectManager
 from typing import List, Any, Dict, Union
 from amadeusgpt.programs.api_registry import register_class_methods, register_core_api
 from cachetools import LRUCache, cached
-from cachetools.keys import hashkey
+
 
 
 

@@ -1,6 +1,4 @@
 import os
-import subprocess
-
 import streamlit as st
 
 if "session_state" not in st.session_state:
@@ -12,8 +10,6 @@ import traceback
 from collections import defaultdict
 import uuid
 from amadeusgpt.logger import AmadeusLogger
-from datetime import datetime
-import requests
 from amadeusgpt import app_utils
 from amadeusgpt.utils import validate_openai_api_key
 
@@ -27,66 +23,19 @@ if "exist_valid_openai_api_key" not in st.session_state:
 
 # Set page configuration
 st.set_page_config(layout="wide")
-app_utils.load_css("static/styles/style.css")
+app_utils.load_css()
 
-def main():
-    import time
-    from streamlit_profiler import Profiler
-
-    def fetch_user_headers():
-        """Fetch user and email info from HTTP headers.
-
-        Output of this function is identical to querying
-        https://amadeusgpt.kinematik.ai/oauth2/userinfo, but
-        works from within the streamlit app.
-        """
-        # TODO(stes): This could change without warning n future streamlit
-        # versions. So I'll leave the import here in case sth should go
-        # wrong in the future
-        from streamlit.web.server.websocket_headers import _get_websocket_headers
-
-        headers = _get_websocket_headers()
-        AmadeusLogger.debug(f"Received Headers: {headers}")
-        return dict(
-            email=headers.get("X-Forwarded-Email", "no_email_in_header"),
-            user=headers.get("X-Forwarded-User", "no_user_in_header"),
-        )
-
-
-    def fetch_user_info():
-        url = "https://amadeusgpt.kinematik.ai/oauth2/userinfo"
-        try:
-            return fetch_user_headers()
-        # TODO(stes): Lets be on the safe side for now.
-        except Exception as e:
-            AmadeusLogger.info(f"Error: {e}")
-            return None
-
-
+def main():    
     if "streamlit_app" in os.environ:
         if "session_id" not in st.session_state:
             session_id = str(uuid.uuid4())
             st.session_state["session_id"] = session_id
-        user_info = fetch_user_info()
-        if user_info is not None:
-            st.session_state["username"] = "no_username"
-            st.session_state["email"] = "no_email"
-        else:
-            AmadeusLogger.info("Getting None from the endpoint")
-            st.session_state["username"] = "no_username"
-            st.session_state["email"] = "no_email"
-
-        AmadeusLogger.debug("A new user logs in ")
-
+       
         if f"database" not in st.session_state:
             st.session_state[f"database"] = defaultdict(dict)
 
 
-    ###### Initialize ######
-    if "amadeus" not in st.session_state:
-        st.session_state["amadeus"] = app_utils.summon_the_beast()[0]
-    if "log_folder" not in st.session_state:
-        st.session_state["log_folder"] = app_utils.summon_the_beast()[1]
+    ###### Initialize ###### 
     if "chatbot" not in st.session_state:
         st.session_state["chatbot"] = []
     if "user" not in st.session_state:
@@ -123,6 +72,7 @@ def main():
 
 
     def valid_api_key():
+        print ('inside valid api key function')
         if "OPENAI_API_KEY" in os.environ:
             api_token = os.environ["OPENAI_API_KEY"]
         else:
@@ -312,8 +262,7 @@ def main():
 
     try:
         if "enable_profiler" in os.environ:
-            with Profiler():
-                example_to_page[example_bar](example_bar)
+            example_to_page[example_bar](example_bar)
         else:
             example_to_page[example_bar](example_bar)
 

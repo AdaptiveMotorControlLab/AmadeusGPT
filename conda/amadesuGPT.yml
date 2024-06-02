@@ -5,6 +5,6 @@ channels:
     - defaults
 dependencies:
     - python<3.10
+    - hdf5
     - pip
-    - pytorch
     - jupyter

@@ -1,6 +1,6 @@
 from calendar import c
 from amadeusgpt.analysis_objects.object import AnimalSeq
-from amadeusgpt.analysis_objects.visualization import BaseVisualization, GraphVisualization, KeypointVisualization, SceneVisualization, EventVisualization, GraphVisualization
+from amadeusgpt.analysis_objects.visualization import GraphVisualization, KeypointVisualization, SceneVisualization, EventVisualization, GraphVisualization
 from amadeusgpt.managers.model_manager import ModelManager
 from .base import Manager
 from .animal_manager import AnimalManager
@@ -8,13 +8,11 @@ from .object_manager import ObjectManager
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Dict, Any, List, Union, Optional
-from collections import defaultdict
 from amadeusgpt.programs.api_registry import register_class_methods, register_core_api
 from amadeusgpt.analysis_objects.event import BaseEvent
 from matplotlib.patches import Wedge
 import cv2
 import os
-import json 
 import glob
 
 def mask2distance(locations):
@@ -38,8 +36,12 @@ class VisualManager(Manager):
         self.animal_manager = animal_manager
         self.object_manager = object_manager
 
-
-
+    def get_scene_image(self):
+        scene_frame_index = self.config['video_info']['scene_frame_number']
+        cap = cv2.VideoCapture(self.config['video_info']['video_file_path'])
+        cap.set(cv2.CAP_PROP_POS_FRAMES, scene_frame_index)
+        ret, frame = cap.read()
+        return frame
 
     def sanity_check_files(self, 
                            video_folder, 

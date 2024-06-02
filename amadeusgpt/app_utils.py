@@ -5,53 +5,34 @@ import matplotlib.pyplot as plt
 import requests
 import streamlit as st
 from PIL import Image
-from collections import defaultdict
-
 plt.style.use("dark_background")
 import glob
 import io
-import math
 import os
 import pickle
 import tempfile
-from datetime import datetime
-import copy
 import cv2
 import numpy as np
 import pandas as pd
-import subprocess
-from numpy import nan
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
-from amadeusgpt.logger import AmadeusLogger
-from amadeusgpt.implementation import AnimalBehaviorAnalysis, Object, Scene
 from amadeusgpt.main import AMADEUS
+from amadeusgpt.config import Config
+from amadeusgpt.analysis_objects.object import Animal, Object, ROIObject
 import gc
-from memory_profiler import profile as memory_profiler
 import matplotlib
 import json
 import base64
 import io
+import amadeusgpt
+from amadeusgpt.analysis_objects.analysis_factory import create_analysis
+
 
 LOG_DIR = os.path.join(os.path.expanduser("~"), "Amadeus_logs")
 VIDEO_EXTS = "mp4", "avi", "mov"
 current_script_directory = os.path.dirname(os.path.abspath(__file__))
-user_profile_path = os.path.join(current_script_directory,'static/images/cat.png')
-bot_profile_path = os.path.join(current_script_directory,'static/images/chatbot.png')
-
-
-def get_git_hash():
-    import importlib.util
-
-    basedir = os.path.split(importlib.util.find_spec("amadeusgpt").origin)[0]
-    git_hash = ""
-    try:
-        git_hash = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=basedir)
-        git_hash = git_hash.decode("utf-8").rstrip("\n")
-    except subprocess.CalledProcessError:  # Not installed from git
-        pass
-    return git_hash
-
+user_profile_path = os.path.join(current_script_directory, 'static', 'images', 'cat.png')
+bot_profile_path = os.path.join(current_script_directory,'static','images', 'chatbot.png')
 
 def load_profile_image(image_path):
     if image_path.startswith("http"):
@@ -61,21 +42,18 @@ def load_profile_image(image_path):
         img = Image.open(image_path)
     return img
 
+def load_css():
+    current_script_directory = os.path.dirname(os.path.abspath(__file__))
+    css_path = os.path.join(current_script_directory, 'static/styles/style.css')
+    if os.path.exists(css_path):
+        st.markdown(f'<style>{open(css_path).read()}</style>', unsafe_allow_html=True)
+    else:
+        st.error(f"File not found: {css_path}")
+
+
 
 USER_PROFILE = load_profile_image(user_profile_path)
 BOT_PROFILE = load_profile_image(bot_profile_path)
-
-
-def conditional_memory_profile(func):
-    if os.environ.get("enable_profiler"):
-        return memory_profiler(func)
-    return func
-
-
-def feedback_onclick(whether_like, user_msg, bot_msg):
-    feedback_type = "like" if whether_like else "dislike"
-    AmadeusLogger.log_feedback(feedback_type, (user_msg, bot_msg))
-
 
 class BaseMessage:
     def __init__(self, json_entry=None):
@@ -290,41 +268,27 @@ class Messages:
     def __setitem__(self, ind, value):
         self.messages[ind] = value
 
-
 @st.cache_data(persist=False)
-def summon_the_beast():
-    # Get the current date and time
-    now = datetime.now()
-    timestamp = now.strftime("%Y%m%d_%H%M%S")
-    # Create the folder name with the timestamp
-    log_folder = os.path.join(LOG_DIR, timestamp)
-    # os.makedirs(log_folder, exist_ok=True)
-    return AMADEUS, log_folder, timestamp
-
+def get_amadeus_instance(example):
+    # construct the config from the current example    
+    # get the root directory of the the module amadeusgpt
+    config = get_config(example)
+    amadeus_instance = AMADEUS(config)
+    return amadeus_instance
 
 def ask_amadeus(question):
-    answer = AMADEUS.chat_iteration(
+    amadeus = get_amadeus_instance(st.session_state["example"])    
+    answer = amadeus.chat_iteration(
         question
-    ).asdict()  # use chat_iteration to support some magic commands
-
-    # Get the current process
-    AmadeusLogger.log_process_memory(log_position="ask_amadeus")
+    )
     return answer
-
-
-def load_css(css_file):
-    current_script_directory = os.path.dirname(os.path.abspath(__file__))
-    css_path = os.path.join(current_script_directory, 'static/styles/style.css')
-    if os.path.exists(css_path):
-        st.markdown(f'<style>{open(css_path).read()}</style>', unsafe_allow_html=True)
-    else:
-        st.error(f"File not found: {css_path}")
 
 
 # caching display roi will make the roi stick to
 # the display of initial state
 def display_roi(example):
-    roi_objects = AnimalBehaviorAnalysis.get_roi_objects()
+    analysis = create_analysis(get_config(example))
+    roi_objects = analysis.get_roi_objects()
     frame = Scene.get_scene_frame()
     colormap = plt.cm.get_cmap("rainbow", len(roi_objects))
 
@@ -345,7 +309,7 @@ def display_roi(example):
         st.image(frame)
 
 
-def update_roi(result_json, ratios):
+def update_roi(analysis, result_json, ratios):
     w_ratio, h_ratio = ratios
     objects = pd.json_normalize(result_json["objects"])
     for col in objects.select_dtypes(include=["object"]).columns:
@@ -369,15 +333,11 @@ def update_roi(result_json, ratios):
             roi_objects[f"ROI{count}"] = _object
 
             count += 1
-        AnimalBehaviorAnalysis.set_roi_objects(roi_objects)
+        for roi_object in roi_objects:
+            analysis.object_manager.add_roi_object(roi_object)
 
-        AmadeusLogger.debug("User just drew an roi")
 
-
-def finish_drawing(canvas_result, ratio):
-    update_roi(canvas_result.json_data, ratio)
-
-def place_st_canvas(key, scene_image):
+def place_st_canvas(analysis, key, scene_image):
 
     width, height = scene_image.size
     # we always resize the canvas to its default values and keep the ratio
@@ -411,19 +371,18 @@ def place_st_canvas(key, scene_image):
     if canvas_result.json_data is not None:
         update_roi(canvas_result.json_data, (w_ratio, h_ratio))
 
-    if AnimalBehaviorAnalysis.roi_objects_exist():
+    if len(analysis.object_managers.get_roi_object_names()) > 0:
         display_roi(key)
 
-    if key == "EPM" and not AnimalBehaviorAnalysis.roi_objects_exist():
+    if key == "EPM" and not len(analysis.object_managers.get_roi_object_names()) > 0:
         with open("examples/EPM/roi_objects.pickle", "rb") as f:
             roi_objects = pickle.load(f)
-            AnimalBehaviorAnalysis.set_roi_objects(roi_objects)
+            for roi_object in roi_objects:
+                analysis.object_manager.add_roi_object(roi_object)
             display_roi(key)
-
 
 def chat_box_submit():
     if "user_input" in st.session_state:
-        AmadeusLogger.store_chats("user_query", st.session_state["user_input"])
         query = st.session_state["user_input"]
         amadeus_answer = ask_amadeus(query)
 
@@ -432,12 +391,12 @@ def chat_box_submit():
 
         st.session_state["messages"].append(user_message)
         st.session_state["messages"].append(amadeus_message)
-        AmadeusLogger.debug("Submitted a query")
 
 
-def check_uploaded_files():
+def check_uploaded_files(example):
     ## if upload files -> check if same and existing,
     # check if multiple h5 -> replace / warning
+    # return an updated config 
     if st.session_state["uploaded_files"]:
         filenames = [f.name for f in st.session_state["uploaded_files"]]
         folder_path = os.path.join(st.session_state["log_folder"], "uploaded_files")
@@ -448,6 +407,8 @@ def check_uploaded_files():
         # Remove the existing h5 file if there is a new one
         if count_h5 > 1:
             st.error("Oooops, you can only upload one *.h5 file! :ghost:")
+        config = get_config(example)
+
         for file in files:
             if file.name.endswith(".h5"):
                 
@@ -456,54 +417,14 @@ def check_uploaded_files():
                 ) as temp:
                     temp.write(file.getbuffer())
                     st.session_state['uploaded_keypoint_file'] = temp.name
-                    AnimalBehaviorAnalysis.set_keypoint_file_path(temp.name)
+                    config['keypoint_info']['keypoint_file_path'] = temp.name
             if any(file.name.endswith(ext) for ext in VIDEO_EXTS):
                 with tempfile.NamedTemporaryFile(
                     dir=folder_path, suffix=".mp4", delete=False
                 ) as temp:
                     temp.write(file.getbuffer())
-                    AnimalBehaviorAnalysis.set_video_file_path(temp.name)                   
+                    config['video_info']['video_file_path'] = temp.name
                     st.session_state["uploaded_video_file"] = temp.name
-
-
-def set_up_sam():
-    # check whether SAM model is there, if no, just return
-    static_root = "static"
-    if os.path.exists(os.path.join(static_root, "sam_vit_b_01ec64.pth")):
-        model_path = os.path.join(static_root, "sam_vit_b_01ec64.pth")
-        model_type = "vit_b"
-    elif os.path.exists(os.path.join(static_root, "sam_vit_l_0b3195.pth")):
-        model_path = os.path.join(static_root, "sam_vit_l_0b3195.pth")
-        model_type = "vit_l"
-    elif os.path.exists(os.path.join(static_root, "sam_vit_h_4b8939.pth")):
-        model_path = os.path.join(static_root, "sam_vit_h_4b8939.pth")
-        model_type = "vit_h"
-    else:
-        # on streamlit cloud, we do not even put those checkpoints
-        model_path = None
-        model_type = None
-
-    if "log_folder" in st.session_state:
-        AnimalBehaviorAnalysis.set_sam_info(
-            ckpt_path=model_path,
-            model_type=model_type,
-            pickle_path=os.path.join(
-                st.session_state["log_folder"], "sam_object.pickle"
-            ),
-        )
-    return model_path is not None
-
-
-def init_files2amadeus(file, log_folder):
-    folder_path = os.path.join(log_folder, "uploaded_files")
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-
-    if "h5" in file:
-        AnimalBehaviorAnalysis.set_keypoint_file_path(file)
-    if os.path.splitext(file)[1][1:] in VIDEO_EXTS:
-        AnimalBehaviorAnalysis.set_video_file_path(file)
-
 
 def rerun_prompt(query, ind):
     messages = st.session_state["messages"]
@@ -542,8 +463,6 @@ def render_messages():
                     disabled=disabled,
                 )
             else:
-                print ('debug msg')
-                print (msg)
                 msg.render()
 
     st.session_state["messages"] = messages
@@ -554,15 +473,7 @@ def render_messages():
         key="user_input",
         on_submit=chat_box_submit,
         disabled=disabled,
-    )
-    # # Convert the saved conversations to a DataFrame
-    # df = pd.DataFrame(conversation_history)
-    # df.index.name = "Index"
-    # csv = df.to_csv().encode("utf-8")
-    # ## auto-save the conversation to logs
-
-    # csv_path = os.path.join(st.session_state["log_folder"], "conversation.csv")
-    # df.to_csv(csv_path)
+    )   
     csv = None
     return csv
 
@@ -581,56 +492,69 @@ def update_df_data(new_item, index_to_update, df, csv_file):
     return csv_file, df
 
 
-def get_scene_image(example):
-    if AnimalBehaviorAnalysis.get_video_file_path() is not None:
-        scene_image = Scene.get_scene_frame()
-        if scene_image is not None:
-            scene_image = Image.fromarray(scene_image)
-            buffered = io.BytesIO()
-            scene_image.save(buffered, format="JPEG")
-            img_str = base64.b64encode(buffered.getvalue()).decode()
-            return img_str
-    elif example!='Custom':
-        video_file = glob.glob(os.path.join("examples", example, "*.mp4"))[0]
-        keypoint_file = glob.glob(os.path.join("examples", example, "*.h5"))[0]
-        AnimalBehaviorAnalysis.set_keypoint_file_path(keypoint_file)
-        AnimalBehaviorAnalysis.set_video_file_path(video_file)
-        return get_scene_image(example)
+def get_scene_image(config):
+    analysis = create_analysis(config) 
 
+    scene_image = analysis.visual_manager.get_scene_image()
+    if scene_image is not None:
+        scene_image = Image.fromarray(scene_image)
+        buffered = io.BytesIO()
+        scene_image.save(buffered, format="JPEG")
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+        return img_str 
 
-def get_sam_image(example):
-    if AnimalBehaviorAnalysis.get_video_file_path():
-        seg_objects = AnimalBehaviorAnalysis.get_seg_objects()        
-        frame = Scene.get_scene_frame()
-        # number text on objects
-        mask_frame = AnimalBehaviorAnalysis.show_seg(seg_objects)
-        mask_frame = (mask_frame * 255).astype(np.uint8)
-        frame = (frame).astype(np.uint8)
-        image1 = Image.fromarray(frame, "RGB")
-        image1 = image1.convert("RGBA")
-        image2 = Image.fromarray(mask_frame, mode="RGBA")
-        sam_image = Image.blend(image1, image2, alpha=0.5)
-        sam_image = np.array(sam_image)
-        for obj_name, obj in seg_objects.items():
-            x, y = obj.center
-            cv2.putText(
-                sam_image,
-                obj_name,
-                (int(x), int(y)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 0, 255),
-                1,
-            )
-        return sam_image
-    else:
-        return None
+def get_sam_image(config):
+    analysis = create_analysis(config)
+    seg_objects = analysis.object_manager.get_seg_objects()        
+    frame = analysis.visual_manager.get_scene_image()
+    # number text on objects
 
+    mask_frame = AnimalBehaviorAnalysis.show_seg(seg_objects)
+    mask_frame = (mask_frame * 255).astype(np.uint8)
+    frame = (frame).astype(np.uint8)
+    image1 = Image.fromarray(frame, "RGB")
+    image1 = image1.convert("RGBA")
+    image2 = Image.fromarray(mask_frame, mode="RGBA")
+    sam_image = Image.blend(image1, image2, alpha=0.5)
+    sam_image = np.array(sam_image)
+    for obj_name, obj in seg_objects.items():
+        x, y = obj.center
+        cv2.putText(
+            sam_image,
+            obj_name,
+            (int(x), int(y)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (0, 0, 255),
+            1,
+        )
+    return sam_image
 
-@conditional_memory_profile
+def get_config(example):
+
+    root_dir = os.path.dirname(amadeusgpt.__file__)
+    if example == 'Horse':
+        pass
+    elif example in ['EPM', 'MausHaus']:
+        template_config_path = os.path.join(root_dir, 'configs', 'supertopview_template.yaml')
+    elif example == 'MABe':
+        template_config_path = os.path.join(root_dir, 'configs', 'mabe_template.yaml')
+
+    config = Config(template_config_path)
+    video_file = glob.glob(os.path.join("examples", example, "*.mp4"))[0]
+    keypoint_file = glob.glob(os.path.join("examples", example, "*.h5"))[0]
+
+    config['keypoint_info']['keypoint_file_path'] = keypoint_file
+    config['video_info']['video_file_path'] = video_file
+
+    return config
+
 def render_page_by_example(example):
+    # get the config
+    config = get_config(example)
+
     current_script_directory = os.path.dirname(os.path.abspath(__file__))
-    logo_path = os.path.join(current_script_directory, 'static/images/amadeusgpt_logo.png')
+    logo_path = os.path.join(current_script_directory, 'static', 'images', 'amadeusgpt_logo.png')
     st.image(
         logo_path,
         caption=None,
@@ -652,7 +576,8 @@ def render_page_by_example(example):
             accept_multiple_files=True,
         )
         st.session_state['uploaded_files'] = uploaded_files
-        check_uploaded_files()
+        # update config with the uploaded files
+        config = check_uploaded_files(example)
 
         ###### USER INPUT PANEL ######
         # get user input once getting the uploaded files
@@ -660,8 +585,7 @@ def render_page_by_example(example):
         if disabled:
             st.warning("Please upload a file before entering text.")
 
-
-    if example == "EPM":
+    elif example == "EPM":
         st.markdown(
             "Elevated plus maze (EPM) is a widely used behavioral test. The mouse is put on an elevated platform with two open arms (without walls) and  two closed arms (with walls). \
                     In this example we used a video from https://www.nature.com/articles/s41386-020-0776-y."
@@ -682,7 +606,8 @@ def render_page_by_example(example):
         
         st.video(os.path.join(current_script_directory,'static/customEPMprompt_short.mp4'))
 
-    if example == "MABe":
+
+    elif example == "MABe":
         st.markdown(
             "MABe Mouse Triplets is part of a behavior benchmark presented in Sun et al 2022 https://arxiv.org/abs/2207.10553. In the videos, three mice exhibit multiple social behaviors including chasing.   \
                     In this example, we take one video where chasing happens between mice."
@@ -696,8 +621,9 @@ def render_page_by_example(example):
         st.markdown(
             "- Ask additional questions in the chatbox at the bottom of the page."
         )
+        analysis = create_analysis(config)
 
-    if example == "MausHaus":
+    elif example == "MausHaus":
         st.markdown(
             "MausHaus is a dataset that records a freely moving mouse within a rich environment with objects. More details can be found https://arxiv.org/pdf/2203.07436.pdf."
         )
@@ -713,54 +639,38 @@ def render_page_by_example(example):
         st.markdown(
             "- Here are some example queries you might consider: 'Give me events where the animal overlaps with the treadmill, which is object 5' | 'Define <|drinking|> as a behavior where the animal's nose is over object 28, which is a waterbasin. The minimum time window for this behavior should be 20 frames. When is the animal drinking?'"
         )
+        config = get_config(example)
 
-    if example == "Horse":
+    elif example == "Horse":
         st.markdown(
             "This horse video is part of a benchmark by Mathis et al 2021 https://arxiv.org/abs/1909.11229."
         )
+        config = get_config(example)
 
-    AnimalBehaviorAnalysis.set_cache_objects(True)
-    if example == "EPM" or example == 'Custom':
-        # in EPM and Custom, we allow people add more objects
-        AnimalBehaviorAnalysis.set_cache_objects(False)
+    analysis = create_analysis(config)
+    # if example == "EPM" or example == 'Custom':
+    #     # in EPM and Custom, we allow people add more objects
+    #     AnimalBehaviorAnalysis.set_cache_objects(False)
 
     if st.session_state["example"] != example:
         st.session_state["messages"] = Messages()
-        AmadeusLogger.debug("The user switched dataset")
-
     st.session_state["example"] = example
-
-    st.session_state["log_folder"] = f"examples/{example}"
 
     video_file = None
     scene_image = None
-    scene_image_str = None
-    if example =='Custom':
-        if st.session_state['uploaded_video_file']:
-            video_file = st.session_state['uploaded_video_file']
-            scene_image_str = get_scene_image(example)
-    else:
-        video_file = glob.glob(os.path.join("examples", example, "*.mp4"))[0]
-        keypoint_file = glob.glob(os.path.join("examples", example, "*.h5"))[0]
-        AnimalBehaviorAnalysis.set_keypoint_file_path(keypoint_file)
-        AnimalBehaviorAnalysis.set_video_file_path(video_file)
-        # get the corresponding scene image for display
-        scene_image_str = get_scene_image(example)
+    scene_image_str = get_scene_image(config)  
 
     if scene_image_str is not None:
         img_data =  base64.b64decode(scene_image_str)
         image_stream = io.BytesIO(img_data)
         image_stream.seek(0)
         scene_image = Image.open(image_stream)
-
         
     col1, col2, col3 = st.columns([2, 1, 1])
 
-    sam_image = None
-    sam_success = set_up_sam()    
     if example == "MausHaus" or st.session_state['enable_SAM'] == "Yes":
-        if sam_success:        
-            sam_image = get_sam_image(example)
+        if 'sam_info' in config and os.path.exists(config['sam_info'].get('sam_checkpoint', '')):
+            sam_image = get_sam_image(config)
         else:
             st.error("Cannot find SAM checkpoints. Skipping SAM")
 
@@ -774,55 +684,32 @@ def render_page_by_example(example):
         if video_file:
             st.video(video_file)
         # we only show objects for MausHaus for demo
-        if sam_image is not None:
-            st.caption("SAM segmentation results")
-            st.image(sam_image, channels="RGBA")
+        # if sam_image is not None:
+        #     st.caption("SAM segmentation results")
+        #     st.image(sam_image, channels="RGBA")
 
     if (
         st.session_state["example"] == "EPM"
         or st.session_state["example"] == "MausHaus"
         and scene_image is not None
     ):
-        place_st_canvas(example, scene_image)
+        place_st_canvas(analysis, example, scene_image)
 
     if st.session_state["example"] == 'Custom' and scene_image:
-        place_st_canvas(example, scene_image)
-
+        place_st_canvas(analysis, example, scene_image)    
 
     if example == "EPM" or example == "MausHaus":
         # will read the keypoints from h5 file to avoid hard coding
         with st.sidebar:
-            topviewimage = os.path.join(current_script_directory,'static/images/supertopview.png')
+            topviewimage = os.path.join(current_script_directory, 'static', 'images', 'supertopview.png')
             st.image(topviewimage)
             #st.image("static/images/supertopview.png")
     with st.sidebar:
         st.write("Keypoints:")
-        st.write(AnimalBehaviorAnalysis.get_bodypart_names())
+        st.write(analysis.get_keypoint_names())
 
     render_messages()
-
-    AmadeusLogger.log_process_memory(log_position=f"after_display_chats_{example}")
     gc.collect()
-    AmadeusLogger.log_process_memory(log_position=f"after_garbage_collection_{example}")
-
-
-def get_history_chat(chat_time):
-    csv_file = glob.glob(os.path.join(LOG_DIR, chat_time, "*.csv"))[0]
-    df = pd.read_csv(csv_file)
-    return df
-
-
-def get_example_history_chat(example):
-    if example == "":
-        return None, None
-    csv_files = glob.glob(os.path.join("examples", example, "example.csv"))
-    if len(csv_files) > 0:
-        csv_file = csv_files[0]
-        df = pd.read_csv(csv_file)
-        return csv_file, df
-    else:
-        return None, None
-
 
 def save_figure_to_tempfile(fig):
     # save the figure

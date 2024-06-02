@@ -44,9 +44,7 @@ class ObjectManager(Manager):
             self.create_grids()
             self.create_grid_labels()
             self.create_grid_objects()
-
         
-
     def summary(self):
         print("roi_objects: ", self.get_roi_object_names())
         print("seg_objects: ", self.get_seg_object_names())
