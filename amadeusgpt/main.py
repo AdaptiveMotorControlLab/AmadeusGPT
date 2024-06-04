@@ -35,14 +35,19 @@ class AMADEUS:
         ####
 
         ## register the llm to the mediator
-        self.sandbox.register_llm(self.code_generator_llm)    
+        self.sandbox.register_llm('code_generator', self.code_generator_llm)    
         if self.use_self_debug:
-            self.sandbox.register_llm(self.self_debug_llm)        
+            self.sandbox.register_llm('self_debug', self.self_debug_llm)        
         if self.use_diagnosis:
-            self.sandbox.register_llm(self.diagnosis_llm)
-                            
+            self.sandbox.register_llm('diagnosis', self.diagnosis_llm)
+
+    def chat_iteration(self, user_query):
+        result = self.sandbox.step(user_query)
+        return result
+
     def step(self, user_query):       
-        self.sandbox.step(user_query)        
+        result = self.sandbox.step(user_query)        
+        return result
          
    
 

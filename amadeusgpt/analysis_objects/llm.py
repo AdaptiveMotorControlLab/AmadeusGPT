@@ -146,8 +146,6 @@ class LLM(AnalysisObject):
             text = "Something went wrong"
         else:
             text = response.choices[0].message.content.strip()
-       
-     
 
         # we need to consider better ways to parse functions
         # and save them in a more structured way
@@ -168,22 +166,18 @@ class CodeGenerationLLM(LLM):
     def __init__(self, config):
         super().__init__(config)
 
-    def whether_speak(self, chat_channel):
+    def whether_speak(self, sandbox):
         """
         1) if there is a error from last iteration, don't speak
         """
-
-        error = chat_channel.get_last_message().get("error", None)
-        if error is not None:
-            return False
-        else:
-            return True      
+        return True    
 
     def speak(self, sandbox):
         """
         Speak to the chat channel
-        """         
-        query = sandbox.get_user_query()
+        """
+        qa_message = sandbox.messages[-1]
+        query = qa_message.query 
         self.update_system_prompt(sandbox)
         self.update_history("user", query)
 
@@ -196,28 +190,24 @@ class CodeGenerationLLM(LLM):
         function_code = re.findall(pattern, text, re.DOTALL)[0]
 
         # create a placeholder   
-        thought_process = text.replace(function_code, "<python_code>")
-
-        sandbox.chat_channel.code_history.append(function_code)
-        sandbox.chat_channel.chain_of_thought.append(thought_process)               
+        thought_process = text
+        qa_message.code = function_code
+        qa_message.chain_of_thought = thought_process
        
-        return thought_process
 
 
     def update_system_prompt(self, sandbox):
         from amadeusgpt.system_prompts.code_generator import _get_system_prompt
 
         core_api_docs = sandbox.get_core_api_docs()
-        helper_functions = sandbox.get_helper_functions()
         task_program_docs = sandbox.get_task_program_docs()
-        variables = sandbox.get_variables()
+        query_block = sandbox.get_query_block()
 
-        self.system_prompt = _get_system_prompt(core_api_docs, 
-                                                             helper_functions, 
-                                                             task_program_docs, 
-                                                          variables)
+        self.system_prompt = _get_system_prompt(query_block, 
+                                                core_api_docs, 
+                                                task_program_docs)
+                                                          
         
-
         # update both history and context window
         self.update_history("system", self.system_prompt)
 

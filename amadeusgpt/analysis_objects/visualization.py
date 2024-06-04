@@ -375,7 +375,6 @@ class EventVisualization(MatplotlibVisualization):
         self.axs.set_yticklabels([])
 
         title = self.sender_animal_name if len(self.receiver_animal_name) == 0 else list(self.receiver_animal_name)[0]
-
         self.axs.set_title(title)
         if len(events) == 0:
             video_length = get_video_length(self.video_file_path)

@@ -1,4 +1,5 @@
 from calendar import c
+from sched import Event
 from amadeusgpt.analysis_objects.object import AnimalSeq
 from amadeusgpt.analysis_objects.visualization import GraphVisualization, KeypointVisualization, SceneVisualization, EventVisualization, GraphVisualization
 from amadeusgpt.managers.model_manager import ModelManager
@@ -104,7 +105,7 @@ class VisualManager(Manager):
             scene_frame_number)
     
     def get_head_orientation_visualization(self,
-                                           events,
+                                           events = None,
                                            render:bool = False):
         ARROW_LENGTH = 20
         CONE_WIDTH = 30
@@ -118,10 +119,9 @@ class VisualManager(Manager):
             axs[sender_idx][0].set_ylabel(sender_animal.get_name())
             for receiver_idx, receiver_animal in enumerate(other_animals):
                 
-                for event in events:
-                    if receiver_animal.get_name() in event.receiver_animal_names:
-                        start_frame = event.start
-                        break
+                for event in events:                    
+                    start_frame = event.start
+                    break
 
                 scene_vis = self.get_scene_visualization(start_frame,
                                         axs = axs[sender_idx][receiver_idx])
@@ -156,12 +156,14 @@ class VisualManager(Manager):
                         axs[sender_idx][receiver_idx].arrow(*origin, *yhat, head_width=10, color='g')
         if render:
             plt.show()
+        return fig, axs
                 
 
     #@register_core_api
     def get_keypoint_visualization(self, 
                                     render:bool = False,
                                     bodypart_names: Optional[List[str]] = None,
+                                    fig: Optional[plt.Figure] = None,
                                     axs: Optional[plt.Axes] = None,
                                     average_keypoints: bool = True,
                                     frames:Optional[range] =  None,
@@ -232,8 +234,10 @@ class VisualManager(Manager):
                                                         events = events)
                     scene_vis.draw()
                     keypoint_vis.draw()
+                
         if render:
             plt.show()
+        return fig, axs
 
     def get_ethogram_visualization(self,
                                 events: List[BaseEvent],
@@ -248,9 +252,20 @@ class VisualManager(Manager):
         We can still make it more informative if we want
 
         """
-        pass
-        
+        fig, axs = plt.subplots(1, len(self.animal_manager.get_animals()))
 
+        for idx, animal in enumerate(self.animal_manager.get_animals()):
+            event_vis = EventVisualization(axs[idx], 
+                                           events, 
+                                           animal.get_name(), 
+                                           set(), 
+                                           self.config['video_info']['video_file_path'])
+            event_vis.draw()
+        if render:
+            plt.show()
+        return fig, axs
+
+        
     #@register_core_api
     def get_animal_animal_visualization(self,
                                    events: List[BaseEvent],

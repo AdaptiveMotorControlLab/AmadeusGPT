@@ -8,6 +8,7 @@ class Config:
     def __init__(self, config_file_path: str, default_config: dict = None):
         self.default_config = default_config or {}
         self.config_file_path = config_file_path
+        assert os.path.exists(self.config_file_path), f"Config file {self.config_file_path} not found."
         self.data = self.load_config()
 
     def __repr__(self):

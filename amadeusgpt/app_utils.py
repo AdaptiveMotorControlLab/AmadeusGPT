@@ -104,8 +104,9 @@ class AIMessage(BaseMessage):
         else:
             self.data = {}
         self.data["role"] = "ai"
-        if amadeus_answer:
-            self.data.update(amadeus_answer)
+        if not isinstance(amadeus_answer, dict):
+            amadeus_answer = amadeus_answer.to_dict()
+        self.data.update(amadeus_answer)
 
     def render(self):
         """
@@ -125,7 +126,7 @@ class AIMessage(BaseMessage):
         --------
         """
 
-        render_keys = ['error_function_code', 'error_message', 'chain_of_thoughts', 'plots', 'str_answer', 'ndarray', 'summary']
+        render_keys = ['query', 'code', 'chain_of_thought', 'plots', 'error_message', 'function_rets']
         #for render_key, render_value in self.data.items():
         if len(self.data) > 0:
             for render_key in render_keys:
@@ -135,28 +136,28 @@ class AIMessage(BaseMessage):
                 if render_value is None:
                     # skip empty field 
                     continue
-                if render_key == "str_answer":
+                if render_key == "function_rets":
                     if render_value!="":
                         st.markdown(f" After executing the code, we get: {render_value}\n ") 
-
                 elif render_key == 'error_message':
-                    st.markdown(f"The error says: {render_value}\n ") 
-                elif render_key == 'error_function_code':
-                    if 'task_program' in render_value and "```python" not in render_value:
-                        st.code(render_value, language = 'python')
-                    else:
-                        st.markdown(
-                            f'<div class="panel">{render_value}</div>', unsafe_allow_html=True
-                        )
-                    st.markdown(f"When executing the the code above, an error occurs:")
-                elif render_key == "chain_of_thoughts" or render_key == "summary":
+                    st.markdown(f"The error says: {render_value}\n ")                                  
+                elif render_key == "chain_of_thought":
                     # there should be a better matching than this
-                    if 'task_program' in render_value and "```python" not in render_value and render_key == 'chain_of_thoughts':
-                        st.code(render_value, language = 'python')
-                    else:
-                        st.markdown(
-                            f'<div class="panel">{render_value}</div>', unsafe_allow_html=True
-                        )
+                    text = render_value
+                    lines = text.split('\n')
+                    inside_code_block = False
+                    code_block = []
+                    for line in lines:
+                        if line.strip().startswith("```python"): 
+                            inside_code_block = True 
+                            code_block = []
+                        elif line.strip().startswith("```") and inside_code_block:
+                            inside_code_block = False
+                            st.code('\n'.join(code_block), language='python')
+                        elif inside_code_block:
+                            code_block.append(line)
+                        else:
+                            st.markdown(line)                    
                 elif render_key == "ndarray":
                     for content_array in render_value:
                         content_array = content_array.squeeze()
@@ -268,7 +269,6 @@ class Messages:
     def __setitem__(self, ind, value):
         self.messages[ind] = value
 
-@st.cache_data(persist=False)
 def get_amadeus_instance(example):
     # construct the config from the current example    
     # get the root directory of the the module amadeusgpt
@@ -278,10 +278,10 @@ def get_amadeus_instance(example):
 
 def ask_amadeus(question):
     amadeus = get_amadeus_instance(st.session_state["example"])    
-    answer = amadeus.chat_iteration(
+    qa_message = amadeus.chat_iteration(
         question
     )
-    return answer
+    return qa_message
 
 
 # caching display roi will make the roi stick to
@@ -384,10 +384,10 @@ def place_st_canvas(analysis, key, scene_image):
 def chat_box_submit():
     if "user_input" in st.session_state:
         query = st.session_state["user_input"]
-        amadeus_answer = ask_amadeus(query)
+        qa_message = ask_amadeus(query)
 
-        user_message = HumanMessage(query=query)
-        amadeus_message = AIMessage(amadeus_answer=amadeus_answer)
+        user_message = HumanMessage(query=qa_message.query)
+        amadeus_message = AIMessage(amadeus_answer=qa_message)
 
         st.session_state["messages"].append(user_message)
         st.session_state["messages"].append(amadeus_message)

@@ -409,7 +409,8 @@ class EventGraph:
                 new_node.prev = cur_node                                
                 self.n_nodes+=1
                 return 
-            elif cur_node.start == new_node.start:
+            elif cur_node.start == new_node.start: 
+                # let's check not to insert a basically equivalent node
                 cur_node.children.extend(new_node.children)
                 self.n_nodes+=1
                 return
@@ -459,23 +460,27 @@ class EventGraph:
         number_of_overlap_for_fusion is a parameter for logical and.
         For example, if there are two conditions to be met in the masks we look for locations that have overlap as 2
         """       
-        # retrieve all events that satisfy the conditions (k=v)    
+        # retrieve all events that satisfy the conditions (k=v) 
         events = graph.traverse_by_kvs(merge_kvs)
+
         if not allow_more_than_2_overlap:
             assert Event.check_max_in_sum(events) <= number_of_overlap_for_fusion, f"Detected overlap {Event.check_max_in_sum(events)}. But we only allow {number_of_overlap_for_fusion} overlap for fusion."
-
+       
         new_graph = cls() 
         if len(events) == 0:
             return new_graph
+        
+        
         masks = [event.generate_mask() for event in events]         
         _sum = np.sum(masks, axis = 0)          
-
         mask = np.zeros_like(_sum, dtype=bool)
         # in case there are many events overlap, 
         # if the events come from one single condition, there is no overlap
         # so the overlap must come from different conditions
-
         mask[(_sum >= number_of_overlap_for_fusion)] = True
+        
+        # the logic of merging receiver names across all events from kv traverse is wrong
+        # especially when we have animal state event to be fused
         events = Event.mask2events(mask,
                                         events[0].video_file_path,
                                         events[0].sender_animal_name,
@@ -484,8 +489,7 @@ class EventGraph:
                                         )     
         for event in events:
             new_graph.insert_node(Node(event.start, [event]))       
-
-
+      
 
         return new_graph
 
@@ -514,7 +518,7 @@ class EventGraph:
                 conditions = []
                 for k,v in kvs.items():
                     # empty receiver name set() should match any node
-                    if isinstance(v, set):
+                    if isinstance(v, set):                       
                         conditions.append(len(getattr(event,k)) == 0 or v.issubset(getattr(event, k)))
                     else:   
                         conditions.append(getattr(event, k) == v)                        
