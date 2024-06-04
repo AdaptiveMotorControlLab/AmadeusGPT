@@ -40,10 +40,11 @@ class ObjectManager(Manager):
         self.animal2labelarray = {}
         self.occupation_heatmap = {}
         #####
-        if os.path.exists(config['video_info']['video_file_path']):
-            self.create_grids()
-            self.create_grid_labels()
-            self.create_grid_objects()
+        # let's not use grid objects for now
+        # if os.path.exists(config['video_info']['video_file_path']):
+        #     self.create_grids()
+        #     self.create_grid_labels()
+        #     self.create_grid_objects()
         
     def summary(self):
         print("roi_objects: ", self.get_roi_object_names())
@@ -114,9 +115,7 @@ class ObjectManager(Manager):
     def add_grid_object(self, obj: GridObject)-> None:
         self.grid_objects.append(obj)
 
-    def get_grid_objects(self)-> List[GridObject]:
-        print ('get grid objects?')
-        print (self.grid_labels)
+    def get_grid_objects(self)-> List[GridObject]:       
         return self.grid_objects
     
     def create_grid_labels(self):
@@ -186,18 +185,8 @@ class ObjectManager(Manager):
                
         return self.occupation_heatmap
         
-    def add_roi_object(self, data: Any)-> None:
-        # the user can add an object to the roi_objects
-        if not isinstance(data, Object):
-            if isinstance(data, list):
-                for e in data:
-                    self.add_roi_object(e)
-                return 
-            else:
-                roi_name = f'ROI_{len(self.get_object_names())}'
-                object = ROIObject(roi_name, data)
-        else:
-            object = data
+    def add_roi_object(self, object)-> None:
+        # the user can add an object to the roi_objects     
         self.roi_objects.append(object)
 
     def get_serializeable_list_names(self) -> List[str]:

@@ -1,4 +1,3 @@
-from distutils import core
 from .base import AnalysisObject
 import openai
 import os
@@ -7,6 +6,7 @@ import time
 from amadeusgpt.utils import AmadeusLogger
 from amadeusgpt.utils import search_generated_func
 import re
+import json 
 
 class LLM(AnalysisObject):
     prompt_tokens = 0
@@ -189,10 +189,16 @@ class CodeGenerationLLM(LLM):
         pattern = r"```python(.*?)```"
         function_code = re.findall(pattern, text, re.DOTALL)[0]
 
+        with open("temp_answer.json", "w") as f:
+            obj = {}
+            obj["chain_of_thought"] = text
+            json.dump(obj, f)
+
         # create a placeholder   
         thought_process = text
         qa_message.code = function_code
         qa_message.chain_of_thought = thought_process
+
        
 
 

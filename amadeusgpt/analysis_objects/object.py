@@ -181,8 +181,9 @@ class MatplotlibObject(Object):
         )
         self.center = np.array([np.mean(vertices[:, 0]), np.mean(vertices[:, 1])])        
 class ROIObject(Object):
-    def __init__(self, name: str, canvas_path):
+    def __init__(self, name: str, canvas_path):       
         super().__init__(name)
+        
         self.canvas_path = canvas_path
         points = canvas_path
         if isinstance(canvas_path, mpath.Path):

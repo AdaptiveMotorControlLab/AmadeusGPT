@@ -47,8 +47,7 @@ def main():
     if "uploaded_video_file" not in st.session_state:
         st.session_state["uploaded_video_file"] = None
     if "uploaded_keypoint_file" not in st.session_state:
-        st.session_state["uploaded_keypoint_file"] = None    
-
+        st.session_state["uploaded_keypoint_file"] = None        
     if "example" not in st.session_state:
         st.session_state["example"] = ""
     if "chat_history" not in st.session_state:

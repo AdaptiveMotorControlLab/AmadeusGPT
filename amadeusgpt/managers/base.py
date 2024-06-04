@@ -41,11 +41,13 @@ class cache_decorator:
         if instance is None:
             return self
         # Return a new, bound version of the decorator, with the instance bound.
-        return lambda *args, **kwargs: self(instance, *args, **kwargs)
+
+        return lambda *args, **kwargs: self.__call__(instance, *args, **kwargs)
     
     def __call__(self, *args, **kwargs):
         # The first argument is now the instance.
         instance, *args = args
+
         if not instance.use_cache:
             return self.func(instance, *args, **kwargs)
         
