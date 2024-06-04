@@ -33,12 +33,15 @@ class RelationshipManager(Manager):
        
         # roi, sam, animals are all objects
         roi_objs = self.object_manager.get_roi_objects()
+        print ('debug')
+        print (self.object_manager.roi_objects)
         seg_objs = self.object_manager.get_seg_objects()
         grid_objs = self.object_manager.get_grid_objects()
         animals = self.animal_manager.get_animals()
 
         # there might be other objs
         objs = roi_objs + seg_objs + grid_objs
+
 
         # the key optimization opportunity here is to make following block faster
         # I don't know if we can vectorize the operations below. Maybe not.

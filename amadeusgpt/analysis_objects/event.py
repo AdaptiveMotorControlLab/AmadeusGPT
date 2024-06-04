@@ -35,7 +35,8 @@ class BaseEvent(AnalysisObject):
             self.duration_in_seconds = 0
         else:
             self.duration_in_seconds = round( duration_in_frames / get_fps(self.video_file_path), 2)
-
+        self.duration = self.duration_in_frames
+        
     def __len__(self)-> int:
         return self.end - self.start + 1
    

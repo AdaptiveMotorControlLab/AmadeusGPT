@@ -15,6 +15,15 @@ from matplotlib.patches import Wedge
 import cv2
 import os
 import glob
+import streamlit as st 
+
+
+#FIXME makes this dynamically dependent on the theme of streamlit
+plt.rcParams['figure.subplot.hspace'] = 0.5  # Horizontal space between subplots
+plt.rcParams['figure.subplot.wspace'] = 0.5  # Vertical space between subplots
+plt.style.use('dark_background')    
+
+
 
 def mask2distance(locations):
     assert len(locations.shape) == 2
@@ -158,6 +167,14 @@ class VisualManager(Manager):
             plt.show()
         return fig, axs
                 
+    @register_core_api
+    def get_frame_rate(self):
+        """
+        A function that returns the frame rate of the video.
+        """
+        cap = cv2.VideoCapture(self.config['video_info']['video_file_path'])
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        return fps
 
     #@register_core_api
     def get_keypoint_visualization(self, 
@@ -252,7 +269,7 @@ class VisualManager(Manager):
         We can still make it more informative if we want
 
         """
-        fig, axs = plt.subplots(1, len(self.animal_manager.get_animals()))
+        fig, axs = plt.subplots(len(self.animal_manager.get_animals()), 1)
 
         for idx, animal in enumerate(self.animal_manager.get_animals()):
             event_vis = EventVisualization(axs[idx], 
@@ -260,6 +277,7 @@ class VisualManager(Manager):
                                            animal.get_name(), 
                                            set(), 
                                            self.config['video_info']['video_file_path'])
+            axs[idx].set_ylabel(animal.get_name())
             event_vis.draw()
         if render:
             plt.show()

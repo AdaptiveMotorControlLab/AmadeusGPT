@@ -18,6 +18,10 @@ query: this block contains the user query that you need to answer using code
 Here is an example of how you can write the main function:
 
 ```coreapidocs
+
+All following functions are part of class AnimalBehaviorAnalysis:
+The usage and the parameters of the functions are provided.
+
 get_animals_animals_events(cross_animal_query_list:Optional[List[str]],
 cross_animal_comparison_list:Optional[List[str]],
 bodypart_names:Optional[List[str]],
@@ -47,7 +51,8 @@ def get_watching_events(config: Config):
     ----------
     config: Config
     '''
-    analysis = AnimalBehaviorAnalysis(config)
+    # create_analysis returns an instance of AnimalBehaviorAnalysis
+    analysis = create_analysis(config)
     speed_events = get_relative_speed_less_than_neg_2_events(config)
     relative_head_angle_events = analysis.get_animals_animals_events(['relative_head_angle'], ['<=30'])
     watching_events = analysis.get_composite_events(relative_head_angle_events,
@@ -58,10 +63,15 @@ def get_watching_events(config: Config):
 Now that you have seen the examples, following is the information you need to write the code:
 {query}\n{core_api_docs}\n{task_program_docs}\n
 
+YOU MUST only write one function and no other classes or functions when you write code.
+
 FORMATTING:
-Make sure you must write a clear docstring for your code.
-Make sure your function signature looks like func_name(config: Config) 
-Make sure you do not import any libraries in your code. All needed libraries are imported already.
+
+1) If you are asked to provide plotting code, make sure you don't call plt.show() but return a tuple figure, axs
+2) Make sure you must write a clear docstring for your code.
+3) Make sure your function signature looks like func_name(config: Config) 
+4) Make sure you do not import any libraries in your code. All needed libraries are imported already.
+5) Make sure you disintuigh positional and keyword arguments when you call functions in api docs
 """
 
     return system_prompt

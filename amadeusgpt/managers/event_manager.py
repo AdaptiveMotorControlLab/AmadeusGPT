@@ -65,11 +65,11 @@ class EventManager(Manager):
         self.animals_animals_events = []
         self.animals_state_events = []
     @register_core_api
-    @cache_decorator
+
     def get_animals_object_events(
         self,
-        object_name: str,
-        query: str,
+        object_name:Optional[str] = "",
+        query: Optional[str] = "",
         negate:Optional[bool]=False,
         bodypart_names: Optional[Union[List[str], None]] = None,
         min_window: int = 0,
@@ -94,6 +94,7 @@ class EventManager(Manager):
                                     
         animals_objects_relations = self.relationship_manager.get_animals_objects_relationships(animal_bodyparts_names=bodypart_names)
        
+
         ret_events = []
         for animal_objects_relationship in animals_objects_relations:
             if animal_objects_relationship.object_name != object_name:

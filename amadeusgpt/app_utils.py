@@ -18,9 +18,8 @@ from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 from amadeusgpt.main import AMADEUS
 from amadeusgpt.config import Config
-from amadeusgpt.analysis_objects.object import Animal, Object, ROIObject
+from amadeusgpt.analysis_objects.object import  Object, ROIObject
 import gc
-import matplotlib
 import json
 import base64
 import io
@@ -181,19 +180,10 @@ class AIMessage(BaseMessage):
                                 raise ValueError("returned array cannot be non 2D array.")               
                 elif render_key == "plots":
                     # are there better ways in streamlit now to support plot display?
-                    for fig_obj in render_value:
-                        caption = self.format_caption(fig_obj["plot_caption"])                   
-                        if isinstance(fig_obj["figure"], str):
-                            img_obj = Image.open(fig_obj["figure"])
-                            st.image(img_obj, width=600)
-                        elif isinstance(fig_obj["figure"], matplotlib.figure.Figure):
-                            # avoid using pyplot
-                            filename = save_figure_to_tempfile(fig_obj["figure"])
-                            st.image(filename, width=600)
-                        st.markdown(
-                            f'<div class="panel">{caption}</div>',
-                            unsafe_allow_html=True,
-                        )
+                    for fig, axe in render_value:
+                        filename = save_figure_to_tempfile(fig)
+                        st.image(filename, width=600)
+                       
 
 class Messages:
     """
@@ -286,15 +276,16 @@ def ask_amadeus(question):
 
 # caching display roi will make the roi stick to
 # the display of initial state
-def display_roi(example):
+def display_roi(analysis,example):
     analysis = create_analysis(get_config(example))
     roi_objects = analysis.get_roi_objects()
-    frame = Scene.get_scene_frame()
+
+    frame = analysis.visual_manager.get_scene_image()
     colormap = plt.cm.get_cmap("rainbow", len(roi_objects))
 
-    for i, (k, v) in enumerate(roi_objects.items()):
-        name = k
-        vertices = v.Path.vertices
+    for i, roi_object in enumerate(roi_objects):
+        name = roi_object.get_name()
+        vertices = roi_object.Path.vertices
         pts = np.array(vertices, np.int32)
         pts = pts.reshape((-1, 1, 2))
         color = colormap(i)[:3]
@@ -329,12 +320,9 @@ def update_roi(analysis, result_json, ratios):
             points = np.array(points)
             points[:, 0] = points[:, 0] * w_ratio
             points[:, 1] = points[:, 1] * h_ratio
-            _object = Object(f"ROI{count}", canvas_path=points)
-            roi_objects[f"ROI{count}"] = _object
-
-            count += 1
-        for roi_object in roi_objects:
-            analysis.object_manager.add_roi_object(roi_object)
+            _object = ROIObject(f"ROI{count}", canvas_path=points)            
+            count += 1        
+            analysis.object_manager.add_roi_object(_object)
 
 
 def place_st_canvas(analysis, key, scene_image):
@@ -369,17 +357,10 @@ def place_st_canvas(analysis, key, scene_image):
         pass
         # st.session_state["previous_roi"] = canvas_result.json_data
     if canvas_result.json_data is not None:
-        update_roi(canvas_result.json_data, (w_ratio, h_ratio))
+        update_roi(analysis, canvas_result.json_data, (w_ratio, h_ratio))
 
-    if len(analysis.object_managers.get_roi_object_names()) > 0:
-        display_roi(key)
-
-    if key == "EPM" and not len(analysis.object_managers.get_roi_object_names()) > 0:
-        with open("examples/EPM/roi_objects.pickle", "rb") as f:
-            roi_objects = pickle.load(f)
-            for roi_object in roi_objects:
-                analysis.object_manager.add_roi_object(roi_object)
-            display_roi(key)
+    if len(analysis.object_manager.get_roi_object_names()) > 0:
+        display_roi(analysis, key)    
 
 def chat_box_submit():
     if "user_input" in st.session_state:
@@ -534,9 +515,11 @@ def get_config(example):
 
     root_dir = os.path.dirname(amadeusgpt.__file__)
     if example == 'Horse':
-        pass
-    elif example in ['EPM', 'MausHaus']:
-        template_config_path = os.path.join(root_dir, 'configs', 'supertopview_template.yaml')
+        template_config_path = os.path.join(root_dir, 'configs', 'Horse_template.yaml')
+    elif example == 'MausHaus':
+        template_config_path = os.path.join(root_dir, 'configs', 'maushaus_template.yaml')
+    elif example == 'EPM':
+        template_config_path = os.path.join(root_dir, 'configs', 'EPM_template.yaml')
     elif example == 'MABe':
         template_config_path = os.path.join(root_dir, 'configs', 'mabe_template.yaml')
 
@@ -647,32 +630,29 @@ def render_page_by_example(example):
         )
         config = get_config(example)
 
-    analysis = create_analysis(config)
-    # if example == "EPM" or example == 'Custom':
-    #     # in EPM and Custom, we allow people add more objects
-    #     AnimalBehaviorAnalysis.set_cache_objects(False)
+    analysis = create_analysis(config)    
 
     if st.session_state["example"] != example:
         st.session_state["messages"] = Messages()
     st.session_state["example"] = example
 
-    video_file = None
-    scene_image = None
-    scene_image_str = get_scene_image(config)  
+    
+    scene_image_path = get_scene_image(config)
+    video_file = config['video_info']['video_file_path']
 
-    if scene_image_str is not None:
-        img_data =  base64.b64decode(scene_image_str)
+    if scene_image_path is not None:
+        img_data =  base64.b64decode(scene_image_path)
         image_stream = io.BytesIO(img_data)
         image_stream.seek(0)
         scene_image = Image.open(image_stream)
         
     col1, col2, col3 = st.columns([2, 1, 1])
 
-    if example == "MausHaus" or st.session_state['enable_SAM'] == "Yes":
-        if 'sam_info' in config and os.path.exists(config['sam_info'].get('sam_checkpoint', '')):
-            sam_image = get_sam_image(config)
-        else:
-            st.error("Cannot find SAM checkpoints. Skipping SAM")
+    # if example == "MausHaus" or st.session_state['enable_SAM'] == "Yes":
+    #     if 'sam_info' in config and os.path.exists(config['sam_info'].get('sam_checkpoint', '')):
+    #         sam_image = get_sam_image(config)
+    #     else:
+    #         st.error("Cannot find SAM checkpoints. Skipping SAM")
 
     with st.sidebar as sb:
         if example == "MABe":
@@ -713,7 +693,7 @@ def render_page_by_example(example):
 
 def save_figure_to_tempfile(fig):
     # save the figure
-    folder_path = os.path.join(st.session_state["log_folder"], "tmp_imgs")
+    folder_path = os.path.join("logs", "tmp_imgs")
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
     # Generate a unique temporary filename in the specified folder
