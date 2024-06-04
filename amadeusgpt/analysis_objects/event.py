@@ -1,4 +1,5 @@
 from asyncio import events
+from tracemalloc import start
 from cv2 import merge
 import numpy as np
 from typing import List, Tuple, Union, Optional, Dict, Set, Any
@@ -448,6 +449,46 @@ class EventGraph:
         return cls.init_from_mask(ret, events[0].video_file_path, events[0].sender_animal_name, set(), set())
 
 
+    @classmethod
+    def refine_graph(cls,
+                        graph):
+        # 1) when animal state is present, the receiver name is an empty set. Merge those events with their closest neighbors
+        # 2) when multiple events share the sender name, the same start and end time but differ in receiver name and object name, we can create a merged event
+        pass
+    @classmethod
+    def handle_animal_state_fusion(cls,
+                                   graph,
+                                   merge_kvs: Dict[str, Any]):        
+        # only matching animal state events that have no receiver name or object name        
+        animal_state_events = graph.traverse_by_kvs(merge_kvs)
+        sender_animal_name = merge_kvs['sender_animal_name']
+        new_graph = cls()
+        events = graph.to_list()
+        for event in events:
+            # identify non animal state events
+            if event.sender_animal_name == sender_animal_name and len(event.receiver_animal_names) !=0:
+                for animal_state_event in animal_state_events:
+                    start1, end1 = event.start, event.end
+                    start2, end2 = animal_state_event.start, animal_state_event.end
+                    if max(start1, start2) <= min(end1, end2):
+                        mask1 = event.generate_mask()
+                        mask2 = animal_state_event.generate_mask()
+                        mask = mask1 & mask2
+                        # animal state event keeps the original receiver name and object name of the non-state event
+                        true_indices = np.where(mask)[0]
+
+                        new_event = Event(true_indices[0],
+                                        true_indices[-1],
+                                        event.video_file_path,
+                                        len(mask),
+                                        sender_animal_name=event.sender_animal_name, 
+                                        receiver_animal_names=event.receiver_animal_names, 
+                                        object_names=event.object_names)
+                        new_graph.insert_node(Node(new_event.start, [new_event]))
+        return new_graph
+
+
+
 
     @classmethod
     def fuse_subgraph_by_kvs(cls,
@@ -470,7 +511,7 @@ class EventGraph:
         if len(events) == 0:
             return new_graph
         
-        
+
         masks = [event.generate_mask() for event in events]         
         _sum = np.sum(masks, axis = 0)          
         mask = np.zeros_like(_sum, dtype=bool)
@@ -479,14 +520,15 @@ class EventGraph:
         # so the overlap must come from different conditions
         mask[(_sum >= number_of_overlap_for_fusion)] = True
         
-        # the logic of merging receiver names across all events from kv traverse is wrong
-        # especially when we have animal state event to be fused
+        # we must be extra careful when we do this
+        # assuming traversing by kv enforces the exact match of receiver name and object name
+        # it's safe to assign receiver name and object name from the first event
         events = Event.mask2events(mask,
-                                        events[0].video_file_path,
-                                        events[0].sender_animal_name,
-                                        receiver_animal_names = set.union(*[event.receiver_animal_names for event in events]),
-                                        object_names = set.union(*[event.object_names for event in events])
-                                        )     
+                                    events[0].video_file_path,
+                                    events[0].sender_animal_name,
+                                    receiver_animal_names = events[0].receiver_animal_names,
+                                    object_names = events[0].object_names)
+                                    
         for event in events:
             new_graph.insert_node(Node(event.start, [event]))       
       
@@ -517,11 +559,8 @@ class EventGraph:
             for event in cur_node.children:
                 conditions = []
                 for k,v in kvs.items():
-                    # empty receiver name set() should match any node
-                    if isinstance(v, set):                       
-                        conditions.append(len(getattr(event,k)) == 0 or v.issubset(getattr(event, k)))
-                    else:   
-                        conditions.append(getattr(event, k) == v)                        
+                    # we do more strict exact match here from now                  
+                    conditions.append(getattr(event, k) == v)                        
                 if all(conditions):
                     ret.append(event)
 
@@ -565,13 +604,7 @@ class EventGraph:
                         secure_events2.append(event2)
                         new_event = Event.concat_two_events(event1, event2)
                         graph.insert_node(Node(new_event.start, [new_event]))
-                        break                
-        # print ('check secure events1')
-        # for event in secure_events1:
-        #     print (event)
-        # print ('check secure events2')
-        # for event in secure_events2:
-        #     print (event)
+                        break                     
 
         return graph
 

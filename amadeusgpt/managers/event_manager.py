@@ -399,14 +399,12 @@ class EventManager(Manager):
                 graphs.append(animal_object_subgraph)
 
             # fuse events from different task programs that involve animal states
-            print ('getting to animal state'* 50)
-            for animal_name in self.animal_manager.get_animal_names():               
-                animal_state_subgraph = EventGraph.fuse_subgraph_by_kvs(
-                    graph,
-                    {'sender_animal_name': animal_name,
-                    'receiver_animal_names': set([])},
-                    number_of_overlap_for_fusion=2,
-                    allow_more_than_2_overlap = True
+            for animal_name in self.animal_manager.get_animal_names():
+                animal_state_subgraph = EventGraph.handle_animal_state_fusion(
+                                    graph,
+                                    {'sender_animal_name': animal_name,
+                                    'receiver_animal_names': set([])
+                                    }                                    
                 )
                 graphs.append(animal_state_subgraph)
 
