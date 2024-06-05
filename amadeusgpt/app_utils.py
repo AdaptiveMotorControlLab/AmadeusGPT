@@ -139,8 +139,14 @@ class AIMessage(BaseMessage):
                     # skip empty field 
                     continue
                 if render_key == "function_rets":
+                    if isinstance(render_key, (list, tuple)):
+                        for ret in render_value:
+                            for key, value in ret.items():
+                                st.code(f"Result\n {value}\n ", language='python')
+                    else:
+                        st.code(f"Result\n {render_value}\n ", language='python')
                     if render_value!="":
-                        st.markdown(f" After executing the code, we get: {render_value}\n ") 
+                        st.code(f" : {render_value}\n ") 
                 elif render_key == 'error_message':
                     st.markdown(f"The error says: {render_value}\n ")                                  
                 elif render_key == "chain_of_thought":
