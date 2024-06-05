@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
-from amadeusgpt.main import AMADEUS
+from amadeusgpt.main import create_amadeus
 from amadeusgpt.config import Config
 from amadeusgpt.analysis_objects.object import  Object, ROIObject
 import gc
@@ -265,11 +265,12 @@ class Messages:
     def __setitem__(self, ind, value):
         self.messages[ind] = value
 
+
 def get_amadeus_instance(example):
     # construct the config from the current example    
     # get the root directory of the the module amadeusgpt
     config = get_config(example)
-    amadeus_instance = AMADEUS(config)
+    amadeus_instance = create_amadeus(config)
     return amadeus_instance
 
 def ask_amadeus(question):
