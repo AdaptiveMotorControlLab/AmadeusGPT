@@ -8,6 +8,14 @@ from amadeusgpt.programs.sandbox import Sandbox
 from amadeusgpt.utils import *
 warnings.filterwarnings("ignore")
 from amadeusgpt.analysis_objects.llm import CodeGenerationLLM, SelfDebugLLM, DiagnosisLLM         
+
+
+amadeus_fac = {}
+def create_amadeus(config: Config):
+    if str(config) not in amadeus_fac:
+        amadeus_fac[str(config)] = AMADEUS(config)
+    return amadeus_fac[str(config)]
+
 class AMADEUS:
     def __init__(self, config: Dict[str, Any]):
         self.config = config          

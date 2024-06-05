@@ -12,6 +12,9 @@ class LLM(AnalysisObject):
     prompt_tokens = 0
     completion_tokens = 0
     total_tokens = 0
+    prices = {'gpt-4o': {'input': 5/10**6, 'output': 15/10**6}}
+    total_cost = 0
+
     def __init__(self, config):
         self.config = config
         self.max_tokens = config.get('max_tokens', 2000)
@@ -20,7 +23,7 @@ class LLM(AnalysisObject):
         #self.gpt_model = config.get('gpt_model', "gpt-4-turbo-preview")
         self.gpt_model = config.get('gpt_model', "gpt-4o")
         self.context_window = []
-        self.history = []     
+        self.history = []        
 
     def whetehr_speak(self):
         """
@@ -67,7 +70,7 @@ class LLM(AnalysisObject):
         
         # the usage was recorded from the last run. However, since we have many LLMs that
         # share the call of this function, we will need to store usage and retrieve them from the database class
-        num_retries = 3  
+        num_retries = 3         
         for _ in range(num_retries):
             try:
                 json_data = {
@@ -84,6 +87,10 @@ class LLM(AnalysisObject):
                 LLM.prompt_tokens += response.usage.prompt_tokens
                 LLM.completion_tokens += response.usage.completion_tokens
                 LLM.total_tokens = LLM.prompt_tokens + LLM.completion_tokens
+                current_cost = LLM.prices[self.gpt_model]['input'] * LLM.prompt_tokens + LLM.prices[self.gpt_model]['output'] * LLM.completion_tokens
+                LLM.total_cost += current_cost
+                print ('cost of the current api call', round(LLM.prices[self.gpt_model]['input'] * LLM.prompt_tokens + LLM.prices[self.gpt_model]['output'] * LLM.completion_tokens,2), '$')
+                print ('current total cost', round(LLM.total_cost,2), '$')
                 print ('current total tokens', LLM.total_tokens)
                 #TODO we need to calculate the actual dollar cost
                 break
@@ -109,6 +116,9 @@ class LLM(AnalysisObject):
     
     def update_history(self, role, content, replace=False):
         if role == "system":
+            print ("updating system")
+            print ("len of history", len(self.history))
+            print ("len of context window", len(self.context_window))
             if len(self.history) > 0:
                 self.history[0]["content"] = content
                 self.context_window[0]["content"] = content
@@ -116,6 +126,9 @@ class LLM(AnalysisObject):
                 self.history.append({"role": role, "content": content})
                 self.context_window.append({"role": role, "content": content})
         else:
+            print (f"updating {role}")
+            print ("len of history", len(self.history))
+            print ("len of history", len(self.context_window))
             if replace == True:
                 if len(self.history) == 2:
                     self.history[1]["content"] = content
@@ -184,7 +197,8 @@ class CodeGenerationLLM(LLM):
 
         response = self.connect_gpt(self.context_window, max_tokens=700)
         text = response.choices[0].message.content.strip()            
-
+        self.update_history('assistant', text)
+       
         # we need to consider better ways to parse functions
         # and save them in a more structured way
         pattern = r"```python(.*?)```"
@@ -199,9 +213,7 @@ class CodeGenerationLLM(LLM):
         thought_process = text
         qa_message['code'] = function_code
         qa_message['chain_of_thought'] = thought_process
-
        
-
 
     def update_system_prompt(self, sandbox):
         from amadeusgpt.system_prompts.code_generator import _get_system_prompt
@@ -248,8 +260,7 @@ class MutationLLM(LLM):
         #query = "Please start. Make sure you provide one task program a time. Thanks a million!"
         query = "Please start. Thanks a million!"
         self.update_system_prompt(sandbox)
-        self.update_history("user", query, replace = True)
-               
+        self.update_history("user", query, replace = True)               
         response = self.connect_gpt(self.context_window, max_tokens=4000)
         text = response.choices[0].message.content.strip() 
         sandbox.chat_channel.chain_of_thought.append(response)            
