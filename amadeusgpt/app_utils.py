@@ -104,6 +104,9 @@ class AIMessage(BaseMessage):
             self.data = {}
         self.data["role"] = "ai"
         if not isinstance(amadeus_answer, dict):
+            print ('amadeus answer')
+            print (amadeus_answer)
+            print (type(amadeus_answer))
             amadeus_answer = amadeus_answer.to_dict()
         self.data.update(amadeus_answer)
 
@@ -125,7 +128,7 @@ class AIMessage(BaseMessage):
         --------
         """
 
-        render_keys = ['query', 'code', 'chain_of_thought', 'plots', 'error_message', 'function_rets']
+        render_keys = ['query', 'chain_of_thought', 'plots', 'error_message', 'function_rets']
         #for render_key, render_value in self.data.items():
         if len(self.data) > 0:
             for render_key in render_keys:
@@ -156,7 +159,10 @@ class AIMessage(BaseMessage):
                         elif inside_code_block:
                             code_block.append(line)
                         else:
-                            st.markdown(line)                    
+                            st.markdown(line)
+                    sandbox = self.data['sandbox']
+                    qa_message = sandbox.code_execution(self.data)
+                    sandbox.render_qa_message(qa_message)
                 elif render_key == "ndarray":
                     for content_array in render_value:
                         content_array = content_array.squeeze()
@@ -367,7 +373,7 @@ def chat_box_submit():
         query = st.session_state["user_input"]
         qa_message = ask_amadeus(query)
 
-        user_message = HumanMessage(query=qa_message.query)
+        user_message = HumanMessage(query=qa_message['query'])
         amadeus_message = AIMessage(amadeus_answer=qa_message)
 
         st.session_state["messages"].append(user_message)
