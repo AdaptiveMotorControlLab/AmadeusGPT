@@ -115,10 +115,7 @@ class LLM(AnalysisObject):
         return response
     
     def update_history(self, role, content, replace=False):
-        if role == "system":
-            print ("updating system")
-            print ("len of history", len(self.history))
-            print ("len of context window", len(self.context_window))
+        if role == "system":         
             if len(self.history) > 0:
                 self.history[0]["content"] = content
                 self.context_window[0]["content"] = content
@@ -126,9 +123,7 @@ class LLM(AnalysisObject):
                 self.history.append({"role": role, "content": content})
                 self.context_window.append({"role": role, "content": content})
         else:
-            print (f"updating {role}")
-            print ("len of history", len(self.history))
-            print ("len of history", len(self.context_window))
+           
             if replace == True:
                 if len(self.history) == 2:
                     self.history[1]["content"] = content
@@ -221,10 +216,11 @@ class CodeGenerationLLM(LLM):
         core_api_docs = sandbox.get_core_api_docs()
         task_program_docs = sandbox.get_task_program_docs()
         query_block = sandbox.get_query_block()
-
+        keypoint_names = sandbox.exec_namespace['behavior_analysis'].get_keypoint_names()
         self.system_prompt = _get_system_prompt(query_block, 
                                                 core_api_docs, 
-                                                task_program_docs)
+                                                task_program_docs,
+                                                keypoint_names)
                                                           
         
         # update both history and context window

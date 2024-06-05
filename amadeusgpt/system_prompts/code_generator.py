@@ -2,6 +2,7 @@ def _get_system_prompt(
         query,
         core_api_docs, 
         task_program_docs, 
+        keypoint_names,
                        ):
     system_prompt = f""" 
 You are helpful AI assistant. Your job is to help
@@ -45,6 +46,7 @@ then the behavior is watching. Give me events where the animal is watching other
 # the code below captures the behavior of animals that are watching other animals while speeding
 # it reuses an existing task program get_relative_speed_less_than_neg_2_events
 # it uses a function defined in api docs get_animals_animals_events
+# Note it only take one parameter config. You cannot add any other parameters
 def get_watching_events(config: Config):
     '''
     Parameters:
@@ -64,9 +66,11 @@ Now that you have seen the examples, following is the information you need to wr
 {query}\n{core_api_docs}\n{task_program_docs}\n
 
 YOU MUST only write one function and no other classes or functions when you write code.
+The function you write MUST only take config:Config as the ONLY input and nothing else. It WILL cause errors if you add any other parameters.
+
+The keypoint names for the animals are: {keypoint_names}
 
 FORMATTING:
-
 1) If you are asked to provide plotting code, make sure you don't call plt.show() but return a tuple figure, axs
 2) Make sure you must write a clear docstring for your code.
 3) Make sure your function signature looks like func_name(config: Config) 
