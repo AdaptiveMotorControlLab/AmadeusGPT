@@ -10,11 +10,10 @@ warnings.filterwarnings("ignore")
 from amadeusgpt.analysis_objects.llm import CodeGenerationLLM, SelfDebugLLM, DiagnosisLLM         
 class AMADEUS:
     def __init__(self, config: Dict[str, Any]):
-        self.config = config    
-        # functionally different llms
+        self.config = config          
         self.code_generator_llm = CodeGenerationLLM(config)
         self.self_debug_llm = SelfDebugLLM(config)
-        self.diagnosis_llm = DiagnosisLLM(config)  
+        self.diagnosis_llm = DiagnosisLLM(config)             
         ### fields that decide the behavior of the application
         self.use_self_debug = False
         self.use_diagnosis = False        
@@ -22,8 +21,6 @@ class AMADEUS:
         self.smart_loading = False        
         self.load_module_top_k = 3
         self.module_threshold = 0.7
-        self.enforce_prompt = "#"
-        self.code_generator_llm.enforce_prompt = ""  
         ### fileds that serve as important storage    
         self.context_window_dict = {}
         self.behavior_modules_str = ""
@@ -42,11 +39,11 @@ class AMADEUS:
             self.sandbox.register_llm('diagnosis', self.diagnosis_llm)
 
     def chat_iteration(self, user_query):
-        result = self.sandbox.step(user_query)
-        return result
+        qa_message = self.sandbox.llm_step(user_query)
+        return qa_message
 
     def step(self, user_query):       
-        result = self.sandbox.step(user_query)        
+        result = self.sandbox.llm_step(user_query)        
         return result
          
    

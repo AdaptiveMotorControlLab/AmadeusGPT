@@ -17,7 +17,8 @@ class LLM(AnalysisObject):
         self.max_tokens = config.get('max_tokens', 2000)
         #self.gpt_model = config.get('gpt_model', "gpt-4-1106-preview")
         #self.gpt_model = config.get('gpt_model', "gpt-3.5-turbo-0125")
-        self.gpt_model = config.get('gpt_model', "gpt-4-turbo-preview")
+        #self.gpt_model = config.get('gpt_model', "gpt-4-turbo-preview")
+        self.gpt_model = config.get('gpt_model', "gpt-4o")
         self.context_window = []
         self.history = []     
 
@@ -177,7 +178,7 @@ class CodeGenerationLLM(LLM):
         Speak to the chat channel
         """
         qa_message = sandbox.messages[-1]
-        query = qa_message.query 
+        query = qa_message['query']
         self.update_system_prompt(sandbox)
         self.update_history("user", query)
 
@@ -192,12 +193,12 @@ class CodeGenerationLLM(LLM):
         with open("temp_answer.json", "w") as f:
             obj = {}
             obj["chain_of_thought"] = text
-            json.dump(obj, f)
+            json.dump(obj, f, indent = 4)
 
         # create a placeholder   
         thought_process = text
-        qa_message.code = function_code
-        qa_message.chain_of_thought = thought_process
+        qa_message['code'] = function_code
+        qa_message['chain_of_thought'] = thought_process
 
        
 

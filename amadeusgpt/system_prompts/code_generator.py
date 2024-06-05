@@ -72,6 +72,7 @@ FORMATTING:
 3) Make sure your function signature looks like func_name(config: Config) 
 4) Make sure you do not import any libraries in your code. All needed libraries are imported already.
 5) Make sure you disintuigh positional and keyword arguments when you call functions in api docs
+6) If you are writing code that uses matplotlib to plot, make sure you comment shape of the data to be plotted to double-check
 """
 
     return system_prompt
