@@ -1,4 +1,4 @@
-from google.cloud import firestore
+
 import os
 import streamlit as st
 import psutil
@@ -16,10 +16,6 @@ class AmadeusLogger:
     logging.basicConfig(level=level)
     filename = None
     logger = logging.getLogger()
-    if "streamlit_cloud" in os.environ:
-        db = firestore.Client.from_service_account_json(
-            "amadeusgpt-a1849-firebase-adminsdk-eyfx1-4a1bbc8488.json"
-        )
 
     @classmethod
     def format(cls, message):
