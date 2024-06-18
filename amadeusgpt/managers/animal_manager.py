@@ -94,13 +94,11 @@ class AnimalManager(Manager):
     def _process_keypoint_file_from_h5(self) -> ndarray:
         df = pd.read_hdf(self.keypoint_file_path)
         self.full_keypoint_names = list(df.columns.get_level_values("bodyparts").unique())
-        self.keypoint_names = [k for k in self.full_keypoint_names]
-
+        self.keypoint_names = [k for k in self.full_keypoint_names]       
         if len(df.columns.levels) > 3:
             self.n_individuals = len(df.columns.levels[1])
         else:
-            self.n_individuals = 1       
-       
+            self.n_individuals = 1
         self.n_frames = df.shape[0]
         self.n_kpts = len(self.keypoint_names)
               
@@ -156,14 +154,12 @@ class AnimalManager(Manager):
         index = animal_names.index(name)
         return self.animals[index]
     
-
     @register_core_api
     def get_keypoints(self) -> ndarray:
         """
         Get the keypoints of animals. The shape is of shape  n_frames, n_individuals, n_kpts, n_dims
         """
         ret =  np.stack([animal.get_keypoints() for animal in self.animals], axis = 1)
-
         return ret
     @register_core_api
     def get_speed(self, 

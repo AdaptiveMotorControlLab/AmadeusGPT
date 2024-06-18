@@ -5,7 +5,7 @@ Not sure yet how much this can be done by GPT-4 or done by us
 import numpy as np
 
 
-def align_poses(keypoints):
+def align_poses(self, keypoints: np.ndarray)-> np.ndarray:
     """
     Aligns 2D keypoints by translating them to the mean position and scaling them based on the bounding box size.
 

@@ -128,7 +128,7 @@ class AIMessage(BaseMessage):
         --------
         """
 
-        render_keys = ['query', 'chain_of_thought', 'plots', 'error_message', 'function_rets']
+        render_keys = ['query', 'chain_of_thought', 'error_message', 'function_rets', 'plots']
         #for render_key, render_value in self.data.items():
         if len(self.data) > 0:
             for render_key in render_keys:
@@ -144,9 +144,7 @@ class AIMessage(BaseMessage):
                             for key, value in ret.items():
                                 st.code(f"Result\n {value}\n ", language='python')
                     else:
-                        st.code(f"Result\n {render_value}\n ", language='python')
-                    if render_value!="":
-                        st.code(f" : {render_value}\n ") 
+                        st.code(f"Result\n {render_value}\n ", language='python')                    
                 elif render_key == 'error_message':
                     st.markdown(f"The error says: {render_value}\n ")                                  
                 elif render_key == "chain_of_thought":
@@ -168,7 +166,13 @@ class AIMessage(BaseMessage):
                             st.markdown(line)
                     sandbox = self.data['sandbox']
                     qa_message = sandbox.code_execution(self.data)
+                    if qa_message['error_message'] is not None:
+                        for i in range(1):
+                            sandbox.llms['self_debug'].speak(sandbox)
+                            qa_message = sandbox.code_execution(qa_message)
                     sandbox.render_qa_message(qa_message)
+                    print ('what is the corrected qa_message')
+                    print (qa_message['plots'])
                 elif render_key == "ndarray":
                     for content_array in render_value:
                         content_array = content_array.squeeze()
@@ -275,7 +279,7 @@ class Messages:
 def get_amadeus_instance(example):
     # construct the config from the current example    
     # get the root directory of the the module amadeusgpt
-    config = get_config(example)
+    config = get_config(example)   
     amadeus_instance = create_amadeus(config)
     return amadeus_instance
 
@@ -388,38 +392,44 @@ def chat_box_submit():
 
 
 def check_uploaded_files(example):
-    ## if upload files -> check if same and existing,
-    # check if multiple h5 -> replace / warning
-    # return an updated config 
-    if st.session_state["uploaded_files"]:
-        filenames = [f.name for f in st.session_state["uploaded_files"]]
-        folder_path = os.path.join(st.session_state["log_folder"], "uploaded_files")
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-        files = st.session_state["uploaded_files"]
-        count_h5 = sum([int(file.name.endswith(".h5")) for file in files])     
-        # Remove the existing h5 file if there is a new one
-        if count_h5 > 1:
-            st.error("Oooops, you can only upload one *.h5 file! :ghost:")
+    
+    video_files = glob.glob(os.path.join("examples", example, "*.mp4"))
+    keypoint_files = glob.glob(os.path.join("examples", example, "*.h5"))
+
+    if len(video_files) > 0 and len(keypoint_files) > 0:
         config = get_config(example)
-
-        for file in files:
-            if file.name.endswith(".h5"):
-                
-                with tempfile.NamedTemporaryFile(
-                    dir=folder_path, suffix=".h5", delete=False
-                ) as temp:
-                    temp.write(file.getbuffer())
-                    st.session_state['uploaded_keypoint_file'] = temp.name
-                    config['keypoint_info']['keypoint_file_path'] = temp.name
-            if any(file.name.endswith(ext) for ext in VIDEO_EXTS):
-                with tempfile.NamedTemporaryFile(
-                    dir=folder_path, suffix=".mp4", delete=False
-                ) as temp:
-                    temp.write(file.getbuffer())
-                    config['video_info']['video_file_path'] = temp.name
-                    st.session_state["uploaded_video_file"] = temp.name
-
+        config['keypoint_info']['keypoint_file_path'] = keypoint_files[0]
+        config['video_info']['video_file_path'] = video_files[0]
+        return config 
+    else:
+        if st.session_state["uploaded_files"]:
+            filenames = [f.name for f in st.session_state["uploaded_files"]]
+            folder_path = os.path.join(st.session_state["log_folder"], "uploaded_files")
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path)
+            files = st.session_state["uploaded_files"]
+            count_h5 = sum([int(file.name.endswith(".h5")) for file in files])     
+            # Remove the existing h5 file if there is a new one
+            if count_h5 > 1:
+                st.error("Oooops, you can only upload one *.h5 file! :ghost:")
+            config = get_config(example)       
+            for file in files:
+                if file.name.endswith(".h5"):             
+                    with tempfile.NamedTemporaryFile(
+                        dir=folder_path, suffix=".h5", delete=False
+                    ) as temp:
+                        temp.write(file.getbuffer())
+                        st.session_state['uploaded_keypoint_file'] = temp.name
+                        config['keypoint_info']['keypoint_file_path'] = temp.name
+                if any(file.name.endswith(ext) for ext in VIDEO_EXTS):
+                    with tempfile.NamedTemporaryFile(
+                        dir=folder_path, suffix=".mp4", delete=False
+                    ) as temp:
+                        temp.write(file.getbuffer())
+                        config['video_info']['video_file_path'] = temp.name
+                        st.session_state["uploaded_video_file"] = temp.name              
+            return config
+    
 def rerun_prompt(query, ind):
     messages = st.session_state["messages"]
     amadeus_answer = ask_amadeus(query)
@@ -535,18 +545,34 @@ def get_config(example):
         template_config_path = os.path.join(root_dir, 'configs', 'EPM_template.yaml')
     elif example == 'MABe':
         template_config_path = os.path.join(root_dir, 'configs', 'mabe_template.yaml')
+    elif example == "Custom":
+        template_config_path = os.path.join(root_dir, 'configs', 'Custom_template.yaml')
 
-    config = Config(template_config_path)
-    video_file = glob.glob(os.path.join("examples", example, "*.mp4"))[0]
-    keypoint_file = glob.glob(os.path.join("examples", example, "*.h5"))[0]
-
-    config['keypoint_info']['keypoint_file_path'] = keypoint_file
-    config['video_info']['video_file_path'] = video_file
-
+    if "config" not in st.session_state[example]:
+       
+        config = Config(template_config_path)        
+        video_files = glob.glob(os.path.join("examples", example, "*.mp4"))
+        keypoint_files = glob.glob(os.path.join("examples", example, "*.h5"))
+        if len(video_files) > 0:
+            video_file = video_files[0]
+        else:
+            video_file = None
+        if len(keypoint_files) > 0:
+            keypoint_file = keypoint_files[0]
+        else:
+            keypoint_file = None
+        config['keypoint_info']['keypoint_file_path'] = keypoint_file
+        config['video_info']['video_file_path'] = video_file
+        st.session_state[example]["config"] = config
+    else:
+        config = st.session_state[example]["config"]    
     return config
 
 def render_page_by_example(example):
     # get the config
+    if example not in st.session_state:
+        st.session_state[example] = {}
+    # needs different logic for custom page
     config = get_config(example)
 
     current_script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -642,13 +668,13 @@ def render_page_by_example(example):
             "This horse video is part of a benchmark by Mathis et al 2021 https://arxiv.org/abs/1909.11229."
         )
         config = get_config(example)
-
+    if config is None:
+        return 
     analysis = create_analysis(config)    
 
     if st.session_state["example"] != example:
         st.session_state["messages"] = Messages()
     st.session_state["example"] = example
-
     
     scene_image_path = get_scene_image(config)
     video_file = config['video_info']['video_file_path']
