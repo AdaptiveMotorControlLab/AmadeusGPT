@@ -23,16 +23,16 @@ def create_amadeus(config: Config):
 class AMADEUS:
     def __init__(self, config: Dict[str, Any]):
         self.config = config          
-        self.code_generator_llm = CodeGenerationLLM(config)
-        self.self_debug_llm = SelfDebugLLM(config)
-        self.diagnosis_llm = DiagnosisLLM(config)             
+        self.code_generator_llm = CodeGenerationLLM(config.get('llm_info', {}))
+        self.self_debug_llm = SelfDebugLLM(config.get('llm_info', {}))
+        self.diagnosis_llm = DiagnosisLLM(config.get('llm_info', {}))            
         ### fields that decide the behavior of the application
         self.use_self_debug = True
         self.use_diagnosis = False        
         self.use_behavior_modules_in_context = True
         self.smart_loading = False        
         self.load_module_top_k = 3
-        self.module_threshold = 0.3     
+        self.module_threshold = 0.3
         ### fileds that serve as important storage    
         # for long-term memory 
         self.integration_module_hub = IntegrationModuleHub(config)       
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     config = Config('amadeusgpt/configs/Horse_template.yaml')
 
     # amadeus = AMADEUS(config)
-    # amadeus.step("Plot the 3D cebra embedding of keypoints and color it by time")
+    # amadeus.step("Could you run a gait analysis of the horse? I'm interested in the keypoint Offfrontfoot; Offfrontfetlock; Offknee; Elbow and Shoulder.")
     amadeus = create_amadeus(config)
     sandbox = amadeus.sandbox
     

@@ -17,12 +17,13 @@ class LLM(AnalysisObject):
 
     def __init__(self, config):
         self.config = config
-        self.max_tokens = config.get('max_tokens', 2000)
-        #self.gpt_model = config.get('gpt_model', "gpt-4-1106-preview")
-        #self.gpt_model = config.get('gpt_model', "gpt-3.5-turbo-0125")
-        #self.gpt_model = config.get('gpt_model', "gpt-4-turbo-preview")
+        self.max_tokens = config.get('max_tokens', 2000)    
         self.gpt_model = config.get('gpt_model', "gpt-4o")
+        self.keep_last_n_messages = config.get('keep_last_n_messages', 2)
+
+        # the list that is actually sent to gpt
         self.context_window = []
+        # only for logging and long-term memory usage.
         self.history = []        
 
     def whetehr_speak(self):
@@ -88,7 +89,7 @@ class LLM(AnalysisObject):
                 LLM.completion_tokens += response.usage.completion_tokens
                 LLM.total_tokens = LLM.prompt_tokens + LLM.completion_tokens
                 current_cost = LLM.prices[self.gpt_model]['input'] * LLM.prompt_tokens + LLM.prices[self.gpt_model]['output'] * LLM.completion_tokens
-                LLM.total_cost += current_cost
+                LLM.total_cost += current_cost               
                 print ('cost of the current api call', round(LLM.prices[self.gpt_model]['input'] * LLM.prompt_tokens + LLM.prices[self.gpt_model]['output'] * LLM.completion_tokens,2), '$')
                 print ('current total cost', round(LLM.total_cost,2), '$')
                 print ('current total tokens', LLM.total_tokens)
@@ -133,7 +134,15 @@ class LLM(AnalysisObject):
                     self.context_window.append({"role": role, "content": content}) 
 
             else:
+                
                 self.history.append({"role": role, "content": content})
+
+                num_AI_messages = (len(self.context_window) - 1) // 2               
+                if num_AI_messages == self.keep_last_n_messages:
+                    # we forget the oldest AI message and corresponding answer
+                    self.context_window.pop(1)
+                    self.context_window.pop(1)
+
                 self.context_window.append({"role": role, "content": content})       
 
     def clean_context_window(self):
@@ -364,14 +373,16 @@ class SelfDebugLLM(LLM):
 
         self.update_system_prompt()
         self.update_history("system", self.system_prompt)
+        print ("the code that gave errors was", code)
         query = f""" The code that caused error was {code}
 And the error message was {error_message}. 
+All the modules were already imported so you don't need to import them again.
 Can you correct the code?
 """      
         self.update_history("user", query)
         response = self.connect_gpt(self.context_window, max_tokens=700)
         text = response.choices[0].message.content.strip()
-        print ('debug response')
+
         print (text)
         thought_process = text
         pattern = r"```python(.*?)```"

@@ -28,12 +28,14 @@ def autocorr(x, axis=-1):
 
 
 def get_events(analysis, event, kpt_names, min_dist=None, detrend=False):
+
+
     if event not in ("contact", "lift"):
         raise ValueError('`event` must be either "contact" or "lift".')
 
     coords = analysis.get_keypoints().copy()
     # center the keypoints
-    coords -= np.nanmean(coords, axis=(0, 2))
+    coords -= np.nanmedian(coords, axis=2)[:, None]
     events = []
     for kpt in kpt_names:
         x = coords[:, 0, analysis.get_keypoint_names().index(kpt), 0]
@@ -56,7 +58,7 @@ def calc_stride_durations(contacts):
 def calc_stride_lengths(analysis, keypoints, hoof_kpt_names, contacts):
     stride_lengths = []
     for hoof, contacts_ in zip(hoof_kpt_names, contacts):
-        x = keypoints[contacts_, :, analysis.get_keypoint_names().index(hoof), 0]
+        x = keypoints[contacts_, :, analysis.get_keypoint_names().index(hoof), 0].flatten()
         stride_lengths.append(np.diff(x))
     return stride_lengths
 
@@ -77,7 +79,7 @@ def calc_duty_factors(contacts, lifts):
 
 def get_stances(contacts, lifts):
     stances = []
-    for contacts_, lifts_ in zip(contacts, lifts):
+    for contacts_, lifts_ in zip(contacts, lifts):     
         temp = set()
         for c1, c2 in zip(contacts_[:-1], contacts_[1:]):  # Individual strides
             lift = lifts_[(lifts_ > c1) & (lifts_ < c2)]
@@ -94,14 +96,14 @@ def get_stances(contacts, lifts):
 
 
 @register_integration_api
-def run_gait_analysis(self, limb_keypoint_names: List[str], min_dist: int = None) -> dict:
+def run_gait_analysis(self, limb_keypoint_names: List[str]) -> dict:
     """
     This function computse an animal's gait parameters given a list of distal keypoints. 
     Parameters
     ----------
-    limb_keypoint_names: List[str], list of the names of the distal keypoints 
-    min_dist: int, optional, default to be None 
+    limb_keypoint_names: List[str], list of the names of the distal keypoints. Need to be at least 2 keypoints.
     """
+    min_dist = None
     contacts = get_events(self, "contact", limb_keypoint_names, min_dist)
     lifts = get_events(self, "lift", limb_keypoint_names, min_dist)
     stride_durations = calc_stride_durations(contacts)
@@ -146,13 +148,17 @@ def plot_gait_analysis_results(
     Parameters
     ----------
     gait_analysis_results: dict, the results from the `run_gait_analysis` function
-    limb_keypoints: List[str], list of the names of the distal keypoints
+    limb_keypoints: List[str], list of the names of the distal keypoints. Need to be at least 2 keypoints.
     color_stance: str, optional, default to be "plum"
     """
+    fig, ax = plt.subplots(sharex=True, sharey=True)
     coords = self.get_keypoints()[:, 0]
+   
+    if gait_analysis_results["stances"] == [[]]:
+        return fig, ax
     stance_inds = gait_analysis_results["stances"][0]
 
-    fig, ax = plt.subplots(sharex=True, sharey=True)
+    
     for spine in ax.spines.values():
         spine.set_visible(False)
     ax.set_xticks([])
