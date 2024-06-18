@@ -21,18 +21,6 @@ from matplotlib.ticker import FuncFormatter
 import networkx as nx
 from matplotlib.animation import FuncAnimation
 
-cmap = plt.get_cmap("tab10")
-
-params = {
-    "axes.labelsize": 10,
-    "legend.fontsize": 10,
-    "xtick.labelsize": 10,
-    "ytick.labelsize": 10,
-    "text.usetex": False,
-    "figure.figsize": [8, 8],
-    "font.size": 10,
-}
-plt.rcParams.update(params)
 
 
 class BaseVisualization(AnalysisObject):

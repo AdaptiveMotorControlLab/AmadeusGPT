@@ -18,12 +18,6 @@ import glob
 import streamlit as st 
 
 
-#FIXME makes this dynamically dependent on the theme of streamlit
-plt.rcParams['figure.subplot.hspace'] = 0.5  # Horizontal space between subplots
-plt.rcParams['figure.subplot.wspace'] = 0.5  # Vertical space between subplots
-plt.style.use('dark_background')    
-
-
 
 def mask2distance(locations):
     assert len(locations.shape) == 2

@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import requests
 import streamlit as st
 from PIL import Image
-plt.style.use("dark_background")
 import glob
 import io
 import os
@@ -98,15 +97,13 @@ class HumanMessage(BaseMessage):
                         )
 class AIMessage(BaseMessage):
     def __init__(self, amadeus_answer=None, json_entry=None):
+        self.rendered = False
         if json_entry:
             super().__init__(json_entry=json_entry)
         else:
             self.data = {}
         self.data["role"] = "ai"
-        if not isinstance(amadeus_answer, dict):
-            print ('amadeus answer')
-            print (amadeus_answer)
-            print (type(amadeus_answer))
+        if not isinstance(amadeus_answer, dict):           
             amadeus_answer = amadeus_answer.to_dict()
         self.data.update(amadeus_answer)
 
@@ -170,9 +167,11 @@ class AIMessage(BaseMessage):
                         for i in range(1):
                             sandbox.llms['self_debug'].speak(sandbox)
                             qa_message = sandbox.code_execution(qa_message)
-                    sandbox.render_qa_message(qa_message)
-                    print ('what is the corrected qa_message')
-                    print (qa_message['plots'])
+                    # do not need to execute the block one more time
+                    if not self.rendered:
+                        self.rendered = True                       
+                        sandbox.render_qa_message(qa_message)
+                                      
                 elif render_key == "ndarray":
                     for content_array in render_value:
                         content_array = content_array.squeeze()
@@ -285,7 +284,7 @@ def get_amadeus_instance(example):
 
 def ask_amadeus(question):
     amadeus = get_amadeus_instance(st.session_state["example"])    
-    qa_message = amadeus.chat_iteration(
+    qa_message = amadeus.step(
         question
     )
     return qa_message

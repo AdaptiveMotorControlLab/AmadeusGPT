@@ -74,9 +74,7 @@ class AMADEUS:
 
     def step(self, user_query): 
         integration_module_names = self.match_integration_module(user_query)
-
         self.sandbox.update_matched_integration_modules(integration_module_names)
-
         result = self.sandbox.llm_step(user_query)        
         return result
          
@@ -85,7 +83,7 @@ if __name__ == "__main__":
     config = Config('amadeusgpt/configs/Horse_template.yaml')
 
     # amadeus = AMADEUS(config)
-    # amadeus.step("run a gait analysis on the animal and plot it for me")
+    # amadeus.step("Plot the 3D cebra embedding of keypoints and color it by time")
     amadeus = create_amadeus(config)
     sandbox = amadeus.sandbox
     
