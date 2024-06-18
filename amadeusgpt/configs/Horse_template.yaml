@@ -8,7 +8,9 @@ keypoint_info:
     animal_center: "neck"
   head_orientation_keypoints:
     nose: "nose"
-    neck: "neck"  
+    neck: "neck" 
+llm_info:
+  keep_last_n_messages: 2 
 object_info:
   load_objects_from_disk: false
 sam_info:
