@@ -40,6 +40,8 @@ def main():
         st.session_state["chatbot"] = []
     if "user" not in st.session_state:
         st.session_state["user"] = []
+    if "log_folder" not in st.session_state:
+        st.session_state["log_folder"] = "logs"
     if "user_input" not in st.session_state:
         st.session_state["user_input"] = ""
     if "uploaded_files" not in st.session_state:

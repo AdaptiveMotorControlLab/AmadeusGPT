@@ -187,9 +187,9 @@ class CodeGenerationLLM(LLM):
         """
         qa_message = sandbox.messages[-1]
         query = qa_message['query']
+
         self.update_system_prompt(sandbox)
         self.update_history("user", query)
-
         response = self.connect_gpt(self.context_window, max_tokens=700)
         text = response.choices[0].message.content.strip()            
         self.update_history('assistant', text)
@@ -199,6 +199,7 @@ class CodeGenerationLLM(LLM):
         pattern = r"```python(.*?)```"
         function_code = re.findall(pattern, text, re.DOTALL)[0]
 
+        # this is for debug use
         with open("temp_answer.json", "w") as f:
             obj = {}
             obj["chain_of_thought"] = text
@@ -212,10 +213,11 @@ class CodeGenerationLLM(LLM):
 
     def update_system_prompt(self, sandbox):
         from amadeusgpt.system_prompts.code_generator import _get_system_prompt
-
+        # get the formatted docs / blocks from the sandbox
         core_api_docs = sandbox.get_core_api_docs()
         task_program_docs = sandbox.get_task_program_docs()
         query_block = sandbox.get_query_block()
+
         keypoint_names = sandbox.exec_namespace['behavior_analysis'].get_keypoint_names()
         self.system_prompt = _get_system_prompt(query_block, 
                                                 core_api_docs, 
@@ -351,41 +353,29 @@ class DiagnosisLLM(LLM):
 
 class SelfDebugLLM(LLM):
 
-    def get_system_prompt(self):
+    def update_system_prompt(self, ):
         from amadeusgpt.system_prompts.self_debug import _get_system_prompt
-        return _get_system_prompt()
+        self.system_prompt = _get_system_prompt()
 
-    def whetehr_speak(self, chat_channel):
-        if chat_channel.get_last_message() is None:
-            return False
-        else:
-            error = chat_channel.get_last_message().get("error", None)
+    def speak(self, sandbox):
+        qa_message = sandbox.messages[-1]
+        error_message = qa_message['error_message']
+        code = qa_message['code']
 
-            return error is None
-
-    def debug_and_retry(self, 
-                        user_query = "",
-                        error_code = "",
-                        diagnosis = "",
-                        api_docs = "", 
-                        error_message = ""):
-      
-
-        system_prompt = self.get_system_prompt()
-
-        user_prompt = f"""
-        <user_query> {user_query} </user_query>
-        <error_code> {error_code} </error_code>
-        <api_docs> {api_docs} </api_docs>
-        <error_message> {error_message} </error_message>
-        """
-        
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
- 
-        response = self.connect_gpt(messages, max_tokens=500)
-        text, function_codes, thought_process = self.parse_openai_response(response)
-        return text, function_codes, thought_process
+        self.update_system_prompt()
+        self.update_history("system", self.system_prompt)
+        query = f""" The code that caused error was {code}
+And the error message was {error_message}. 
+Can you correct the code?
+"""      
+        self.update_history("user", query)
+        response = self.connect_gpt(self.context_window, max_tokens=700)
+        text = response.choices[0].message.content.strip()
+        print ('debug response')
+        print (text)
+        thought_process = text
+        pattern = r"```python(.*?)```"
+        function_code = re.findall(pattern, text, re.DOTALL)[0]
+        qa_message['code'] = function_code
+        qa_message['chain_of_thought'] = thought_process
 

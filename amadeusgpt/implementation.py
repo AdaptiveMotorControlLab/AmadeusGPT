@@ -3,7 +3,8 @@ EventManager, VisualManager, ModelManager, GUIManager)
 import random
 random.seed(78)
 from typing import Dict
-from .programs.api_registry import DEFAULT_REGISTRY, CORE_API_REGISTRY
+from .programs.api_registry import DEFAULT_REGISTRY, CORE_API_REGISTRY, INTEGRATION_API_REGISTRY
+import types
 """
 write a class called FuncObj that inhertis from pydantic BaseModel that takes a function string,
 use AST to parse the function string to input and output types, function name, args, kwargs, and function body
@@ -61,7 +62,12 @@ class AnimalBehaviorAnalysis:
         # check all attributes that are inheritance of manager classes
         # and attach them as methods to the main class               
         self._attach_manager_methods()
+
+        # attach the integration methods to the main class
+        self._attach_integration_methods()
         
+    # Put the methods of the managers in the main behavior analysis class
+    # So we can save tokens and make it easier for LLM to learn to use the methods
     def _attach_manager_methods(self):
         method_names = set()
         for attr in dir(self):
@@ -77,7 +83,13 @@ class AnimalBehaviorAnalysis:
                             method_names.add(method_name)
                         else:
                             raise ValueError(f"Method {method_name} already exists in the class")
-            
+    def _attach_integration_methods(self):
+        ### adding the methods from the dictionary to the class
+        for method_name, func_info in INTEGRATION_API_REGISTRY.items():            
+            # this bound still needs to happen before we can register the function into a instance method at this class
+            bound_method = types.MethodType(func_info['func'], self)
+            setattr(self, method_name, bound_method)
+             
 
     def summary(self, manager_name = None):
         for manager in [self.animal_manager, self.object_manager, self.relationship_manager, self.event_manager, self.visual_manager]:

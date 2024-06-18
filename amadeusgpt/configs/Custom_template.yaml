@@ -1,0 +1,20 @@
+keypoint_info:
+  keypoint_file_path: "examples/Custom/tom_video_superanimal_topviewmouse_hrnetw32.h5"
+  model_checkpoint: ""
+  model_name: ""
+  body_orientation_keypoints:
+    neck: "nose"
+    tail_base: "tail_base"
+    animal_center: "neck"
+  head_orientation_keypoints:
+    nose: "nose"
+    neck: "neck"  
+object_info:
+  load_objects_from_disk: false
+sam_info:
+  ckpt_path: "path/to/ckpt"
+  model_type: "sam"
+video_info:
+  scene_frame_number: 100
+  pixels_per_cm: 8
+  video_file_path: "examples/Custom/tom_video_superanimal_topviewmouse_hrnetw32_labeled_after_adapt.mp4"
