@@ -61,7 +61,9 @@ class GUIManager(Manager):
                  ):
         self.config = config
         self.object_manager = object_manager
-        self.video_file_path = config.get("video_info", {}).get("video_file_path", '')
+        self.video_file_path = config["video_info"]["video_file_path"]
+        if self.video_file_path is None:
+            return
         self.videos = {}
     
     def add_roi_from_video_selection(self)-> None:

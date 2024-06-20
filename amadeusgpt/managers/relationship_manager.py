@@ -3,10 +3,7 @@ from .base import Manager, cache_decorator
 from .animal_manager import AnimalManager
 from .object_manager import ObjectManager
 from typing import List, Any, Dict, Union
-from amadeusgpt.programs.api_registry import register_class_methods, register_core_api
-from cachetools import LRUCache, cached
-
-
+from amadeusgpt.programs.api_registry import register_class_methods
 
 
 @register_class_methods
@@ -33,7 +30,6 @@ class RelationshipManager(Manager):
        
         # roi, sam, animals are all objects
         roi_objs = self.object_manager.get_roi_objects()
-        print ('debug')
         print (self.object_manager.roi_objects)
         seg_objs = self.object_manager.get_seg_objects()
         grid_objs = self.object_manager.get_grid_objects()
@@ -41,7 +37,6 @@ class RelationshipManager(Manager):
 
         # there might be other objs
         objs = roi_objs + seg_objs + grid_objs
-
 
         # the key optimization opportunity here is to make following block faster
         # I don't know if we can vectorize the operations below. Maybe not.

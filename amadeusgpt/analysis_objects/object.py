@@ -6,8 +6,6 @@ from typing import List, Dict, Any
 from pycocotools import mask as mask_decoder
 from scipy.spatial import ConvexHull
 from numpy import ndarray
-from functools import lru_cache
-
 class Object(AnalysisObject):    
     def __init__(self,                  
                  name: str):
@@ -202,7 +200,7 @@ class ROIObject(Object):
         self.area = 0.5 * np.abs(
             np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1))
         )
-        self.center = np.array([np.mean(vertices[:, 0]), np.mean(vertices[:, 1])])        
+        self.center = np.array([np.mean(vertices[:, 0]), np.mean(vertices[:, 1])])      
 
 class GridObject(Object):
     def __init__(self, name: str, region):
@@ -217,6 +215,7 @@ class GridObject(Object):
         self.Path = self.points2Path([[self.x_min, self.y_min], [self.x_max, self.y_min], [self.x_max, self.y_max], [self.x_min, self.y_max]])
         self.points = np.array([[self.x_min, self.y_min], [self.x_max, self.y_min], [self.x_max, self.y_max], [self.x_min, self.y_max]])
         self.area = region["w"] * region["h"]
+    
 
 class Animal(Object):        
     def get_keypoint_names(self):

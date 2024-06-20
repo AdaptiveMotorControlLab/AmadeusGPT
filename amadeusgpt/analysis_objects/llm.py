@@ -206,7 +206,11 @@ class CodeGenerationLLM(LLM):
         # we need to consider better ways to parse functions
         # and save them in a more structured way
         pattern = r"```python(.*?)```"
-        function_code = re.findall(pattern, text, re.DOTALL)[0]
+        if len(re.findall(pattern, text, re.DOTALL)) == 0:
+            pass
+        else:
+            function_code = re.findall(pattern, text, re.DOTALL)[0]
+            qa_message['code'] = function_code
 
         # this is for debug use
         with open("temp_answer.json", "w") as f:
@@ -216,7 +220,7 @@ class CodeGenerationLLM(LLM):
 
         # create a placeholder   
         thought_process = text
-        qa_message['code'] = function_code
+       
         qa_message['chain_of_thought'] = thought_process
        
 

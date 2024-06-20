@@ -16,9 +16,7 @@ class Config:
     
     def __setitem__(self, key, value):
         self.data[key] = value
-
-    def get(self, key, default=None):
-        return self.data.get(key, default)
+   
 
     def load_config(self):
         # Load the YAML config file
@@ -55,11 +53,14 @@ class Config:
                 result[k] = v
         return result
 
+    def get(self, key, default = {}):
+        return self.data.get(key, default)
+
     def __getitem__(self, key):
         """
         Get a value from the configuration data.
         """
-        return self.data[key] 
+        return self.data.get(key, {})
     
     def copy(self):
         return Config(self.config_file_path, self.default_config)

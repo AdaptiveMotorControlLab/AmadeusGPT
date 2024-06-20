@@ -1,74 +1,26 @@
 import os
 import streamlit as st
-
-if "session_state" not in st.session_state:
-    st.session_state.session_id = None
-    st.session_state.username = None
-    st.session_state.email = None
-
 import traceback
-from collections import defaultdict
-import uuid
-from amadeusgpt.logger import AmadeusLogger
 from amadeusgpt import app_utils
 from amadeusgpt.utils import validate_openai_api_key
-
-# Initialize session state variables if not present
-st._is_running_with_streamlit = True
-os.environ["streamlit_app"] = "True"
-assert "streamlit_app" in os.environ, "The 'streamlit_app' environment variable is not set!"
-
-if "exist_valid_openai_api_key" not in st.session_state:
-    st.session_state["exist_valid_openai_api_key"] = False
 
 # Set page configuration
 st.set_page_config(layout="wide")
 app_utils.load_css()
 
-def main():    
-    if "streamlit_app" in os.environ:
-        if "session_id" not in st.session_state:
-            session_id = str(uuid.uuid4())
-            st.session_state["session_id"] = session_id
-       
-        if f"database" not in st.session_state:
-            st.session_state[f"database"] = defaultdict(dict)
-
-
-    ###### Initialize ###### 
-    if "chatbot" not in st.session_state:
-        st.session_state["chatbot"] = []
-    if "user" not in st.session_state:
-        st.session_state["user"] = []
+def main():        
     if "log_folder" not in st.session_state:
         st.session_state["log_folder"] = "logs"
     if "user_input" not in st.session_state:
-        st.session_state["user_input"] = ""
-    if "uploaded_files" not in st.session_state:
-        st.session_state["uploaded_files"] = []
-    if "uploaded_video_file" not in st.session_state:
-        st.session_state["uploaded_video_file"] = None
-    if "uploaded_keypoint_file" not in st.session_state:
-        st.session_state["uploaded_keypoint_file"] = None        
+        st.session_state["user_input"] = ""             
     if "example" not in st.session_state:
         st.session_state["example"] = ""
-    if "chat_history" not in st.session_state:
-        st.session_state["chat_history"] = ""
-    if "previous_roi" not in st.session_state:
-        st.session_state["previous_roi"] = {}
-    if "roi_exist" not in st.session_state:
-        st.session_state["roi_exist"] = False
     if "exist_valid_openai_api_key" not in st.session_state:
-        if "OPENAI_API_KEY" in os.environ:
+        if "OPENAI_API_KEY" in os.environ:            
             st.session_state["exist_valid_openai_api_key"] = True
         else:
             st.session_state["exist_valid_openai_api_key"] = False
-    if "enable_explainer" not in st.session_state:
-        st.session_state["enable_explainer"] = False
-
-    if "enable_SAM" not in st.session_state:
-        st.session_state["enable_SAM"] = False    
-
+ 
     example_to_page = {}
 
 
@@ -96,30 +48,7 @@ def main():
                     "place your token here",
                     key="openAI_token",
                     on_change=valid_api_key,
-                )
-
-            model_selection = st.sidebar.selectbox(
-                "Select a GPT-4 model",
-                ("gpt-4", "gpt-4-1106-preview"),
-            )
-            st.session_state["gpt_model"] = model_selection
-
-            enable_explainer = st.sidebar.selectbox(
-                "Do you want to use our LLM Explainer Module? This outputs a written description of the query results, but can be slow.",
-                ("No", "Yes"),
-            )
-            st.session_state["enable_explainer"] = enable_explainer
-
-            enable_SAM = st.sidebar.selectbox(
-                "Do you want to use Segment Anything on your own data? This can be slow and requires you to download the model weights.",
-                ("No", "Yes"),
-            )
-            st.session_state["enable_SAM"] = enable_SAM
-
-            
-            
-            # remove this for now
-            # st.caption(f"git hash: {app_utils.get_git_hash()}")
+                )                                             
         current_script_directory = os.path.dirname(os.path.abspath(__file__))
         logo_path = os.path.join(current_script_directory, 'static/images/amadeusgpt_logo.png')
         st.image(
@@ -268,11 +197,7 @@ def main():
             example_to_page[example_bar](example_bar)
 
     except Exception as e:
-        print(traceback.format_exc())
-        if "streamlit_cloud" in os.environ:
-            if "session_id" in st.session_state:
-                AmadeusLogger.store_chats("errors", str(e) + "\n" + traceback.format_exc())
-        AmadeusLogger.debug(traceback.format_exc())
+        print(traceback.format_exc())       
 
 
 if __name__ == "__main__":

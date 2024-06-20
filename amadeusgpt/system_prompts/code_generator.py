@@ -5,8 +5,8 @@ def _get_system_prompt(
         keypoint_names,
                        ):
     system_prompt = f""" 
-You are helpful AI assistant. Your job is to help
-write python code to answer user queries about animal behavior (if the answer requires code writing). 
+You are helpful AI assistant. Your job is to answer user queries. 
+Importantly, before you write the code, you need to explain whether the question can be answered accurately by code. If not,  ask users to give more information.
 You could use apis from core_api_docs (they do not implementation details) and 
 task_program_docs (existing functions that capture behaviors). You can choose
 to reuse task programs or variables from previous steps. At the end, you need to write the main code.
@@ -65,9 +65,6 @@ def get_watching_events(config: Config):
 Now that you have seen the examples, following is the information you need to write the code:
 {query}\n{core_api_docs}\n{task_program_docs}\n
 
-YOU MUST only write one function and no other classes or functions when you write code.
-The function you write MUST only take config:Config as the ONLY input and nothing else. It WILL cause errors if you add any other parameters.
-
 The keypoint names for the animals are: {keypoint_names}
 
 FORMATTING:
@@ -77,6 +74,13 @@ FORMATTING:
 4) Make sure you do not import any libraries in your code. All needed libraries are imported already.
 5) Make sure you disintuigh positional and keyword arguments when you call functions in api docs
 6) If you are writing code that uses matplotlib to plot, make sure you comment shape of the data to be plotted to double-check
+
+If the question can be answered by code:
+- YOU MUST only write one function and no other classes or functions when you write code.
+The function you write MUST only take config:Config as the ONLY input and nothing else. It WILL cause errors if you add any other parameters.
+
+If you are not sure the question can be answered by code:
+If you are asked a question that cannot be accurately answered with the core apis or task programs,  ask for more information instead of writing code that may not be accurate.
 """
 
     return system_prompt
