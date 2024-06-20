@@ -56,7 +56,7 @@ def select_roi_from_video(video_filename):
     fig, axs = plt.subplots(1)
     axs.imshow(frame)
     selector = ROISelector(axs)
-    #plt.show()
+    # plt.show()
     return selector.paths
 
 
@@ -94,4 +94,4 @@ if __name__ == "__main__":
     plt.ylabel("Count of True values in mask")
     plt.title("Animal occurrence in ROI")
     # Show the plot
-    #plt.show()
+    # plt.show()

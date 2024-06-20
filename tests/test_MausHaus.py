@@ -1,7 +1,9 @@
-from amadeusgpt import AMADEUS, AnimalBehaviorAnalysis, utils
-import pandas as pd
 import os
 import time
+
+import pandas as pd
+
+from amadeusgpt import AMADEUS, AnimalBehaviorAnalysis, utils
 
 root_dir = "examples/MausHaus"
 

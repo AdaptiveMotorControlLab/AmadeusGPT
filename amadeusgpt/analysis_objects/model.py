@@ -2,16 +2,17 @@
 This class is for deep learning models
 """
 
+import os
+import pickle
+import platform
+from typing import Any, Dict, List, Union
+
+import cv2
+import msgpack
+import numpy as np
+
 from .base import AnalysisObject
 from .object import Object
-from typing import List, Dict, Any, Union
-import platform
-import cv2
-import numpy as np
-import msgpack
-import pickle
-import os
-
 
 
 def _superanimal_inference(
@@ -28,6 +29,7 @@ def _superanimal_inference(
         video_adapt=True,
         pseudo_threshold=0.5,
     )
+
 
 def superanimal_video_inference(
     self,
@@ -124,16 +126,14 @@ def create_labeled_video(cls, videoname):
     keypoints_clip = video.fl_image(lambda frame: draw_keypoints(frame, keypoints))
     keypoints_clip.write_videofile(f"{videoname}")
 
-from segment_anything import (
-    SamAutomaticMaskGenerator,
-    SamPredictor,
-    sam_model_registry,
-)
+
+from segment_anything import (SamAutomaticMaskGenerator, SamPredictor,
+                              sam_model_registry)
+
 
 class Model(AnalysisObject):
     def __init__(self, config):
-        self.config = config  
-
+        self.config = config
 
 
 class DeepLabCut(Model):
@@ -152,12 +152,13 @@ class Segmentation(Model):
         filename specifies the path to the potential serialized segmentation file
         We make sure that the segmentation files have same formats
         """
-        self.filename = config['seg_filename']
+        self.filename = config["seg_filename"]
         self.pickledata = None
         self.load()
-    def get_name(self)->str:
+
+    def get_name(self) -> str:
         return self.filename
-    
+
     def load_msgpack(self):
         object_list = {
             0: "barrel",
@@ -210,17 +211,18 @@ class Segmentation(Model):
         with open(filename, "wb") as f:
             pickle.dump(data, f)
 
+
 class SAM(Segmentation):
     """
     Class that captures the state of objects, supported by Seg everything
     """
-    
-    #def __init__(self, ckpt_path, model_type, filename=None):
+
+    # def __init__(self, ckpt_path, model_type, filename=None):
     def __init__(self, sam_info: Dict[str, Any]):
         super().__init__(sam_info)
         self.sam_info = sam_info
         self.ckpt_path: Union[str, None] = self.sam_info.get("ckpt_path")
-        self.model_type: Union[str,None] = self.sam_info.get("model_type")
+        self.model_type: Union[str, None] = self.sam_info.get("model_type")
         self.scene_frame_number = self.sam_info.get("scene_frame_number")
 
         sam = sam_model_registry[self.model_type](checkpoint=self.ckpt_path)
@@ -240,9 +242,8 @@ class SAM(Segmentation):
         cap.release()
         # cv2.destroyAllWindows()
         return masks
-    
 
-    def get_objects(self, video_file_path: str, sam_info: Dict[str, Any], frame_id = 0):         
+    def get_objects(self, video_file_path: str, sam_info: Dict[str, Any], frame_id=0):
         # assuming objects are still
         if self.pickledata is None:
             masks = self.generate_mask_at_frame(video_file_path, frame_id)
@@ -253,7 +254,7 @@ class SAM(Segmentation):
             return objects
         else:
             return self.pickledata
-    
+
 
 class MausHausSeg(Segmentation):
     def __init__(self, filename=None):
@@ -268,4 +269,3 @@ class MausHausSeg(Segmentation):
             return ret
         else:
             raise ValueError("We only support loading from MausHaus for now")
-    

@@ -1,21 +1,23 @@
+import ast
 import copy
-from pydoc import doc
+import inspect
 import re
+import sys
+import time
+import traceback
 from itertools import groupby
 from operator import itemgetter
-from typing import Sequence
-import inspect
+from pydoc import doc
+from typing import Any, Dict, Sequence
+
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.ndimage.filters import uniform_filter1d
-import time
-from amadeusgpt.logger import AmadeusLogger
-import sys
-import traceback
-import cv2
-from typing import Dict, Any
-import ast
 from numpy import ndarray
+from scipy.ndimage.filters import uniform_filter1d
+
+from amadeusgpt.logger import AmadeusLogger
+
 
 def moving_average(x: Sequence, window_size: int, pos: str = "centered"):
     """
@@ -91,13 +93,15 @@ def group_consecutive(x: Sequence):
         yield list(map(itemgetter(1), g))
 
 
-def get_fps(video_path):    
+def get_fps(video_path):
     # Load the video
     video = cv2.VideoCapture(video_path)
     # Get the FPS
     fps = video.get(cv2.CAP_PROP_FPS)
-    video.release()    
+    video.release()
     return fps
+
+
 def get_video_length(video_path):
     video = cv2.VideoCapture(video_path)
     fps = video.get(cv2.CAP_PROP_FPS)
@@ -112,9 +116,6 @@ def frame_number_to_minute_seconds(frame_number, video_path):
     seconds = int(temp % 60)
     ret = f"{minutes:02d}:{seconds:02d}"
     return ret
-
-
-
 
 
 def search_generated_func(text):
@@ -251,7 +252,9 @@ def timer_decorator(func):
         AmadeusLogger.debug(
             f"The function {func.__name__} took {end_time - start_time} seconds to execute."
         )
-        print (f"The function {func.__name__} took {end_time - start_time} seconds to execute.")
+        print(
+            f"The function {func.__name__} took {end_time - start_time} seconds to execute."
+        )
         return result
 
     return wrapper
@@ -264,14 +267,17 @@ def parse_error_message_from_python():
     )
     return traceback_str
 
+
 def validate_openai_api_key(key):
     import openai
+
     openai.api_key = key
     try:
         openai.models.list()
         return True
     except openai.AuthenticationError:
         return False
+
 
 def flatten_tuple(t):
     """
@@ -285,6 +291,7 @@ def flatten_tuple(t):
             flattened.append(item)
     return tuple(flattened)
 
+
 # the function func2json takes a function object as inputs
 # and returns a json object that contains the function name,
 # input type, output type, function body, and function description
@@ -292,26 +299,31 @@ def flatten_tuple(t):
 import inspect
 import textwrap
 
+
 def func2json(func):
     if isinstance(func, str):
         func_str = textwrap.dedent(func)
-        
+
         # Parse the function string to an AST
         parsed = ast.parse(func_str)
         func_def = parsed.body[0]
         # Use the AST to extract the function's name
-        func_name = func_def.name        
+        func_name = func_def.name
         # Extract the docstring directly from the AST
-        docstring = ast.get_docstring(func_def)              
+        docstring = ast.get_docstring(func_def)
         # Remove the docstring node if present
-        if func_def.body and isinstance(func_def.body[0], ast.Expr) and isinstance(func_def.body[0].value, (ast.Str, ast.Constant)):
+        if (
+            func_def.body
+            and isinstance(func_def.body[0], ast.Expr)
+            and isinstance(func_def.body[0].value, (ast.Str, ast.Constant))
+        ):
             func_def.body.pop(0)
 
         # Remove decorators from the function definition
         func_def.decorator_list = []
 
         # Convert the modified AST back to source code
-        if hasattr(ast, 'unparse'):
+        if hasattr(ast, "unparse"):
             source_without_docstring_or_decorators = ast.unparse(func_def)
         else:
             # Placeholder for actual conversion in older Python versions
@@ -323,19 +335,18 @@ def func2json(func):
             return_annotation = ast.unparse(func_def.returns)
 
         json_obj = {
-            'name': func_name,
-            'inputs': '',
-            'source_code': source_without_docstring_or_decorators,
-            'docstring': docstring,
-            'return': return_annotation
+            "name": func_name,
+            "inputs": "",
+            "source_code": source_without_docstring_or_decorators,
+            "docstring": docstring,
+            "return": return_annotation,
         }
-        return json_obj        
+        return json_obj
     else:
 
         # Capture the function's signature for input arguments
         sig = inspect.signature(func)
         inputs = {name: str(param.annotation) for name, param in sig.parameters.items()}
-    
 
         # Extract the docstring
         docstring = inspect.getdoc(func)
@@ -348,31 +359,36 @@ def func2json(func):
         func_def = parsed.body[0]
 
         # Remove the docstring node if present
-        if func_def.body and isinstance(func_def.body[0], ast.Expr) and isinstance(func_def.body[0].value, (ast.Str, ast.Constant)):
+        if (
+            func_def.body
+            and isinstance(func_def.body[0], ast.Expr)
+            and isinstance(func_def.body[0].value, (ast.Str, ast.Constant))
+        ):
             func_def.body.pop(0)
 
         # Remove decorators from the function definition
         func_def.decorator_list = []
 
         # Convert the modified AST back to source code
-        if hasattr(ast, 'unparse'):
+        if hasattr(ast, "unparse"):
             source_without_docstring_or_decorators = ast.unparse(func_def)
         else:
             # Placeholder for actual conversion in older Python versions
             source_without_docstring_or_decorators = None  # Consider using `astor` here
 
         json_obj = {
-            'name': func.__name__,
-            'inputs': inputs,
-            'source_code': textwrap.dedent(source_without_docstring_or_decorators),
-            'docstring': docstring,
-            'return': str(sig.return_annotation)
+            "name": func.__name__,
+            "inputs": inputs,
+            "source_code": textwrap.dedent(source_without_docstring_or_decorators),
+            "docstring": docstring,
+            "return": str(sig.return_annotation),
         }
         return json_obj
 
-def get_func_name_from_func_string(function_string:str):
+
+def get_func_name_from_func_string(function_string: str):
     import ast
-   
+
     # Parse the string into an AST
     parsed_ast = ast.parse(function_string)
 

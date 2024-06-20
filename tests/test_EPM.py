@@ -1,9 +1,11 @@
+import os
+import pickle
+import time
+
+import pandas as pd
+
 import amadeusgpt
 from amadeusgpt import AMADEUS, AnimalBehaviorAnalysis, utils
-import pandas as pd
-import os
-import time
-import pickle
 
 print(amadeusgpt.__file__)
 
