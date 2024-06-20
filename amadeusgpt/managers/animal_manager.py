@@ -71,7 +71,13 @@ class AnimalManager(Manager):
         self.config = config
         self.model_manager = model_manager
         self.animals: List[AnimalSeq] = []
-        self.keypoint_file_path = config['keypoint_info']['keypoint_file_path']
+        self.full_keypoint_names = []
+        keypoint_info = config['keypoint_info']
+        if keypoint_info['keypoint_file_path'] is None:
+            # no need to initialize here
+            return 
+        else:
+            self.keypoint_file_path = config['keypoint_info']['keypoint_file_path']
         if self.keypoint_file_path.endswith('.h5'):
             all_keypoints = self._process_keypoint_file_from_h5()
         elif self.keypoint_file_path.endswith('.json'):
@@ -190,7 +196,7 @@ class AnimalManager(Manager):
     @register_core_api
     def get_n_individuals(self) -> int:
         """
-        Get the number of individuals in the data.
+        Get the number of animals in the data.
         """
         return self.n_individuals
     @register_core_api

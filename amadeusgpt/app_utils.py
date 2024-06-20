@@ -3,6 +3,7 @@ from io import BytesIO
 
 import matplotlib.pyplot as plt
 import requests
+from distutils.command import upload
 import streamlit as st
 from PIL import Image
 import glob
@@ -125,7 +126,7 @@ class AIMessage(BaseMessage):
         --------
         """
 
-        render_keys = ['query', 'chain_of_thought', 'error_message', 'function_rets', 'plots']
+        render_keys = ['query', 'chain_of_thought', 'error_message', 'function_rets', 'plots', 'out_videos']
         #for render_key, render_value in self.data.items():
         if len(self.data) > 0:
             for render_key in render_keys:
@@ -164,6 +165,10 @@ class AIMessage(BaseMessage):
                     sandbox = self.data['sandbox']
                     qa_message = sandbox.code_execution(self.data)
                     if qa_message['error_message'] is not None:
+                        # make the error message more visible with different color
+                        st.markdown(f"Error: {qa_message['error_message']}\n ")
+                        # Remind users we are fixing the error by self debuging
+                        st.markdown(f"Let me try to fix the error by self-debugging\n ")
                         for i in range(1):
                             sandbox.llms['self_debug'].speak(sandbox)
                             qa_message = sandbox.code_execution(qa_message)
@@ -198,6 +203,9 @@ class AIMessage(BaseMessage):
                     for fig, axe in render_value:
                         filename = save_figure_to_tempfile(fig)
                         st.image(filename, width=600)
+                elif render_key == "out_videos":
+                    for video_path in render_value:
+                        st.video(video_path)
                        
 
 class Messages:
@@ -287,6 +295,7 @@ def ask_amadeus(question):
     qa_message = amadeus.step(
         question
     )
+   
     return qa_message
 
 
@@ -336,10 +345,11 @@ def update_roi(analysis, result_json, ratios):
             points = np.array(points)
             points[:, 0] = points[:, 0] * w_ratio
             points[:, 1] = points[:, 1] * h_ratio
-            _object = ROIObject(f"ROI{count}", canvas_path=points)            
+            _object = ROIObject(f"ROI{count}", canvas_path=points)
             count += 1        
             analysis.object_manager.add_roi_object(_object)
-
+            
+    analysis.object_manager.save_roi_objects('temp_roi_objects.pickle')
 
 def place_st_canvas(analysis, key, scene_image):
 
@@ -354,7 +364,6 @@ def place_st_canvas(analysis, key, scene_image):
             "Left click to draw a polygon. Right click to confirm the drawing. Refresh the page if you need new ROIs or if the ROI canvas does not display"
         )
         canvas_result = st_canvas(
-            # initial_drawing=st.session_state["previous_roi"],
             fill_color="rgba(255, 165, 0, 0.9)",
             stroke_width=3,
             background_image=scene_image,
@@ -371,7 +380,6 @@ def place_st_canvas(analysis, key, scene_image):
         and len(canvas_result.json_data["path"]) > 0
     ):
         pass
-        # st.session_state["previous_roi"] = canvas_result.json_data
     if canvas_result.json_data is not None:
         update_roi(analysis, canvas_result.json_data, (w_ratio, h_ratio))
 
@@ -389,45 +397,6 @@ def chat_box_submit():
         st.session_state["messages"].append(user_message)
         st.session_state["messages"].append(amadeus_message)
 
-
-def check_uploaded_files(example):
-    
-    video_files = glob.glob(os.path.join("examples", example, "*.mp4"))
-    keypoint_files = glob.glob(os.path.join("examples", example, "*.h5"))
-
-    if len(video_files) > 0 and len(keypoint_files) > 0:
-        config = get_config(example)
-        config['keypoint_info']['keypoint_file_path'] = keypoint_files[0]
-        config['video_info']['video_file_path'] = video_files[0]
-        return config 
-    else:
-        if st.session_state["uploaded_files"]:
-            filenames = [f.name for f in st.session_state["uploaded_files"]]
-            folder_path = os.path.join(st.session_state["log_folder"], "uploaded_files")
-            if not os.path.exists(folder_path):
-                os.makedirs(folder_path)
-            files = st.session_state["uploaded_files"]
-            count_h5 = sum([int(file.name.endswith(".h5")) for file in files])     
-            # Remove the existing h5 file if there is a new one
-            if count_h5 > 1:
-                st.error("Oooops, you can only upload one *.h5 file! :ghost:")
-            config = get_config(example)       
-            for file in files:
-                if file.name.endswith(".h5"):             
-                    with tempfile.NamedTemporaryFile(
-                        dir=folder_path, suffix=".h5", delete=False
-                    ) as temp:
-                        temp.write(file.getbuffer())
-                        st.session_state['uploaded_keypoint_file'] = temp.name
-                        config['keypoint_info']['keypoint_file_path'] = temp.name
-                if any(file.name.endswith(ext) for ext in VIDEO_EXTS):
-                    with tempfile.NamedTemporaryFile(
-                        dir=folder_path, suffix=".mp4", delete=False
-                    ) as temp:
-                        temp.write(file.getbuffer())
-                        config['video_info']['video_file_path'] = temp.name
-                        st.session_state["uploaded_video_file"] = temp.name              
-            return config
     
 def rerun_prompt(query, ind):
     messages = st.session_state["messages"]
@@ -506,32 +475,6 @@ def get_scene_image(config):
         img_str = base64.b64encode(buffered.getvalue()).decode()
         return img_str 
 
-def get_sam_image(config):
-    analysis = create_analysis(config)
-    seg_objects = analysis.object_manager.get_seg_objects()        
-    frame = analysis.visual_manager.get_scene_image()
-    # number text on objects
-
-    mask_frame = AnimalBehaviorAnalysis.show_seg(seg_objects)
-    mask_frame = (mask_frame * 255).astype(np.uint8)
-    frame = (frame).astype(np.uint8)
-    image1 = Image.fromarray(frame, "RGB")
-    image1 = image1.convert("RGBA")
-    image2 = Image.fromarray(mask_frame, mode="RGBA")
-    sam_image = Image.blend(image1, image2, alpha=0.5)
-    sam_image = np.array(sam_image)
-    for obj_name, obj in seg_objects.items():
-        x, y = obj.center
-        cv2.putText(
-            sam_image,
-            obj_name,
-            (int(x), int(y)),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0, 0, 255),
-            1,
-        )
-    return sam_image
 
 def get_config(example):
 
@@ -547,25 +490,19 @@ def get_config(example):
     elif example == "Custom":
         template_config_path = os.path.join(root_dir, 'configs', 'Custom_template.yaml')
 
-    if "config" not in st.session_state[example]:
-       
-        config = Config(template_config_path)        
-        video_files = glob.glob(os.path.join("examples", example, "*.mp4"))
-        keypoint_files = glob.glob(os.path.join("examples", example, "*.h5"))
-        if len(video_files) > 0:
-            video_file = video_files[0]
-        else:
-            video_file = None
-        if len(keypoint_files) > 0:
-            keypoint_file = keypoint_files[0]
-        else:
-            keypoint_file = None
-        config['keypoint_info']['keypoint_file_path'] = keypoint_file
-        config['video_info']['video_file_path'] = video_file
-        st.session_state[example]["config"] = config
-    else:
-        config = st.session_state[example]["config"]    
+    config = Config(template_config_path)
+        
     return config
+
+def save_uploaded_file(uploaded_file, save_dir):
+
+    filename = uploaded_file.name    
+    save_path = os.path.join(save_dir, filename)
+    if not os.path.exists(save_path):
+        with open(save_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        
+    return save_path
 
 def render_page_by_example(example):
     # get the config
@@ -591,20 +528,31 @@ def render_page_by_example(example):
         st.markdown(
             "Provide your own video and keypoint file (in pairs)"
         )
-        uploaded_files = st.file_uploader(
-            "Choose data or video files to upload",
-            ["h5", *VIDEO_EXTS],
-            accept_multiple_files=True,
+        uploaded_keypoint_file = st.file_uploader(
+            "Choose keypoint files",
+            ["h5"],
+            accept_multiple_files=False,
         )
-        st.session_state['uploaded_files'] = uploaded_files
-        # update config with the uploaded files
-        config = check_uploaded_files(example)
+        uploaded_video_file = st.file_uploader(
+            "Choose video files",
+            VIDEO_EXTS,
+            accept_multiple_files=False,
+        )
 
+        if uploaded_keypoint_file is not None:
+            save_dir = os.path.join("examples", example)
+            config['keypoint_info']['keypoint_file_path'] = save_uploaded_file(uploaded_keypoint_file, save_dir)
+            config['video_info']['video_file_path'] = save_uploaded_file(uploaded_video_file, save_dir)
+   
         ###### USER INPUT PANEL ######
         # get user input once getting the uploaded files
-        disabled = True if len(st.session_state["uploaded_files"])==0 else False
+        if uploaded_keypoint_file is None or uploaded_video_file is None:
+            disabled = True
+        else:
+            disabled = False
+        
         if disabled:
-            st.warning("Please upload a file before entering text.")
+            st.warning("Please upload a file before entering text.")             
 
     elif example == "EPM":
         st.markdown(
@@ -666,9 +614,8 @@ def render_page_by_example(example):
         st.markdown(
             "This horse video is part of a benchmark by Mathis et al 2021 https://arxiv.org/abs/1909.11229."
         )
-        config = get_config(example)
-    if config is None:
-        return 
+    
+    config = get_config(example)
     analysis = create_analysis(config)    
 
     if st.session_state["example"] != example:
@@ -683,6 +630,8 @@ def render_page_by_example(example):
         image_stream = io.BytesIO(img_data)
         image_stream.seek(0)
         scene_image = Image.open(image_stream)
+    else:
+        scene_image = None
         
     col1, col2, col3 = st.columns([2, 1, 1])
 

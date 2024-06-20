@@ -11,9 +11,8 @@ keypoint_info:
     neck: "neck"  
 object_info:
   load_objects_from_disk: false
-sam_info:
-  ckpt_path: "path/to/ckpt"
-  model_type: "sam"
+llm_info:
+  keep_last_n_messages: 2
 video_info:
   scene_frame_number: 100
   pixels_per_cm: 8

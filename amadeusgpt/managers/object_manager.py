@@ -1,17 +1,15 @@
-from email.mime import image
-
 from amadeusgpt.config import Config
 from amadeusgpt.managers.base import Manager
 from amadeusgpt.managers.model_manager import ModelManager
 from amadeusgpt.managers.animal_manager import AnimalManager
 from typing import List, Dict,Any
-from amadeusgpt.analysis_objects.object import GridObject, Object, ROIObject 
-from amadeusgpt.programs.api_registry import register_class_methods, register_core_api
-from PIL import Image
+from amadeusgpt.analysis_objects.object import GridObject, Object, ROIObject
+from amadeusgpt.programs.api_registry import register_class_methods
 import cv2
 import numpy as np 
-import os
+import pickle
 np.set_printoptions(suppress=True)
+
 
 @register_class_methods
 class ObjectManager(Manager):
@@ -49,27 +47,70 @@ class ObjectManager(Manager):
     def summary(self):
         print("roi_objects: ", self.get_roi_object_names())
         print("seg_objects: ", self.get_seg_object_names())
-
-    def get_roi_object_names(self)-> List[str]:
-        return [obj.name for obj in self.roi_objects]
+    
     
     def get_seg_object_names(self)-> List[str]:
         return [obj.name for obj in self.seg_objects]
        
     def load_objects_from_disk(self):
         pass
+    
+    def get_roi_object_names(self)-> List[str]:
+        return [obj.name for obj in self.roi_objects]
+
     def get_roi_objects(self)-> List[Object]:
         return self.roi_objects
     
+    def filter_duplicates(self, roi_objects):
+        seen = set()
+        unique_set = []
+        for roi_object in roi_objects:
+            if roi_object.name not in seen:
+                seen.add(roi_object.name)
+                unique_set.append(roi_object)
+        return unique_set
+
+    def add_roi_object(self, object)-> None:
+        # the user can add an object to the roi_objects     
+        self.roi_objects.append(object)
+        self.roi_objects = self.filter_duplicates(self.roi_objects)
+
+    def save_roi_objects(self, path: str)-> None:
+        roi_obects = self.get_roi_objects()
+        print ('how many roi objects')
+        print (roi_obects)
+        for roi in roi_obects:
+            print (roi.name)
+        data = {}
+        for obj in roi_obects:
+            data[obj.name] = {'Path': obj.Path}
+        with open(path,'wb') as f:
+            pickle.dump(data, f)
+
+    def load_roi_objects(self, path: str)-> None:
+        with open(path,'rb') as f:
+            data = pickle.load(f)
+        for name, path in data.items():
+            self.add_roi_object(ROIObject(name, path['Path']))
+    
     def get_seg_objects(self)-> list[Object]:
         return self.seg_objects
+    
+    def add_sam_object(self, object)-> None:
+        sam_info = self.config['sam_info']
+        ckpt_path = sam_info["ckpt_path"]
+        model_type = sam_info["model_type"]
+        pickle_path = sam_info["pickle_path"]
+        video_file_path = sam_info["video_info"]["video_file_path"]
+        sam = SAM(ckpt_path, model_type, filename=pickle_path)
+        sam.save_to_pickle(sam.get_objects(video_file_path), pickle_path)
+
         
     def get_objects(self)-> List[Object]:
         return self.roi_objects + self.seg_objects
     def get_object_names(self)-> List[str]:
         return self.get_roi_object_names() + self.get_seg_object_names() 
    
-    
 
     def create_grids(self):
         """
@@ -184,10 +225,7 @@ class ObjectManager(Manager):
 
                
         return self.occupation_heatmap
-        
-    def add_roi_object(self, object)-> None:
-        # the user can add an object to the roi_objects     
-        self.roi_objects.append(object)
+            
 
     def get_serializeable_list_names(self) -> List[str]:
         return ['roi_objects', 'seg_objects']

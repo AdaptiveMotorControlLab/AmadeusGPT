@@ -26,7 +26,8 @@ def create_message(query, sandbox):
         'plots': [],
         'error_message': None,
         'function_rets': None,
-        'sandbox': sandbox
+        'sandbox': sandbox,
+        'out_videos': []
     }
       
 class SandboxBase:
@@ -307,6 +308,9 @@ The usage and the parameters of the functions are provided."""
         # add main function into the namespace        
         self.update_namespace()
         code = qa_message['code']
+        # not need to do further if there was no code found
+        if code is None:
+            return qa_message
         exec(code, self.exec_namespace)
         # call the main function
         function_name = self.get_function_name_from_string(code)
@@ -322,6 +326,7 @@ The usage and the parameters of the functions are provided."""
             return qa_message
         result = self.exec_namespace['result']
         qa_message['function_rets'] = result
+      
         return qa_message
     
     def get_function_name_from_string(self, code):         
@@ -359,9 +364,17 @@ The usage and the parameters of the functions are provided."""
                                                      parents = parents,
                                                      mutation_from = mutation_from)(code)
 
-
     def register_llm(self, name,  llm):
         self.llms[name] = llm
+
+    def events_to_videos(self, events, query):
+        behavior_analysis = self.exec_namespace['behavior_analysis']
+        visual_manager = behavior_analysis.visual_manager
+        out_folder = 'event_clips'
+        os.makedirs(out_folder, exist_ok=True)
+        behavior_name = '_'.join(query.split(' '))
+        video_file = self.config['video_info']['video_file_path']
+        return visual_manager.generate_video_clips_from_events(out_folder, video_file, events, behavior_name)
 
     def render_qa_message(self, qa_message):
         function_rets = qa_message['function_rets']
@@ -386,14 +399,16 @@ The usage and the parameters of the functions are provided."""
                         # of course we can show all of them at the same time except for animal interaction if there are multi animals                      
                         # keypoint visualization
                         plots.append(visual_manager.get_keypoint_visualization(bodypart_names = bodypart_names, events =  e))                   
-      
+                        qa_message['out_videos'].append(self.events_to_videos(e, qa_message['query']))
+
         elif isinstance(function_rets, list) and len(function_rets) > 0 and isinstance(function_rets[0], BaseEvent):
                 # this is for "return events"
                 plots.append(visual_manager.get_keypoint_visualization(bodypart_names = bodypart_names, events = function_rets))
                 plots.append(visual_manager.get_ethogram_visualization(events = function_rets))
+                qa_message['out_videos'].append(self.events_to_videos(function_rets, qa_message['query']))
         else:
             pass
-        qa_message['plots'].extend(plots)
+        qa_message['plots'].extend(plots)        
         return qa_message
 
 
@@ -476,9 +491,15 @@ def render_temp_message(query, sandbox):
         else:
             st.markdown(line)
                     
+    if qa_message['code'] is not None:
+        qa_message = sandbox.code_execution(qa_message)
+        print ('after code execution')
+        print (len(qa_message['function_rets']))
+        events = qa_message['function_rets']
+        # for event in events:
+        #     print (event.start, event.end)
+        #qa_message = sandbox.render_qa_message(qa_message)
 
-    qa_message = sandbox.code_execution(qa_message)
-    qa_message = sandbox.render_qa_message(qa_message)
     if qa_message["function_rets"] is not None:
         st.markdown(qa_message["function_rets"])
 
@@ -487,6 +508,9 @@ def render_temp_message(query, sandbox):
         filename = save_figure_to_tempfile(fig)
         st.image(filename, width=600)    
 
+    videos = qa_message['out_videos']
+    for video in videos:
+        st.video(video)
 
 if __name__ == '__main__':
     # testing qa message
@@ -495,6 +519,8 @@ if __name__ == '__main__':
     config = Config('amadeusgpt/configs/Horse_template.yaml')
     amadeus = create_amadeus(config)
     sandbox = amadeus.sandbox
+    analysis = sandbox.exec_namespace['behavior_analysis']
+    analysis.add_roi_object = ''
     
     res = sandbox.step('plot the trajectory of the bodypart body_mouth')
 

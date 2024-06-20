@@ -36,7 +36,10 @@ class VisualManager(Manager):
                  ):
         super().__init__(config)    
         self.config = config
-        self.video_file_path = config.get('video_info', {}).get('video_file_path', '')
+        video_info = config['video_info']
+        if video_info['video_file_path'] is None:
+            return 
+        self.video_file_path = config['video_info']['video_file_path']
         self.animal_manager = animal_manager
         self.object_manager = object_manager
 
@@ -99,6 +102,7 @@ class VisualManager(Manager):
         # returns a vis id
         if axs is None:
             fig, axs = plt.subplots(1)
+        
         objects = self.object_manager.get_objects()
         
         return SceneVisualization(
@@ -194,6 +198,7 @@ class VisualManager(Manager):
            
                 fig, axs = plt.subplots(self.animal_manager.get_n_individuals(), 
                                         self.animal_manager.get_n_individuals()-1, squeeze = False)
+                axs = np.atleast_1d(axs)
 
                 for sender_idx, sender_animal in enumerate(self.animal_manager.get_animals()):
                     other_animals = [other_animal for other_animal in self.animal_manager.get_animals() if other_animal.name != sender_animal.name]
@@ -222,9 +227,10 @@ class VisualManager(Manager):
             else:
                 if self.animal_manager.get_n_individuals() == 1:
                     fig, axs = plt.subplots(1)
-                    axs = [axs]
+                    axs = np.atleast_1d(axs)
                 else:
                     fig, axs = plt.subplots(self.animal_manager.get_n_individuals())
+                    axs = np.atleast_1d(axs)
                 
                 for idx, sender_animal in enumerate(self.animal_manager.get_animals()):
                     scene_vis = self.get_scene_visualization(self.config['video_info']['scene_frame_number'],
@@ -264,7 +270,7 @@ class VisualManager(Manager):
 
         """
         fig, axs = plt.subplots(len(self.animal_manager.get_animals()), 1)
-
+        axs = np.atleast_1d(axs)
         for idx, animal in enumerate(self.animal_manager.get_animals()):
             event_vis = EventVisualization(axs[idx], 
                                            events, 
@@ -313,10 +319,10 @@ class VisualManager(Manager):
             else:
                 if self.animal_manager.get_n_individuals() == 1:
                     fig, axs = plt.subplots(1)
-                    axs = [axs]
+                    axs = np.atleast_1d(axs)
                 else:
                     fig, axs = plt.subplots(self.animal_manager.get_n_individuals(),
-                                        constrained_layout=True)
+                                        constrained_layout=True)                
 
                 for idx, animal in enumerate(self.animal_manager.get_animals()):
                     if idx == 0:
@@ -438,7 +444,7 @@ class VisualManager(Manager):
         if total_duration < 0.5:
             return 
         
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Adjust the codec as needed
+        fourcc = cv2.VideoWriter_fourcc(*'avc1')  # Adjust the codec as needed
         out = cv2.VideoWriter(os.path.join(out_folder, f'{out_name}'), fourcc, 30.0, (int(cap.get(3)), int(cap.get(4))))
        
         for triple in data:
@@ -452,7 +458,7 @@ class VisualManager(Manager):
             while cap.isOpened():
                 current_frame = time_slice[0] + offset
                 ret, frame = cap.read()
-                frame = self.plot_chessboard_regions(frame)
+                #frame = self.plot_chessboard_regions(frame)
                 if not ret:
                     break
 
@@ -497,7 +503,7 @@ class VisualManager(Manager):
         cap.release()
         out.release()
         cv2.destroyAllWindows()        
-
+    
     def generate_video_clips_from_events(self,
                                         out_folder,
                                         video_file, 
@@ -518,5 +524,6 @@ class VisualManager(Manager):
             video_file,
             video_name,
             events)
+        return os.path.join(out_folder, video_name)
 
     

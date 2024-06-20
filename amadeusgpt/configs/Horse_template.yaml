@@ -13,9 +13,6 @@ llm_info:
   keep_last_n_messages: 2 
 object_info:
   load_objects_from_disk: false
-sam_info:
-  ckpt_path: "path/to/ckpt"
-  model_type: "sam"
 video_info:
   scene_frame_number: 100
   video_file_path: "examples/Horse/BrownHorseinShadow.mp4"

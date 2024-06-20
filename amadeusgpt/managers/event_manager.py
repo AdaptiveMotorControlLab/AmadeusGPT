@@ -59,13 +59,16 @@ class EventManager(Manager):
         self.config = config
         self.object_manager = object_manager
         self.animal_manager = animal_manager
-        self.relationship_manager = relationship_manager        
-        self.video_file_path = self.config.get("video_info", {}).get("video_file_path", "")
+        self.relationship_manager = relationship_manager     
+        video_info = self.config["video_info"]
+        if video_info['video_file_path'] is None:
+            # no need to initialize
+            return 
+        self.video_file_path = video_info['video_file_path']
         self.animals_object_events = []
         self.animals_animals_events = []
         self.animals_state_events = []
     @register_core_api
-
     def get_animals_object_events(
         self,
         object_name:Optional[str] = "",
@@ -77,7 +80,7 @@ class EventManager(Manager):
         smooth_window_size: int = 3,
     ) -> List[BaseEvent]:
         """
-        This function is only used when there is object with name involved in the queries.               
+        This function is used to retrieve events that involve the interactions between animals and objects.              
         object_name : str
         This parameter represents the name of the object of interest. It is expected to be a string.
         query: str. Examples are 'overlap == True', 'distance==30', 'angle<20', 
