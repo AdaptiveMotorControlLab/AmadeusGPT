@@ -1,14 +1,17 @@
-from .base import Manager
-from .object_manager import ObjectManager
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 import cv2
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
-import numpy as np 
-from amadeusgpt.programs.api_registry import register_class_methods, register_core_api
-from matplotlib.widgets import Button, PolygonSelector
+import numpy as np
 from matplotlib.path import Path
+from matplotlib.widgets import Button, PolygonSelector
+
+from amadeusgpt.programs.api_registry import (register_class_methods,
+                                              register_core_api)
+
 from .base import Manager
+from .object_manager import ObjectManager
 
 
 class ROISelector:
@@ -44,29 +47,26 @@ class ROISelector:
         self.roi_select_event(vertices)
         figure_output = "roi_figure.png"
         plt.savefig(figure_output, dpi=800)
-        
+
         # Here you can add any further processing of the polygons
         self.object_manager.roi_objects = []
         self.object_manager.add_roi_object(self.paths)
-        
-        print (len(self.object_manager.roi_objects))
-        # Assuming the object_manager's add_roi_object is meant to handle the completed polygons
 
+        print(len(self.object_manager.roi_objects))
+        # Assuming the object_manager's add_roi_object is meant to handle the completed polygons
 
 
 @register_class_methods
 class GUIManager(Manager):
-    def __init__(self, config: Dict[str, Any],
-                 object_manager: ObjectManager
-                 ):
+    def __init__(self, config: Dict[str, Any], object_manager: ObjectManager):
         self.config = config
         self.object_manager = object_manager
         self.video_file_path = config["video_info"]["video_file_path"]
         if self.video_file_path is None:
             return
         self.videos = {}
-    
-    def add_roi_from_video_selection(self)-> None:
+
+    def add_roi_from_video_selection(self) -> None:
         cap = cv2.VideoCapture(self.video_file_path)
         if not cap.isOpened():
             print("Error opening video file.")
@@ -85,6 +85,5 @@ class GUIManager(Manager):
         ax.imshow(frame)
         self.selector = ROISelector(ax, self.object_manager)
 
-    
     def get_serializeable_list_names(self) -> List[str]:
         return []

@@ -1,6 +1,8 @@
 import os
-import streamlit as st
 import traceback
+
+import streamlit as st
+
 from amadeusgpt import app_utils
 from amadeusgpt.utils import validate_openai_api_key
 
@@ -8,24 +10,24 @@ from amadeusgpt.utils import validate_openai_api_key
 st.set_page_config(layout="wide")
 app_utils.load_css()
 
-def main():        
+
+def main():
     if "log_folder" not in st.session_state:
         st.session_state["log_folder"] = "logs"
     if "user_input" not in st.session_state:
-        st.session_state["user_input"] = ""             
+        st.session_state["user_input"] = ""
     if "example" not in st.session_state:
         st.session_state["example"] = ""
     if "exist_valid_openai_api_key" not in st.session_state:
-        if "OPENAI_API_KEY" in os.environ:            
+        if "OPENAI_API_KEY" in os.environ:
             st.session_state["exist_valid_openai_api_key"] = True
         else:
             st.session_state["exist_valid_openai_api_key"] = False
- 
+
     example_to_page = {}
 
-
     def valid_api_key():
-        print ('inside valid api key function')
+        print("inside valid api key function")
         if "OPENAI_API_KEY" in os.environ:
             api_token = os.environ["OPENAI_API_KEY"]
         else:
@@ -39,7 +41,6 @@ def main():
         else:
             st.error("Invalid OpenAI API Key")
 
-
     def welcome_page(text):
         with st.sidebar as sb:
             if st.session_state["exist_valid_openai_api_key"] is not True:
@@ -48,9 +49,11 @@ def main():
                     "place your token here",
                     key="openAI_token",
                     on_change=valid_api_key,
-                )                                             
+                )
         current_script_directory = os.path.dirname(os.path.abspath(__file__))
-        logo_path = os.path.join(current_script_directory, 'static/images/amadeusgpt_logo.png')
+        logo_path = os.path.join(
+            current_script_directory, "static/images/amadeusgpt_logo.png"
+        )
         st.image(
             logo_path,
             caption=None,
@@ -98,9 +101,9 @@ def main():
         st.markdown(
             f"{small_font} - This demo serves to highlight a hosted user-experience, but does not include all the features yet..."
         )
-        #st.markdown(f"{small_font} - Watch the video below to see how to use the App.")
+        # st.markdown(f"{small_font} - Watch the video below to see how to use the App.")
 
-        #st.video("static/demo_withvoice.mp4")
+        # st.video("static/demo_withvoice.mp4")
 
         st.markdown("### ⚠️ Disclaimers")
 
@@ -146,7 +149,9 @@ def main():
         )
         st.markdown(f"{small_font} - A: Check the video on the EPM tab!")
         st.markdown(f"{small_font} Q: How can I ask AmadeusGPT🎻 to plot something?")
-        st.markdown(f"{small_font} - A: Check the demo video and prompts in the examples")
+        st.markdown(
+            f"{small_font} - A: Check the demo video and prompts in the examples"
+        )
         st.markdown(
             f"{small_font} Q: Why did AmadeusGPT🎻 produce errors or give me unexpected answers to my questions?"
         )
@@ -160,7 +165,9 @@ def main():
         st.markdown(
             f"{small_font} - A: No, AmadeusGPT🎻 can work with a range of animals as long as poses are extracted and behaviors can be defined with those poses. We will add examples of other animals in the future."
         )
-        st.markdown(f"{small_font} Q: How do I know I can trust AmadeusGPT🎻's answers?")
+        st.markdown(
+            f"{small_font} Q: How do I know I can trust AmadeusGPT🎻's answers?"
+        )
         st.markdown(
             f"{small_font} - A: For people who are comfortable with reading Python code, reading the code can help validate the answer. We welcome the community to check our APIs. Otherwise, try visualize your questions by asking \n"
             f"{small_font} AmadeusGPT🎻 to plot the related data and use the visualization as a cross validation. We are also developing new features\n"
@@ -172,7 +179,6 @@ def main():
         st.markdown(
             f"{small_font} - A: There might be a high traffic for either ChatGPT API or the Streamlit server. Refresh the page and retry or come back later."
         )
-
 
     if st.session_state["exist_valid_openai_api_key"]:
         example_list = ["Welcome", "Custom", "EPM", "MausHaus", "MABe", "Horse"]
@@ -197,7 +203,7 @@ def main():
             example_to_page[example_bar](example_bar)
 
     except Exception as e:
-        print(traceback.format_exc())       
+        print(traceback.format_exc())
 
 
 if __name__ == "__main__":

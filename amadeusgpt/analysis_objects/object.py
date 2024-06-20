@@ -1,14 +1,17 @@
 from ast import Dict
-from .base import AnalysisObject
-import numpy as np
+from typing import Any, Dict, List
+
 import matplotlib.path as mpath
-from typing import List, Dict, Any
+import numpy as np
+from numpy import ndarray
 from pycocotools import mask as mask_decoder
 from scipy.spatial import ConvexHull
-from numpy import ndarray
-class Object(AnalysisObject):    
-    def __init__(self,                  
-                 name: str):
+
+from .base import AnalysisObject
+
+
+class Object(AnalysisObject):
+    def __init__(self, name: str):
         """
         TODO: instead of using a point, use the true segmentation as reference point
         name: str for referencing the object
@@ -32,14 +35,15 @@ class Object(AnalysisObject):
         self.y_max = None
         self.Path = None
         self.points = None
+
     def get_name(self):
         return self.name
+
     def get_data(self):
         """
         The class multiple fields
         """
         return self
-
 
     def get_center(self):
         return self.center
@@ -65,11 +69,12 @@ class Object(AnalysisObject):
 
     def summary(self):
         for attr_name in self.__dict__:
-            print(f'{attr_name} has {self.__dict__[attr_name]}')
+            print(f"{attr_name} has {self.__dict__[attr_name]}")
 
     def distance(self, other_object):
         # we use the center of two objects for calculating distance
         return np.linalg.norm(self.center - other_object.center)
+
     def points2Path(self, points):
         path = None
         if len(points) > 2:
@@ -84,7 +89,8 @@ class Object(AnalysisObject):
             path_data.append((mpath.Path.CLOSEPOLY, points[0]))
             codes, verts = zip(*path_data)
             path = mpath.Path(verts, codes)
-        return path 
+        return path
+
     def get_path(self):
         """
         The representation of points in the object
@@ -120,26 +126,26 @@ class Object(AnalysisObject):
     def to_below(self, other_object):
         # whether the other object is to the below of this object
         return other_object.center[1] >= self.y_max
-   
 
 
 class SegObject(Object):
     """
-        segmentation : the mask
-        area : the area of the mask in pixels
-        bbox : the boundary box of the mask in XYWH format
-        predicted_iou : the model's own prediction for the quality of the mask
-        point_coords : the sampled input point that generated this mask
-        stability_score : an additional measure of mask quality
-        crop_box : the crop of the image used to generate this mask in XYWH format
+    segmentation : the mask
+    area : the area of the mask in pixels
+    bbox : the boundary box of the mask in XYWH format
+    predicted_iou : the model's own prediction for the quality of the mask
+    point_coords : the sampled input point that generated this mask
+    stability_score : an additional measure of mask quality
+    crop_box : the crop of the image used to generate this mask in XYWH format
     """
-    def __init__(self, name: str, masks:dict):        
+
+    def __init__(self, name: str, masks: dict):
         super().__init__(name)
         self.masks = masks
         self.bbox = self.masks.get("bbox")
         self.area = self.masks["area"]
         # _seg could be either binary mask or rle string
-        _seg:dict = self.masks.get("segmentation")
+        _seg: dict = self.masks.get("segmentation")
         # this is rle format
         if "counts" in _seg:
             self.segmentation = mask_decoder.decode(_seg)
@@ -155,13 +161,15 @@ class SegObject(Object):
         x, y, w, h = self.bbox
         self.x_min, self.y_min, self.x_max, self.y_max = x, y, x + w, y + h
         self.center = np.array([x + w / 2, y + h / 2])
+
     def plot(self, ax):
         x, y = zip(*self.points)
         # Plot the polygon
         ax.plot(x, y, "b-")  # 'b-' means blue line
 
+
 class MatplotlibObject(Object):
-    def __init__(self, name: str, object_path):        
+    def __init__(self, name: str, object_path):
         super().__init__(name)
         self.object_path = object_path
         self.Path = object_path
@@ -174,14 +182,14 @@ class MatplotlibObject(Object):
         x = vertices[:, 0]
         y = vertices[:, 1]
         self.points = vertices
-        self.area = 0.5 * np.abs(
-            np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1))
-        )
-        self.center = np.array([np.mean(vertices[:, 0]), np.mean(vertices[:, 1])])        
+        self.area = 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
+        self.center = np.array([np.mean(vertices[:, 0]), np.mean(vertices[:, 1])])
+
+
 class ROIObject(Object):
-    def __init__(self, name: str, canvas_path):       
+    def __init__(self, name: str, canvas_path):
         super().__init__(name)
-        
+
         self.canvas_path = canvas_path
         points = canvas_path
         if isinstance(canvas_path, mpath.Path):
@@ -197,10 +205,9 @@ class ROIObject(Object):
         x = vertices[:, 0]
         y = vertices[:, 1]
         self.points = vertices
-        self.area = 0.5 * np.abs(
-            np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1))
-        )
-        self.center = np.array([np.mean(vertices[:, 0]), np.mean(vertices[:, 1])])      
+        self.area = 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
+        self.center = np.array([np.mean(vertices[:, 0]), np.mean(vertices[:, 1])])
+
 
 class GridObject(Object):
     def __init__(self, name: str, region):
@@ -210,23 +217,41 @@ class GridObject(Object):
         self.y_min = region["y"]
         self.x_max = region["x"] + region["w"]
         self.y_max = region["y"] + region["h"]
-        self.center = np.array([self.x_min + region["w"] / 2, self.y_min + region["h"] / 2])
-        
-        self.Path = self.points2Path([[self.x_min, self.y_min], [self.x_max, self.y_min], [self.x_max, self.y_max], [self.x_min, self.y_max]])
-        self.points = np.array([[self.x_min, self.y_min], [self.x_max, self.y_min], [self.x_max, self.y_max], [self.x_min, self.y_max]])
-        self.area = region["w"] * region["h"]
-    
+        self.center = np.array(
+            [self.x_min + region["w"] / 2, self.y_min + region["h"] / 2]
+        )
 
-class Animal(Object):        
+        self.Path = self.points2Path(
+            [
+                [self.x_min, self.y_min],
+                [self.x_max, self.y_min],
+                [self.x_max, self.y_max],
+                [self.x_min, self.y_max],
+            ]
+        )
+        self.points = np.array(
+            [
+                [self.x_min, self.y_min],
+                [self.x_max, self.y_min],
+                [self.x_max, self.y_max],
+                [self.x_min, self.y_max],
+            ]
+        )
+        self.area = region["w"] * region["h"]
+
+
+class Animal(Object):
     def get_keypoint_names(self):
         """
         keypoint names should be the basic attributes
         """
         pass
+
     def summary(self):
-        print (self.__class__.__name__)
+        print(self.__class__.__name__)
         for attr_name in self.__dict__:
-            print(f'{attr_name} has {self.__dict__[attr_name]}')
+            print(f"{attr_name} has {self.__dict__[attr_name]}")
+
 
 class AnimalSeq(Animal):
     """
@@ -237,12 +262,11 @@ class AnimalSeq(Animal):
     self._coords: arr potentially subset of keypoints
     self.wholebody: full set of keypoints. This is important for overlap relationship
     """
-    def __init__(self, animal_name: str,
-                 keypoints: ndarray, 
-                 keypoint_names: List[str]):        
+
+    def __init__(self, animal_name: str, keypoints: ndarray, keypoint_names: List[str]):
         self.name = animal_name
         self.whole_body: ndarray = keypoints
-        self.keypoint_names = keypoint_names      
+        self.keypoint_names = keypoint_names
         self._paths = []
         self.state = {}
         self.kinematics_types = ["speed", "acceleration"]
@@ -264,18 +288,23 @@ class AnimalSeq(Animal):
     def restore_roi_keypoint(self):
         self.keypoints = self.whole_body
 
-    def set_body_orientation_keypoints(self, body_orientation_keypoints: Dict[str, Any]):
+    def set_body_orientation_keypoints(
+        self, body_orientation_keypoints: Dict[str, Any]
+    ):
         self.neck_name = body_orientation_keypoints["neck"]
         self.tail_base_name = body_orientation_keypoints["tail_base"]
         self.animal_center_name = body_orientation_keypoints["animal_center"]
         self.support_body_orientation = True
-    def set_head_orientation_keypoints(self, head_orientation_keypoints: Dict[str, Any]):
+
+    def set_head_orientation_keypoints(
+        self, head_orientation_keypoints: Dict[str, Any]
+    ):
         self.nose_name = head_orientation_keypoints["nose"]
         self.neck_name = head_orientation_keypoints["neck"]
         self.support_head_orientation = True
 
     # all the properties cannot be cached because update could happen
-    def get_paths(self):   
+    def get_paths(self):
         paths = []
         for ind in range(self.whole_body.shape[0]):
             paths.append(self.get_path(ind))
@@ -297,7 +326,7 @@ class AnimalSeq(Animal):
         codes, verts = zip(*path_data)
         return mpath.Path(verts, codes)
 
-    def get_keypoints(self, average_keypoints = False)-> ndarray:
+    def get_keypoints(self, average_keypoints=False) -> ndarray:
         if average_keypoints:
             return np.nanmedian(self.keypoints, axis=1)
         return self.keypoints
@@ -305,25 +334,27 @@ class AnimalSeq(Animal):
     def get_center(self):
         return np.nanmedian(self.keypoints, axis=1).squeeze()
 
-    def get_xmin(self):       
+    def get_xmin(self):
         return np.nanmin(self.keypoints[..., 0], axis=1)
 
-    def get_xmax(self):        
+    def get_xmax(self):
         return np.nanmax(self.keypoints[..., 0], axis=1)
-        
-    def get_ymin(self):       
+
+    def get_ymin(self):
         return np.nanmin(self.keypoints[..., 1], axis=1)
 
-    def get_ymax(self):       
+    def get_ymax(self):
         return np.nanmax(self.keypoints[..., 1], axis=1)
 
     def get_keypoint_names(self):
         return self.keypoint_names
 
     def query_states(self, query: str) -> ndarray:
-        assert query in ["speed",
-                         "acceleration",
-                         "bodypart_pairwise_distance"], f"{query} is not supported"
+        assert query in [
+            "speed",
+            "acceleration",
+            "bodypart_pairwise_distance",
+        ], f"{query} is not supported"
 
         if query == "speed":
             self.state[query] = self.get_speed()
@@ -333,15 +364,15 @@ class AnimalSeq(Animal):
             self.state[query] = self.get_bodypart_wise_relation()
 
         return self.state[query]
-   
-    def get_velocity(self)-> ndarray:
+
+    def get_velocity(self) -> ndarray:
         keypoints = self.get_keypoints()
         velocity = np.diff(keypoints, axis=0) / 30
         velocity = np.concatenate([np.zeros((1,) + velocity.shape[1:]), velocity])
         assert len(velocity.shape) == 3
         return velocity
 
-    def get_speed(self)-> ndarray:
+    def get_speed(self) -> ndarray:
         keypoints = self.get_keypoints()
         velocity = (
             np.diff(keypoints, axis=0) / 30
@@ -350,33 +381,32 @@ class AnimalSeq(Animal):
         velocity = np.concatenate([np.zeros((1,) + velocity.shape[1:]), velocity])
         # Compute the speed from the velocity
         speed = np.linalg.norm(velocity, axis=-1)
-        speed = np.expand_dims(speed, axis = -1)
+        speed = np.expand_dims(speed, axis=-1)
         assert len(speed.shape) == 3
         return speed
 
-    def get_acceleration(self)-> ndarray:
-        velocities = self.get_velocity()      
+    def get_acceleration(self) -> ndarray:
+        velocities = self.get_velocity()
         accelerations = (
             np.diff(velocities, axis=0) / 30
         )  # divided by frame rate to get acceleration in pixels/second^2
         # Pad accelerations to match the original shape
         accelerations = np.concatenate(
-            [np.zeros((1,) + accelerations.shape[1:]), accelerations], axis = 0
+            [np.zeros((1,) + accelerations.shape[1:]), accelerations], axis=0
         )
         assert len(accelerations.shape) == 3
         return accelerations
-   
 
     def get_bodypart_wise_relation(self):
         keypoints = self.get_keypoints()
         diff = keypoints[..., np.newaxis, :, :] - keypoints[..., :, np.newaxis, :]
         sq_dist = np.sum(diff**2, axis=-1)
-        distances = np.sqrt(sq_dist)        
+        distances = np.sqrt(sq_dist)
         return distances
-    
 
-    def get_body_cs(self,
-               ):
+    def get_body_cs(
+        self,
+    ):
         # this only works for topview
         neck_index = self.keypoint_names.index(self.neck_name)
         tailbase_index = self.keypoint_names.index(self.tail_base_name)
@@ -397,6 +427,7 @@ class AnimalSeq(Animal):
         ]  # center back
 
         return animal_cs
+
     def calc_head_cs(self):
         nose_index = self.keypoint_names.index(self.nose_name)
         nose = self.whole_body[:, nose_index]

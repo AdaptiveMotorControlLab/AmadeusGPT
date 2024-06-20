@@ -5,11 +5,13 @@ SOURCE CODE: https://github.com/AdaptiveMotorControlLab/AmadeusGPT
 Apache-2.0 license
 """
 
-from amadeusgpt.implementation import AnimalBehaviorAnalysis
-from amadeusgpt.main import AMADEUS
-from amadeusgpt.version import __version__, VERSION
 from integration_modules import *
 from matplotlib import pyplot as plt
+
+from amadeusgpt.implementation import AnimalBehaviorAnalysis
+from amadeusgpt.main import AMADEUS
+from amadeusgpt.version import VERSION, __version__
+
 params = {
     "axes.labelsize": 10,
     "legend.fontsize": 10,
@@ -20,6 +22,6 @@ params = {
     "font.size": 10,
 }
 plt.rcParams.update(params)
-plt.rcParams['figure.subplot.hspace'] = 0.5  # Horizontal space between subplots
-plt.rcParams['figure.subplot.wspace'] = 0.5  # Vertical space between subplots
-plt.style.use('dark_background')    
+plt.rcParams["figure.subplot.hspace"] = 0.5  # Horizontal space between subplots
+plt.rcParams["figure.subplot.wspace"] = 0.5  # Vertical space between subplots
+plt.style.use("dark_background")

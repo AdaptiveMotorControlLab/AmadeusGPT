@@ -1,37 +1,39 @@
 import base64
-from io import BytesIO
-
-import matplotlib.pyplot as plt
-import requests
-from distutils.command import upload
-import streamlit as st
-from PIL import Image
+import gc
 import glob
 import io
+import json
 import os
 import pickle
 import tempfile
+from distutils.command import upload
+from io import BytesIO
+
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import requests
+import streamlit as st
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
-from amadeusgpt.main import create_amadeus
-from amadeusgpt.config import Config
-from amadeusgpt.analysis_objects.object import  Object, ROIObject
-import gc
-import json
-import base64
-import io
+
 import amadeusgpt
 from amadeusgpt.analysis_objects.analysis_factory import create_analysis
-
+from amadeusgpt.analysis_objects.object import Object, ROIObject
+from amadeusgpt.config import Config
+from amadeusgpt.main import create_amadeus
 
 LOG_DIR = os.path.join(os.path.expanduser("~"), "Amadeus_logs")
 VIDEO_EXTS = "mp4", "avi", "mov"
 current_script_directory = os.path.dirname(os.path.abspath(__file__))
-user_profile_path = os.path.join(current_script_directory, 'static', 'images', 'cat.png')
-bot_profile_path = os.path.join(current_script_directory,'static','images', 'chatbot.png')
+user_profile_path = os.path.join(
+    current_script_directory, "static", "images", "cat.png"
+)
+bot_profile_path = os.path.join(
+    current_script_directory, "static", "images", "chatbot.png"
+)
+
 
 def load_profile_image(image_path):
     if image_path.startswith("http"):
@@ -41,18 +43,19 @@ def load_profile_image(image_path):
         img = Image.open(image_path)
     return img
 
+
 def load_css():
     current_script_directory = os.path.dirname(os.path.abspath(__file__))
-    css_path = os.path.join(current_script_directory, 'static/styles/style.css')
+    css_path = os.path.join(current_script_directory, "static/styles/style.css")
     if os.path.exists(css_path):
-        st.markdown(f'<style>{open(css_path).read()}</style>', unsafe_allow_html=True)
+        st.markdown(f"<style>{open(css_path).read()}</style>", unsafe_allow_html=True)
     else:
         st.error(f"File not found: {css_path}")
 
 
-
 USER_PROFILE = load_profile_image(user_profile_path)
 BOT_PROFILE = load_profile_image(bot_profile_path)
+
 
 class BaseMessage:
     def __init__(self, json_entry=None):
@@ -71,13 +74,14 @@ class BaseMessage:
         return str(self.data)
 
     def format_caption(self, caption):
-        temp = caption.split('\n')
-        temp = [f'<li>{content}</li>' for content in temp]
-        ret =  '<ul>\n' + ''.join(temp).rstrip() + '\n</ul>'
+        temp = caption.split("\n")
+        temp = [f"<li>{content}</li>" for content in temp]
+        ret = "<ul>\n" + "".join(temp).rstrip() + "\n</ul>"
         return ret
 
     def render(self):
         raise NotImplementedError("Must implement this")
+
 
 class HumanMessage(BaseMessage):
     def __init__(self, query=None, json_entry=None):
@@ -93,9 +97,12 @@ class HumanMessage(BaseMessage):
         if len(self.data) > 0:
             for render_key, render_value in self.data.items():
                 if render_key == "query":
-                        st.markdown(
-                            f'<div class="panel">{render_value}</div>', unsafe_allow_html=True
-                        )
+                    st.markdown(
+                        f'<div class="panel">{render_value}</div>',
+                        unsafe_allow_html=True,
+                    )
+
+
 class AIMessage(BaseMessage):
     def __init__(self, amadeus_answer=None, json_entry=None):
         self.rendered = False
@@ -104,7 +111,7 @@ class AIMessage(BaseMessage):
         else:
             self.data = {}
         self.data["role"] = "ai"
-        if not isinstance(amadeus_answer, dict):           
+        if not isinstance(amadeus_answer, dict):
             amadeus_answer = amadeus_answer.to_dict()
         self.data.update(amadeus_answer)
 
@@ -126,62 +133,69 @@ class AIMessage(BaseMessage):
         --------
         """
 
-        render_keys = ['query', 'chain_of_thought', 'error_message', 'function_rets', 'plots', 'out_videos']
-        #for render_key, render_value in self.data.items():
+        render_keys = [
+            "query",
+            "chain_of_thought",
+            "error_message",
+            "function_rets",
+            "plots",
+            "out_videos",
+        ]
+        # for render_key, render_value in self.data.items():
         if len(self.data) > 0:
             for render_key in render_keys:
                 if render_key not in self.data:
                     continue
-                render_value = self.data[render_key]            
+                render_value = self.data[render_key]
                 if render_value is None:
-                    # skip empty field 
+                    # skip empty field
                     continue
                 if render_key == "function_rets":
                     if isinstance(render_key, (list, tuple)):
                         for ret in render_value:
                             for key, value in ret.items():
-                                st.code(f"Result\n {value}\n ", language='python')
+                                st.code(f"Result\n {value}\n ", language="python")
                     else:
-                        st.code(f"Result\n {render_value}\n ", language='python')                    
-                elif render_key == 'error_message':
-                    st.markdown(f"The error says: {render_value}\n ")                                  
+                        st.code(f"Result\n {render_value}\n ", language="python")
+                elif render_key == "error_message":
+                    st.markdown(f"The error says: {render_value}\n ")
                 elif render_key == "chain_of_thought":
                     # there should be a better matching than this
                     text = render_value
-                    lines = text.split('\n')
+                    lines = text.split("\n")
                     inside_code_block = False
                     code_block = []
                     for line in lines:
-                        if line.strip().startswith("```python"): 
-                            inside_code_block = True 
+                        if line.strip().startswith("```python"):
+                            inside_code_block = True
                             code_block = []
                         elif line.strip().startswith("```") and inside_code_block:
                             inside_code_block = False
-                            st.code('\n'.join(code_block), language='python')
+                            st.code("\n".join(code_block), language="python")
                         elif inside_code_block:
                             code_block.append(line)
                         else:
                             st.markdown(line)
-                    sandbox = self.data['sandbox']
+                    sandbox = self.data["sandbox"]
                     qa_message = sandbox.code_execution(self.data)
-                    if qa_message['error_message'] is not None:
+                    if qa_message["error_message"] is not None:
                         # make the error message more visible with different color
                         st.markdown(f"Error: {qa_message['error_message']}\n ")
                         # Remind users we are fixing the error by self debuging
                         st.markdown(f"Let me try to fix the error by self-debugging\n ")
                         for i in range(1):
-                            sandbox.llms['self_debug'].speak(sandbox)
+                            sandbox.llms["self_debug"].speak(sandbox)
                             qa_message = sandbox.code_execution(qa_message)
                     # do not need to execute the block one more time
                     if not self.rendered:
-                        self.rendered = True                       
+                        self.rendered = True
                         sandbox.render_qa_message(qa_message)
-                                      
+
                 elif render_key == "ndarray":
                     for content_array in render_value:
                         content_array = content_array.squeeze()
                         # no point of showing array that's large
-                        
+
                         hint_message = "Here is the output:"
                         st.markdown(
                             f'<div class="panel">{hint_message}</div>',
@@ -197,7 +211,9 @@ class AIMessage(BaseMessage):
                                 df = pd.DataFrame(content_array)
                                 st.dataframe(df, use_container_width=True)
                             else:
-                                raise ValueError("returned array cannot be non 2D array.")               
+                                raise ValueError(
+                                    "returned array cannot be non 2D array."
+                                )
                 elif render_key == "plots":
                     # are there better ways in streamlit now to support plot display?
                     for fig, axe in render_value:
@@ -206,7 +222,7 @@ class AIMessage(BaseMessage):
                 elif render_key == "out_videos":
                     for video_path in render_value:
                         st.video(video_path)
-                       
+
 
 class Messages:
     """
@@ -284,24 +300,23 @@ class Messages:
 
 
 def get_amadeus_instance(example):
-    # construct the config from the current example    
+    # construct the config from the current example
     # get the root directory of the the module amadeusgpt
-    config = get_config(example)   
+    config = get_config(example)
     amadeus_instance = create_amadeus(config)
     return amadeus_instance
 
+
 def ask_amadeus(question):
-    amadeus = get_amadeus_instance(st.session_state["example"])    
-    qa_message = amadeus.step(
-        question
-    )
-   
+    amadeus = get_amadeus_instance(st.session_state["example"])
+    qa_message = amadeus.step(question)
+
     return qa_message
 
 
 # caching display roi will make the roi stick to
 # the display of initial state
-def display_roi(analysis,example):
+def display_roi(analysis, example):
     analysis = create_analysis(get_config(example))
     roi_objects = analysis.get_roi_objects()
 
@@ -346,10 +361,11 @@ def update_roi(analysis, result_json, ratios):
             points[:, 0] = points[:, 0] * w_ratio
             points[:, 1] = points[:, 1] * h_ratio
             _object = ROIObject(f"ROI{count}", canvas_path=points)
-            count += 1        
+            count += 1
             analysis.object_manager.add_roi_object(_object)
-            
-    analysis.object_manager.save_roi_objects('temp_roi_objects.pickle')
+
+    analysis.object_manager.save_roi_objects("temp_roi_objects.pickle")
+
 
 def place_st_canvas(analysis, key, scene_image):
 
@@ -384,20 +400,21 @@ def place_st_canvas(analysis, key, scene_image):
         update_roi(analysis, canvas_result.json_data, (w_ratio, h_ratio))
 
     if len(analysis.object_manager.get_roi_object_names()) > 0:
-        display_roi(analysis, key)    
+        display_roi(analysis, key)
+
 
 def chat_box_submit():
     if "user_input" in st.session_state:
         query = st.session_state["user_input"]
         qa_message = ask_amadeus(query)
 
-        user_message = HumanMessage(query=qa_message['query'])
+        user_message = HumanMessage(query=qa_message["query"])
         amadeus_message = AIMessage(amadeus_answer=qa_message)
 
         st.session_state["messages"].append(user_message)
         st.session_state["messages"].append(amadeus_message)
 
-    
+
 def rerun_prompt(query, ind):
     messages = st.session_state["messages"]
     amadeus_answer = ask_amadeus(query)
@@ -413,7 +430,7 @@ def render_messages():
     example = st.session_state["example"]
     messages = st.session_state["messages"]
 
-    if len(messages) == 0 and example!="Custom":
+    if len(messages) == 0 and example != "Custom":
         example_history_json = os.path.join(f"examples/{example}/example.json")
         messages.parse_from_json(example_history_json)
 
@@ -445,7 +462,7 @@ def render_messages():
         key="user_input",
         on_submit=chat_box_submit,
         disabled=disabled,
-    )   
+    )
     csv = None
     return csv
 
@@ -465,7 +482,7 @@ def update_df_data(new_item, index_to_update, df, csv_file):
 
 
 def get_scene_image(config):
-    analysis = create_analysis(config) 
+    analysis = create_analysis(config)
 
     scene_image = analysis.visual_manager.get_scene_image()
     if scene_image is not None:
@@ -473,36 +490,40 @@ def get_scene_image(config):
         buffered = io.BytesIO()
         scene_image.save(buffered, format="JPEG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
-        return img_str 
+        return img_str
 
 
 def get_config(example):
 
     root_dir = os.path.dirname(amadeusgpt.__file__)
-    if example == 'Horse':
-        template_config_path = os.path.join(root_dir, 'configs', 'Horse_template.yaml')
-    elif example == 'MausHaus':
-        template_config_path = os.path.join(root_dir, 'configs', 'maushaus_template.yaml')
-    elif example == 'EPM':
-        template_config_path = os.path.join(root_dir, 'configs', 'EPM_template.yaml')
-    elif example == 'MABe':
-        template_config_path = os.path.join(root_dir, 'configs', 'mabe_template.yaml')
+    if example == "Horse":
+        template_config_path = os.path.join(root_dir, "configs", "Horse_template.yaml")
+    elif example == "MausHaus":
+        template_config_path = os.path.join(
+            root_dir, "configs", "maushaus_template.yaml"
+        )
+    elif example == "EPM":
+        template_config_path = os.path.join(root_dir, "configs", "EPM_template.yaml")
+    elif example == "MABe":
+        template_config_path = os.path.join(root_dir, "configs", "mabe_template.yaml")
     elif example == "Custom":
-        template_config_path = os.path.join(root_dir, 'configs', 'Custom_template.yaml')
+        template_config_path = os.path.join(root_dir, "configs", "Custom_template.yaml")
 
     config = Config(template_config_path)
-        
+
     return config
+
 
 def save_uploaded_file(uploaded_file, save_dir):
 
-    filename = uploaded_file.name    
+    filename = uploaded_file.name
     save_path = os.path.join(save_dir, filename)
     if not os.path.exists(save_path):
         with open(save_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
-        
+
     return save_path
+
 
 def render_page_by_example(example):
     # get the config
@@ -512,7 +533,9 @@ def render_page_by_example(example):
     config = get_config(example)
 
     current_script_directory = os.path.dirname(os.path.abspath(__file__))
-    logo_path = os.path.join(current_script_directory, 'static', 'images', 'amadeusgpt_logo.png')
+    logo_path = os.path.join(
+        current_script_directory, "static", "images", "amadeusgpt_logo.png"
+    )
     st.image(
         logo_path,
         caption=None,
@@ -524,10 +547,8 @@ def render_page_by_example(example):
     )
     # st.markdown("# Welcome to AmadeusGPT🎻")
 
-    if example == 'Custom':
-        st.markdown(
-            "Provide your own video and keypoint file (in pairs)"
-        )
+    if example == "Custom":
+        st.markdown("Provide your own video and keypoint file (in pairs)")
         uploaded_keypoint_file = st.file_uploader(
             "Choose keypoint files",
             ["h5"],
@@ -541,18 +562,22 @@ def render_page_by_example(example):
 
         if uploaded_keypoint_file is not None:
             save_dir = os.path.join("examples", example)
-            config['keypoint_info']['keypoint_file_path'] = save_uploaded_file(uploaded_keypoint_file, save_dir)
-            config['video_info']['video_file_path'] = save_uploaded_file(uploaded_video_file, save_dir)
-   
+            config["keypoint_info"]["keypoint_file_path"] = save_uploaded_file(
+                uploaded_keypoint_file, save_dir
+            )
+            config["video_info"]["video_file_path"] = save_uploaded_file(
+                uploaded_video_file, save_dir
+            )
+
         ###### USER INPUT PANEL ######
         # get user input once getting the uploaded files
         if uploaded_keypoint_file is None or uploaded_video_file is None:
             disabled = True
         else:
             disabled = False
-        
+
         if disabled:
-            st.warning("Please upload a file before entering text.")             
+            st.warning("Please upload a file before entering text.")
 
     elif example == "EPM":
         st.markdown(
@@ -572,9 +597,10 @@ def render_page_by_example(example):
             "- Here are some example queries you might consider: 'The <|open arm|> is the ROI0. How much time does the mouse spend in the open arm?' (NOTE here you can re-draw an ROI0 if you want. Be sure to click 'finish drawing') | 'Define head_dips as a behavior where the mouse's mouse_center and neck are in ROI0 which is open arm while head_midpoint is outside ROI1 which is the cross-shape area. When does head_dips happen and what is the number of bouts for head_dips?' "
         )
         st.markdown("- ⬇️🎥 Watch this short clip on how to draw the ROI(s)🤗")
-        
-        st.video(os.path.join(current_script_directory,'static/customEPMprompt_short.mp4'))
 
+        st.video(
+            os.path.join(current_script_directory, "static/customEPMprompt_short.mp4")
+        )
 
     elif example == "MABe":
         st.markdown(
@@ -614,25 +640,25 @@ def render_page_by_example(example):
         st.markdown(
             "This horse video is part of a benchmark by Mathis et al 2021 https://arxiv.org/abs/1909.11229."
         )
-    
+
     config = get_config(example)
-    analysis = create_analysis(config)    
+    analysis = create_analysis(config)
 
     if st.session_state["example"] != example:
         st.session_state["messages"] = Messages()
     st.session_state["example"] = example
-    
+
     scene_image_path = get_scene_image(config)
-    video_file = config['video_info']['video_file_path']
+    video_file = config["video_info"]["video_file_path"]
 
     if scene_image_path is not None:
-        img_data =  base64.b64decode(scene_image_path)
+        img_data = base64.b64decode(scene_image_path)
         image_stream = io.BytesIO(img_data)
         image_stream.seek(0)
         scene_image = Image.open(image_stream)
     else:
         scene_image = None
-        
+
     col1, col2, col3 = st.columns([2, 1, 1])
 
     # if example == "MausHaus" or st.session_state['enable_SAM'] == "Yes":
@@ -662,21 +688,24 @@ def render_page_by_example(example):
     ):
         place_st_canvas(analysis, example, scene_image)
 
-    if st.session_state["example"] == 'Custom' and scene_image:
-        place_st_canvas(analysis, example, scene_image)    
+    if st.session_state["example"] == "Custom" and scene_image:
+        place_st_canvas(analysis, example, scene_image)
 
     if example == "EPM" or example == "MausHaus":
         # will read the keypoints from h5 file to avoid hard coding
         with st.sidebar:
-            topviewimage = os.path.join(current_script_directory, 'static', 'images', 'supertopview.png')
+            topviewimage = os.path.join(
+                current_script_directory, "static", "images", "supertopview.png"
+            )
             st.image(topviewimage)
-            #st.image("static/images/supertopview.png")
+            # st.image("static/images/supertopview.png")
     with st.sidebar:
         st.write("Keypoints:")
         st.write(analysis.get_keypoint_names())
 
     render_messages()
     gc.collect()
+
 
 def save_figure_to_tempfile(fig):
     # save the figure

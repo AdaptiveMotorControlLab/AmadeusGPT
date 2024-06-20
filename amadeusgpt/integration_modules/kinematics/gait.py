@@ -1,10 +1,13 @@
-import numpy as np
-from scipy import signal
 from typing import List
-from amadeusgpt.programs.api_registry import register_integration_api
+
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.collections import LineCollection
+from scipy import signal
+
+from amadeusgpt.programs.api_registry import register_integration_api
+
 
 def find_peaks(x, min_dist=50, detrend=False):
     if detrend:
@@ -28,7 +31,6 @@ def autocorr(x, axis=-1):
 
 
 def get_events(analysis, event, kpt_names, min_dist=None, detrend=False):
-
 
     if event not in ("contact", "lift"):
         raise ValueError('`event` must be either "contact" or "lift".')
@@ -58,7 +60,9 @@ def calc_stride_durations(contacts):
 def calc_stride_lengths(analysis, keypoints, hoof_kpt_names, contacts):
     stride_lengths = []
     for hoof, contacts_ in zip(hoof_kpt_names, contacts):
-        x = keypoints[contacts_, :, analysis.get_keypoint_names().index(hoof), 0].flatten()
+        x = keypoints[
+            contacts_, :, analysis.get_keypoint_names().index(hoof), 0
+        ].flatten()
         stride_lengths.append(np.diff(x))
     return stride_lengths
 
@@ -79,7 +83,7 @@ def calc_duty_factors(contacts, lifts):
 
 def get_stances(contacts, lifts):
     stances = []
-    for contacts_, lifts_ in zip(contacts, lifts):     
+    for contacts_, lifts_ in zip(contacts, lifts):
         temp = set()
         for c1, c2 in zip(contacts_[:-1], contacts_[1:]):  # Individual strides
             lift = lifts_[(lifts_ > c1) & (lifts_ < c2)]
@@ -98,7 +102,7 @@ def get_stances(contacts, lifts):
 @register_integration_api
 def run_gait_analysis(self, limb_keypoint_names: List[str]) -> dict:
     """
-    This function computse an animal's gait parameters given a list of distal keypoints. 
+    This function computse an animal's gait parameters given a list of distal keypoints.
     Parameters
     ----------
     limb_keypoint_names: List[str], list of the names of the distal keypoints. Need to be at least 2 keypoints.
@@ -121,9 +125,9 @@ def run_gait_analysis(self, limb_keypoint_names: List[str]) -> dict:
     }
 
 
-
 def _make_line_collection(
-    coords, links, start=0, end=-1, inds=None, color_stance="plum", alpha=0.5):
+    coords, links, start=0, end=-1, inds=None, color_stance="plum", alpha=0.5
+):
     color = mcolors.to_rgb("gray")
     colors = np.array([color] * len(coords))
     if inds is not None:
@@ -133,11 +137,12 @@ def _make_line_collection(
         colors[mask] = mcolors.to_rgb(color_stance)
     sl = slice(start, end)
     colors = colors[sl]
-   
+
     segs = coords[sl, links].reshape((-1, 2, 2))
     colors = np.repeat(colors, len(links), axis=0)
     coll = LineCollection(segs, colors=colors, alpha=alpha)
     return coll, segs
+
 
 @register_integration_api
 def plot_gait_analysis_results(
@@ -153,12 +158,11 @@ def plot_gait_analysis_results(
     """
     fig, ax = plt.subplots(sharex=True, sharey=True)
     coords = self.get_keypoints()[:, 0]
-   
+
     if gait_analysis_results["stances"] == [[]]:
         return fig, ax
     stance_inds = gait_analysis_results["stances"][0]
 
-    
     for spine in ax.spines.values():
         spine.set_visible(False)
     ax.set_xticks([])
@@ -170,7 +174,7 @@ def plot_gait_analysis_results(
         skeleton.append(
             (
                 self.get_keypoint_names().index(kpt1),
-                self.get_keypoint_names().index(kpt2)
+                self.get_keypoint_names().index(kpt2),
             ),
         )
     coll, segs = _make_line_collection(
@@ -184,4 +188,3 @@ def plot_gait_analysis_results(
     ax.add_collection(coll)
     ax.set_ylabel("Limb")
     return fig, ax
-

@@ -1,6 +1,4 @@
-def _get_system_prompt(
-    user_input,  thought_process, answer
-):
+def _get_system_prompt(user_input, thought_process, answer):
     system_prompt = f""" You are an expert on animal behavior analysis. Your job is to interpret the answer we give to our users who are neuroscinetist that are asking questinos about animal behaviors.
     The questions was {user_input}
     The thought process for the answer was {thought_process}

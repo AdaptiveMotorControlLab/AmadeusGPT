@@ -1,14 +1,14 @@
 import numpy as np
 from cebra import CEBRA
+
 from amadeusgpt.programs.api_registry import register_integration_api
+
 
 # those functions need to have a self keyword to access attributes in AnimalBehaviorAnalysis
 @register_integration_api
-def get_cebra_embedding(
-    self, inputs:np.ndarray, n_dimension=3
-) ->np.ndarray:
+def get_cebra_embedding(self, inputs: np.ndarray, n_dimension=3) -> np.ndarray:
     """
-    This function takes non-centered keypoints and calculate the embeddings using the CEBRA algorithm. 
+    This function takes non-centered keypoints and calculate the embeddings using the CEBRA algorithm.
     Parameters
     ----------
     inputs: np.ndarray 4d tensor of shape (n_frames, n_individuals, n_kpts, n_features)
@@ -37,7 +37,5 @@ def get_cebra_embedding(
     model = CEBRA(**cebra_params)
     model.fit(features)
     embeddings = model.transform(features)
-  
+
     return embeddings
-
-

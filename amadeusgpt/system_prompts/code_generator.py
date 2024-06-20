@@ -1,9 +1,9 @@
 def _get_system_prompt(
-        query,
-        core_api_docs, 
-        task_program_docs, 
-        keypoint_names,
-                       ):
+    query,
+    core_api_docs,
+    task_program_docs,
+    keypoint_names,
+):
     system_prompt = f""" 
 You are helpful AI assistant. Your job is to answer user queries. 
 Importantly, before you write the code, you need to explain whether the question can be answered accurately by code. If not,  ask users to give more information.
