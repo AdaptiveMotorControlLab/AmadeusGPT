@@ -3,24 +3,19 @@ import os
 import re
 import time
 import traceback
-
-import openai
-
 from amadeusgpt.utils import AmadeusLogger, search_generated_func
-
 from .base import AnalysisObject
-
+import openai
+from openai import OpenAI
 
 class LLM(AnalysisObject):
-    prompt_tokens = 0
-    completion_tokens = 0
     total_tokens = 0
     prices = {"gpt-4o": {"input": 5 / 10**6, "output": 15 / 10**6}}
     total_cost = 0
 
     def __init__(self, config):
         self.config = config
-        self.max_tokens = config.get("max_tokens", 2000)
+        self.max_tokens = config.get("max_tokens", 6000)
         self.gpt_model = config.get("gpt_model", "gpt-4o")
         self.keep_last_n_messages = config.get("keep_last_n_messages", 2)
 
@@ -46,9 +41,7 @@ class LLM(AnalysisObject):
         # if openai version is less than 1
         return self.connect_gpt_oai_1(messages, **kwargs)
 
-    def connect_gpt_oai_1(self, messages, **kwargs):
-        import openai
-        from openai import OpenAI
+    def connect_gpt_oai_1(self, messages, **kwargs):        
 
         if self.config.get("use_streamlit", False):
             if "OPENAI_API_KEY" in os.environ:
@@ -75,6 +68,10 @@ class LLM(AnalysisObject):
         # the usage was recorded from the last run. However, since we have many LLMs that
         # share the call of this function, we will need to store usage and retrieve them from the database class
         num_retries = 3
+        print ('number of messages to send', len(messages))
+        print ('print the message')
+        for message in messages:
+            print (message)
         for _ in range(num_retries):
             try:
                 json_data = {
@@ -88,22 +85,10 @@ class LLM(AnalysisObject):
 
                 response = client.chat.completions.create(**json_data)
 
-                LLM.prompt_tokens += response.usage.prompt_tokens
-                LLM.completion_tokens += response.usage.completion_tokens
-                LLM.total_tokens = LLM.prompt_tokens + LLM.completion_tokens
-                current_cost = (
-                    LLM.prices[self.gpt_model]["input"] * LLM.prompt_tokens
-                    + LLM.prices[self.gpt_model]["output"] * LLM.completion_tokens
-                )
-                LLM.total_cost += current_cost
-                print(
-                    "cost of the current api call",
-                    round(
-                        LLM.prices[self.gpt_model]["input"] * LLM.prompt_tokens
-                        + LLM.prices[self.gpt_model]["output"] * LLM.completion_tokens,
-                        2,
-                    ),
-                    "$",
+                LLM.total_tokens =  LLM.total_tokens + response.usage.prompt_tokens + response.usage.completion_tokens
+                LLM.total_cost += (
+                    LLM.prices[self.gpt_model]["input"] * response.usage.prompt_tokens
+                    + LLM.prices[self.gpt_model]["output"] * response.usage.completion_tokens
                 )
                 print("current total cost", round(LLM.total_cost, 2), "$")
                 print("current total tokens", LLM.total_tokens)
@@ -152,6 +137,7 @@ class LLM(AnalysisObject):
 
                 num_AI_messages = (len(self.context_window) - 1) // 2
                 if num_AI_messages == self.keep_last_n_messages:
+                    print ("doing active forgetting")
                     # we forget the oldest AI message and corresponding answer
                     self.context_window.pop(1)
                     self.context_window.pop(1)
@@ -211,7 +197,7 @@ class CodeGenerationLLM(LLM):
 
         self.update_system_prompt(sandbox)
         self.update_history("user", query)
-        response = self.connect_gpt(self.context_window, max_tokens=700)
+        response = self.connect_gpt(self.context_window, max_tokens=2000)
         text = response.choices[0].message.content.strip()
         self.update_history("assistant", text)
 

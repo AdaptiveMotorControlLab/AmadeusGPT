@@ -74,6 +74,7 @@ FORMATTING:
 4) Make sure you do not import any libraries in your code. All needed libraries are imported already.
 5) Make sure you disintuigh positional and keyword arguments when you call functions in api docs
 6) If you are writing code that uses matplotlib to plot, make sure you comment shape of the data to be plotted to double-check
+7) if your plotting code plots coordinates of keypoints, make sure you invert y axis so that the plot is consistent with the image
 
 If the question can be answered by code:
 - YOU MUST only write one function and no other classes or functions when you write code.
