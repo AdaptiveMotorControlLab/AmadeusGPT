@@ -60,7 +60,6 @@ class AMADEUS:
         if len(sorted_query_results) == 0:
             return None
         modules = []
-        print("sorted_query_results", sorted_query_results)
         for i in range(min(self.load_module_top_k, len(sorted_query_results))):
             query_result = sorted_query_results[i]
             query_module = query_result[0]

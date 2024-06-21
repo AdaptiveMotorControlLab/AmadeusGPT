@@ -226,7 +226,6 @@ The usage and the parameters of the functions are provided."""
             ret += f"{name}({parameters}): \n{description}\n"
 
         ret += "\n```"
-        print(ret)
         return ret
 
     def get_task_program_docs(self):
