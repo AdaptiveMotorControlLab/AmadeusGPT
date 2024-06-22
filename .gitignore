@@ -1,7 +1,7 @@
 *~
-*.mp4
-*.h5
-*.pickle
+# *.mp4 
+# *.h5  
+# *.pickle 
 *.pth
 __pycache__
 .env
