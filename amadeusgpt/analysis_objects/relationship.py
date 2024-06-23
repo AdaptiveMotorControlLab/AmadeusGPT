@@ -132,7 +132,7 @@ class AnimalObjectRelationship(Relationship):
     ) -> Dict[str, Any]:
         if self.sender_animal_bodyparts_names is not None:
             # the keypoints of animal get updated when we update the roi bodypart names
-            animal.update_roi_keypoint_names(self.sender_animal_bodyparts_names)
+            animal.update_roi_keypoint_by_names(self.sender_animal_bodyparts_names)
 
         c = other_obj.get_center()
 
