@@ -229,11 +229,12 @@ class CodeGenerationLLM(LLM):
         task_program_docs = sandbox.get_task_program_docs()
         query_block = sandbox.get_query_block()
 
-        keypoint_names = sandbox.exec_namespace[
+        behavior_analysis = sandbox.exec_namespace[
             "behavior_analysis"
-        ].get_keypoint_names()
+        ]
+       
         self.system_prompt = _get_system_prompt(
-            query_block, core_api_docs, task_program_docs, keypoint_names
+            query_block, core_api_docs, task_program_docs, behavior_analysis
         )
 
         # update both history and context window
