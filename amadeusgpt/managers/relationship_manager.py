@@ -52,7 +52,7 @@ class RelationshipManager(Manager):
         for animal in animals:
             if animal_bodyparts_names is not None:
                 # the keypoints of animal get updated when we update the roi bodypart names
-                animal.update_roi_keypoint_names(animal_bodyparts_names)
+                animal.update_roi_keypoint_by_names(animal_bodyparts_names)
             for object in objs:
                 animal_object_relations = AnimalObjectRelationship(
                     animal, object, animal_bodyparts_names

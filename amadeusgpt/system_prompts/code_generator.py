@@ -2,8 +2,10 @@ def _get_system_prompt(
     query,
     core_api_docs,
     task_program_docs,
-    keypoint_names,
+    behavior_analysis,
 ):
+    keypoint_names = behavior_analysis.get_keypoint_names()
+    roi_object_names = behavior_analysis.get_roi_object_names()
     system_prompt = f""" 
 You are helpful AI assistant. Your job is to answer user queries. 
 Importantly, before you write the code, you need to explain whether the question can be answered accurately by code. If not,  ask users to give more information.
@@ -66,6 +68,7 @@ Now that you have seen the examples, following is the information you need to wr
 {query}\n{core_api_docs}\n{task_program_docs}\n
 
 The keypoint names for the animals are: {keypoint_names}
+Available ROI objects are: {roi_object_names}
 
 FORMATTING:
 1) If you are asked to provide plotting code, make sure you don't call plt.show() but return a tuple figure, axs
