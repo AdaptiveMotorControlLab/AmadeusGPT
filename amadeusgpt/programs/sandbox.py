@@ -399,7 +399,7 @@ The usage and the parameters of the functions are provided."""
 
             else:
                 for e in function_rets:
-                    if isinstance(e, list) and isinstance(e[0], BaseEvent):
+                    if isinstance(e, list) and len(e) > 0 and isinstance(e[0], BaseEvent):
                         # here we need to understand what we do with the events
                         # we have ethogram plot, keypoint plot, head orientation plot, scene plot
                         # and animal interaction plot

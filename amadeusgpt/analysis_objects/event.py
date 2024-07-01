@@ -163,20 +163,20 @@ end: {self.end}
         Get list of events that are negates of those events
         The core attributes must stay the same
         """
-        # mask = np.zeros_like(events[0].mask, dtype=bool)
         mask = np.zeros(events[0].data_length, dtype=bool)
         sender_animal_name = events[0].sender_animal_name
         for event in events:
             assert sender_animal_name == event.sender_animal_name
         video_file_path = events[0].video_file_path
         for event in events:
-            mask |= event.mask
+            mask |= event.generate_mask()
         negate_mask = ~mask
 
-        start, end = cls.get_start_end_from_mask(negate_mask)
+        
 
         negate_events = Event.mask2events(
-            start, end, video_file_path, sender_animal_name
+            negate_mask, video_file_path, sender_animal_name,
+            set(), set(), smooth_window_size = 1
         )
 
         return negate_events
