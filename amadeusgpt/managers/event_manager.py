@@ -320,6 +320,7 @@ class EventManager(Manager):
                 _comparison = comparison_operator + "".join(
                     query.split(comparison_operator)[1:]
                 )
+               
                 events = self.get_events_from_relationship(
                     relationship, _query, _comparison, smooth_window_size
                 )

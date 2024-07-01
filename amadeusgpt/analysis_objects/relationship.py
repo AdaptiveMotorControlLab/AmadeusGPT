@@ -71,6 +71,7 @@ def calc_angle_in_egocentric_animal(mouse_cs_inv, p):
         p_in_mouse[:, 1], p_in_mouse[:, 0]
     )  # relative angle between the object and the mouse body axis
     theta = np.rad2deg(theta % (2 * np.pi))
+ 
     return theta
 
 
@@ -91,6 +92,7 @@ class Relationship(AnalysisObject):
         return self.__name__
 
     def query_relationship(self, query_name: str) -> ndarray:
+
         ret = self.data[query_name]
         return ret
 
@@ -239,7 +241,7 @@ class AnimalAnimalRelationship(Relationship):
             mouse_cs_inv[valid] = np.linalg.inv(mouse_cs[valid])
             head_cs_inv.append(mouse_cs_inv)
             head_angles = calc_angle_in_egocentric_animal(
-                head_cs_inv, sender_animal.get_center()
+                head_cs_inv, receiver_animal.get_center()
             )
 
         relative_velocity = (
@@ -261,7 +263,7 @@ class AnimalAnimalRelationship(Relationship):
 
         if head_angles is not None:
             ret["relative_head_angle"] = head_angles
-            # print ('head angle', head_angles)
+
         if angles is not None:
             ret["relative_angle"] = angles
         if orientation is not None:
