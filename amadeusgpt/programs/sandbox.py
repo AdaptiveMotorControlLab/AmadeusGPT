@@ -372,12 +372,12 @@ The usage and the parameters of the functions are provided."""
     def register_llm(self, name, llm):
         self.llms[name] = llm
 
-    def events_to_videos(self, events, query):
+    def events_to_videos(self, events, function_name):
         behavior_analysis = self.exec_namespace["behavior_analysis"]
         visual_manager = behavior_analysis.visual_manager
         out_folder = "event_clips"
         os.makedirs(out_folder, exist_ok=True)
-        behavior_name = "_".join(query.split(" "))
+        behavior_name = "_".join(function_name.split(" "))
         video_file = self.config["video_info"]["video_file_path"]
         return visual_manager.generate_video_clips_from_events(
             out_folder, video_file, events, behavior_name
@@ -411,7 +411,7 @@ The usage and the parameters of the functions are provided."""
                             )
                         )
                         qa_message["out_videos"].append(
-                            self.events_to_videos(e, qa_message["query"])
+                            self.events_to_videos(e, self.get_function_name_from_string(qa_message["code"]))
                         )
 
         elif (
@@ -429,7 +429,7 @@ The usage and the parameters of the functions are provided."""
                 visual_manager.get_ethogram_visualization(events=function_rets)
             )
             qa_message["out_videos"].append(
-                self.events_to_videos(function_rets, qa_message["query"])
+                self.events_to_videos(function_rets, self.get_function_name_from_string(qa_message["code"]))
             )
         else:
             pass
@@ -521,19 +521,20 @@ def render_temp_message(query, sandbox):
         print("after code execution")
         print(len(qa_message["function_rets"]))
         events = qa_message["function_rets"]
-        # for event in events:
-        #     print (event.start, event.end)
-        # qa_message = sandbox.render_qa_message(qa_message)
-
+        for event in events:
+            print (event)
+      
     if qa_message["function_rets"] is not None:
         st.markdown(qa_message["function_rets"])
 
     plots = qa_message["plots"]
+    print ('plots', plots)
     for fig, axe in plots:
         filename = save_figure_to_tempfile(fig)
         st.image(filename, width=600)
 
     videos = qa_message["out_videos"]
+    print ('videos', videos)
     for video in videos:
         st.video(video)
 

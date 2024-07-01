@@ -2,7 +2,7 @@
     {
         "role": "human",
         "error": NaN,
-        "query": "Define <|chases|> as a social behavior where closest distance between this animal and other animals is less than 40 pixels and the angle between this and other animals have to be less than 30 and this animal has to travel faster than 2."
+        "query": "Define <|chases|> as a social behavior where closest distance between this animal and other animals is less than 40 pixels and the angle between this and other animals have to be less than 30 and this animal has to travel faster than 0.2."
     },
     {
         "role": "human",

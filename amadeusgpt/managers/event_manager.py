@@ -192,6 +192,8 @@ class EventManager(Manager):
             state = self.animal_manager.query_animal_states(
                 sender_animal_name, query_name
             )
+           
+
             # must be of shape (n_frames, n_kpts, n_dim)
             assert (
                 len(state.shape) == 3
@@ -199,6 +201,7 @@ class EventManager(Manager):
             if len(state.shape) == 3:
                 state = np.nanmedian(state, axis=(1, 2))
             relation_string = "state" + comparison
+        
             mask = eval(relation_string)
 
             events = Event.mask2events(
