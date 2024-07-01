@@ -233,6 +233,7 @@ class EventManager(Manager):
 
         mask = relationship.query_relationship(relation_query)
 
+        #print ('mask', mask)
         # determine whether the mask is a numpy of float or numpy of boolean
 
         if mask.dtype != bool:
@@ -323,7 +324,7 @@ class EventManager(Manager):
                 _comparison = comparison_operator + "".join(
                     query.split(comparison_operator)[1:]
                 )
-               
+             
                 events = self.get_events_from_relationship(
                     relationship, _query, _comparison, smooth_window_size
                 )
