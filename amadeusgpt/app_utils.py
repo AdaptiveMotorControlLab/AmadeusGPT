@@ -217,8 +217,6 @@ class AIMessage(BaseMessage):
                         filename = save_figure_to_tempfile(fig)
                         st.image(filename, width=600)
                 elif render_key == "out_videos":
-                    print ('out_videos')
-                    print (render_value)
                     for video_path in render_value:
                         if os.path.exists(video_path):
                             st.video(video_path)

@@ -549,4 +549,66 @@ if __name__ == "__main__":
     amadeus = create_amadeus(config)
     sandbox = amadeus.sandbox
 
-    render_temp_message('random', sandbox)
+    def get_chases_events(config: Config):
+        '''
+        Parameters:
+        ----------
+        config: Config
+        '''
+        # create_analysis returns an instance of AnimalBehaviorAnalysis
+        analysis = create_analysis(config)
+
+        # Get events where the closest distance between animals is less than 40 pixels
+        closest_distance_events = analysis.get_animals_animals_events(
+            cross_animal_query_list=['closest_distance<40'],
+            bodypart_names=None,
+            otheranimal_bodypart_names=None,
+            min_window=1,
+            max_window=100000
+        )
+
+        # Get events where the angle between animals is less than 30 degrees
+        angle_events = analysis.get_animals_animals_events(
+            cross_animal_query_list=['relative_angle<30'],
+            bodypart_names=None,
+            otheranimal_bodypart_names=None,
+            min_window=1,
+            max_window=100000
+        )
+
+        print ('angle_events')
+        for event in angle_events:
+            print (event)
+        return angle_events
+
+        # Get events where the animal's speed is greater than 0.2
+        speed_events = analysis.get_animals_state_events(
+            query='speed>0.2',
+            bodypart_names=None,
+            min_window=1,
+            max_window=100000
+        )
+
+        # Combine the closest distance and angle events using logical AND
+        distance_angle_events = analysis.get_composite_events(
+            events_A=closest_distance_events,
+            events_B=angle_events,
+            composition_type='logical_and',
+            max_interval_between_sequential_events=0,
+            min_window=1,
+            max_window=100000
+        )
+
+        # Combine the result with the speed events using logical AND
+        chases_events = analysis.get_composite_events(
+            events_A=distance_angle_events,
+            events_B=speed_events,
+            composition_type='logical_and',
+            max_interval_between_sequential_events=0,
+            min_window=1,
+            max_window=100000
+        )
+
+        return chases_events
+
+    get_chases_events(config)
