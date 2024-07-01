@@ -546,7 +546,7 @@ class VisualManager(Manager):
             # sort the data by start_time
         data = sorted(data, key=lambda x: x["start_time"])
         total_duration = sum([event.duration_in_seconds for event in events])
-        if total_duration < 0.5:
+        if total_duration < 0.0:
             return
 
         fourcc = cv2.VideoWriter_fourcc(*"avc1")  # Adjust the codec as needed
