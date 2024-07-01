@@ -543,10 +543,9 @@ if __name__ == "__main__":
     from amadeusgpt.analysis_objects.object import ROIObject
     from amadeusgpt.main import create_amadeus
 
-    config = Config("amadeusgpt/configs/Horse_template.yaml")
+    config = Config("amadeusgpt/configs/mabe_template.yaml")
+
     amadeus = create_amadeus(config)
     sandbox = amadeus.sandbox
-    analysis = sandbox.exec_namespace["behavior_analysis"]
-    analysis.add_roi_object = ""
 
-    res = sandbox.step("plot the trajectory of the bodypart body_mouth")
+    render_temp_message('random', sandbox)
