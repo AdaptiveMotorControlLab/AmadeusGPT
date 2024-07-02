@@ -212,6 +212,16 @@ class AnimalManager(Manager):
         """
         Get the keypoints of animals. The shape is of shape  n_frames, n_individuals, n_kpts, n_dims
         """
+        use_superanimal = False
+        if use_superanimal:
+            import deeplabcut
+            from deeplabcut.modelzoo.video_inference import video_inference_superanimal
+            superanimal_name = 'superanimal_topviewmouse_hrnetw32'
+            video_inference_superanimal(videos = [self.config['video_info']['video_file_path']],
+                            superanimal_name = superanimal_name,
+                            video_adapt = False,
+                            dest_folder = 'temp_pose')
+
         ret = np.stack([animal.get_keypoints() for animal in self.animals], axis=1)
         return ret
 

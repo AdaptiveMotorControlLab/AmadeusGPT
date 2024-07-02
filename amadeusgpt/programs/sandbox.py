@@ -389,15 +389,14 @@ The usage and the parameters of the functions are provided."""
         n_animals = behavior_analysis.animal_manager.get_n_individuals()
         bodypart_names = behavior_analysis.animal_manager.get_keypoint_names()
         visual_manager = behavior_analysis.visual_manager
-        plots = []
-
+        plots = []       
         if isinstance(function_rets, tuple):
             # could be plotting tuple
             if isinstance(function_rets[0], plt.Figure):
                 # this is for "return fig, ax"
                 plots.append(function_rets)
 
-            else:
+            else:               
                 for e in function_rets:
                     if isinstance(e, list) and len(e) > 0 and isinstance(e[0], BaseEvent):
                         # here we need to understand what we do with the events
@@ -521,8 +520,8 @@ def render_temp_message(query, sandbox):
         print("after code execution")
         print(len(qa_message["function_rets"]))
         events = qa_message["function_rets"]
-        for event in events:
-            print (event)
+       
+    sandbox.render_qa_message(qa_message)
       
     if qa_message["function_rets"] is not None:
         st.markdown(qa_message["function_rets"])
@@ -543,72 +542,80 @@ if __name__ == "__main__":
     # testing qa message
     from amadeusgpt.analysis_objects.object import ROIObject
     from amadeusgpt.main import create_amadeus
-
-    config = Config("amadeusgpt/configs/mabe_template.yaml")
+    import pickle
+    config = Config("amadeusgpt/configs/EPM_template.yaml")
 
     amadeus = create_amadeus(config)
     sandbox = amadeus.sandbox
+    analysis = sandbox.exec_namespace["behavior_analysis"]
+    with open("temp_roi_objects.pickle", "rb") as f:
+        roi_objects = pickle.load(f)
 
-    def get_chases_events(config: Config):
-        '''
-        Parameters:
-        ----------
-        config: Config
-        '''
-        # create_analysis returns an instance of AnimalBehaviorAnalysis
-        analysis = create_analysis(config)
+    for name, roi_object in roi_objects.items():
+        analysis.object_manager.add_roi_object(ROIObject(name, roi_object["Path"]))
 
-        # Get events where the closest distance between animals is less than 40 pixels
-        closest_distance_events = analysis.get_animals_animals_events(
-            cross_animal_query_list=['closest_distance<40'],
-            bodypart_names=None,
-            otheranimal_bodypart_names=None,
-            min_window=1,
-            max_window=100000
-        )
+    render_temp_message("random query", sandbox)
 
-        # Get events where the angle between animals is less than 30 degrees
-        angle_events = analysis.get_animals_animals_events(
-            cross_animal_query_list=['relative_angle<30'],
-            bodypart_names=None,
-            otheranimal_bodypart_names=None,
-            min_window=1,
-            max_window=100000
-        )
+    # def get_head_dips_events(config: Config):
+    #     """
+    #     Identify and count the number of head_dips events.
 
-        print ('angle_events')
-        for event in angle_events:
-            print (event)
-        return angle_events
+    #     Parameters:
+    #     ----------
+    #     config: Config
 
-        # Get events where the animal's speed is greater than 0.2
-        speed_events = analysis.get_animals_state_events(
-            query='speed>0.2',
-            bodypart_names=None,
-            min_window=1,
-            max_window=100000
-        )
+    #     Returns:
+    #     -------
+    #     head_dips_events: List[BaseEvent]
+    #         List of events where head_dips behavior occurs.
+    #     num_bouts: int
+    #         Number of bouts for head_dips behavior.
+    #     """
+    #     # Create an instance of AnimalBehaviorAnalysis
+    #     analysis = create_analysis(config)
 
-        # Combine the closest distance and angle events using logical AND
-        distance_angle_events = analysis.get_composite_events(
-            events_A=closest_distance_events,
-            events_B=angle_events,
-            composition_type='logical_and',
-            max_interval_between_sequential_events=0,
-            min_window=1,
-            max_window=100000
-        )
+    #     # Get events where mouse_center and neck are inside ROI0
+    #     mouse_center_neck_in_ROI0_events = analysis.get_animals_object_events(
+    #         object_name='ROI0',
+    #         query='overlap == True',
+    #         bodypart_names=['mouse_center', 'neck'],
+    #         min_window=1,
+    #         max_window=100000,
+    #         negate=False
+    #     )
+    #     # print ("mouse center neck in ROI0")
+    #     # print (len(mouse_center_neck_in_ROI0_events))
+    #     # for event in mouse_center_neck_in_ROI0_events:
+    #     #     print (event)
 
-        # Combine the result with the speed events using logical AND
-        chases_events = analysis.get_composite_events(
-            events_A=distance_angle_events,
-            events_B=speed_events,
-            composition_type='logical_and',
-            max_interval_between_sequential_events=0,
-            min_window=1,
-            max_window=100000
-        )
+    #     # Get events where head_midpoint is outside ROI1
+    #     head_midpoint_outside_ROI1_events = analysis.get_animals_object_events(
+    #         object_name='ROI1',
+    #         query='overlap == True',
+    #         bodypart_names=['head_midpoint'],
+    #         min_window=1,
+    #         max_window=100000,
+    #         negate=True
+    #     )
+    #     # print ('mouse head not in ROI1')
+    #     # print (len(head_midpoint_outside_ROI1_events))
+    #     # for event in head_midpoint_outside_ROI1_events:
+    #     #     print (event)
 
-        return chases_events
+    #     # Combine the events to define head_dips behavior
+    #     head_dips_events = analysis.get_composite_events(
+    #         events_A=mouse_center_neck_in_ROI0_events,
+    #         events_B=head_midpoint_outside_ROI1_events,
+    #         composition_type='logical_and',
+    #         max_interval_between_sequential_events=0,
+    #         min_window=1,
+    #         max_window=100000
+    #     )
+    #     print ('head dips events', len(head_dips_events))
 
-    get_chases_events(config)
+    #     # Count the number of bouts for head_dips behavior
+    #     num_bouts = len(head_dips_events)
+
+    #     return head_dips_events, num_bouts
+
+    # get_head_dips_events(config)

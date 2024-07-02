@@ -440,10 +440,12 @@ class EventManager(Manager):
                         graphs.append(animal_animal_subgraph)
             # we then fuse events from different task programs that involve animal-object interactions
             for object_name in self.object_manager.get_object_names():
-
+                # if we strictly require the object needs to match, then EPM head dipping example won't work.
+                # so we cannot require objects to match. This causes some ambiguity.
                 animal_object_subgraph = EventGraph.fuse_subgraph_by_kvs(
                     graph,
-                    {"sender_animal_name": animal_name, "object_names": object_name},
+                    {"sender_animal_name": animal_name,},
+                      #"object_names": object_name},
                     number_of_overlap_for_fusion=2,
                 )
                 graphs.append(animal_object_subgraph)
