@@ -112,7 +112,7 @@ class AIMessage(BaseMessage):
             amadeus_answer = amadeus_answer.to_dict()
         self.data.update(amadeus_answer)
 
-    def render(self):
+    def render(self, debug = False):
         """
         We use the getter for better encapsulation
         overall structure of what to be rendered
@@ -180,9 +180,10 @@ class AIMessage(BaseMessage):
                         st.markdown(f"Error: {qa_message['error_message']}\n ")
                         # Remind users we are fixing the error by self debuging
                         st.markdown(f"Let me try to fix the error by self-debugging\n ")
-                        for i in range(1):
-                            sandbox.llms["self_debug"].speak(sandbox)
+                        if not debug:
+                            sandbox.llms["self_debug"].speak(sandbox)                        
                             qa_message = sandbox.code_execution(qa_message)
+                            self.render(debug = True)
                     # do not need to execute the block one more time
                     if not self.rendered:
                         self.rendered = True
