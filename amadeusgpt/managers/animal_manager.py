@@ -11,7 +11,8 @@ from amadeusgpt.programs.api_registry import (register_class_methods,
 
 from .base import Manager
 from .model_manager import ModelManager
-
+from pathlib import Path
+import os
 
 def get_orientation_vector(cls, b1_name, b2_name):
     b1 = cls.get_keypoints()[:, :, cls.get_bodypart_index(b1_name), :]
@@ -79,12 +80,18 @@ class AnimalManager(Manager):
         self.model_manager = model_manager
         self.animals: List[AnimalSeq] = []
         self.full_keypoint_names = []
-        keypoint_info = config["keypoint_info"]
+
+        self.init_pose()
+
+    def init_pose(self):
+        keypoint_info = self.config["keypoint_info"]
+        
         if keypoint_info["keypoint_file_path"] is None:
             # no need to initialize here
             return
         else:
-            self.keypoint_file_path = config["keypoint_info"]["keypoint_file_path"]
+            self.keypoint_file_path = self.config["keypoint_info"]["keypoint_file_path"]
+            
         if self.keypoint_file_path.endswith(".h5"):
             all_keypoints = self._process_keypoint_file_from_h5()
         elif self.keypoint_file_path.endswith(".json"):
@@ -97,17 +104,17 @@ class AnimalManager(Manager):
             animalseq = AnimalSeq(
                 animal_name, all_keypoints[:, individual_id], self.keypoint_names
             )
-            if "body_orientation_keypoints" in config["keypoint_info"]:
+            if "body_orientation_keypoints" in self.config["keypoint_info"]:
                 animalseq.set_body_orientation_keypoints(
-                    config["keypoint_info"]["body_orientation_keypoints"]
+                    self.config["keypoint_info"]["body_orientation_keypoints"]
                 )
-            if "head_orientation_keypoints" in config["keypoint_info"]:
+            if "head_orientation_keypoints" in self.config["keypoint_info"]:
                 animalseq.set_head_orientation_keypoints(
-                    config["keypoint_info"]["head_orientation_keypoints"]
+                    self.config["keypoint_info"]["head_orientation_keypoints"]
                 )
 
-            self.animals.append(animalseq)
-
+            self.animals.append(animalseq)        
+            
     def _process_keypoint_file_from_h5(self) -> ndarray:
         df = pd.read_hdf(self.keypoint_file_path)
         self.full_keypoint_names = list(
@@ -212,15 +219,25 @@ class AnimalManager(Manager):
         """
         Get the keypoints of animals. The shape is of shape  n_frames, n_individuals, n_kpts, n_dims
         """
-        use_superanimal = False
-        if use_superanimal:
+
+        keypoint_file_path = self.config['keypoint_info']['keypoint_file_path']
+        video_file_path = self.config['video_info']['video_file_path']
+        if os.path.exists(video_file_path) and keypoint_file_path is None:
+
             import deeplabcut
             from deeplabcut.modelzoo.video_inference import video_inference_superanimal
             superanimal_name = 'superanimal_topviewmouse_hrnetw32'
-            video_inference_superanimal(videos = [self.config['video_info']['video_file_path']],
-                            superanimal_name = superanimal_name,
-                            video_adapt = False,
-                            dest_folder = 'temp_pose')
+            
+            keypoint_file_path = video_file_path.replace('.mp4', '_' + superanimal_name + '.h5')
+            if not os.path.exists(keypoint_file_path):
+                video_inference_superanimal(videos = [self.config['video_info']['video_file_path']],
+                                            superanimal_name = superanimal_name,
+                                            video_adapt = False)
+            
+            if os.path.exists(keypoint_file_path):
+
+                self.config['keypoint_info']['keypoint_file_path'] = keypoint_file_path
+                self.init_pose()
 
         ret = np.stack([animal.get_keypoints() for animal in self.animals], axis=1)
         return ret
