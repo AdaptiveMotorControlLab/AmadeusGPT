@@ -203,7 +203,7 @@ class VisualLLM(LLM):
         response = self.connect_gpt(self.context_window, max_tokens=2000)        
         text = response.choices[0].message.content.strip()
 
-        pattern = r"```python(.*?)```"
+        pattern = r"```json(.*?)```"
         if len(re.findall(pattern, text, re.DOTALL)) == 0:
             return None
         else:
