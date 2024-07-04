@@ -120,14 +120,15 @@ class LLM(AnalysisObject):
                 self.context_window.append({"role": role, "content": content})
         else:
 
-            if replace == True:
-                if len(self.history) == 2:
-                    self.history[1]["content"] = content
-                    self.context_window[1]["content"] = content
-                else:
-                    self.history.append({"role": role, "content": content})
-                    self.context_window.append({"role": role, "content": content})
-
+            if encoded_image is None:
+                self.history.append({"role": role, "content": content})
+                num_AI_messages = (len(self.context_window) - 1) // 2
+                if num_AI_messages == self.keep_last_n_messages:
+                    print ("doing active forgetting")
+                    # we forget the oldest AI message and corresponding answer
+                    self.context_window.pop(1)
+                    self.context_window.pop(1)
+                new_message = {"role": role, "content": content}
             else:
                 if encoded_image is None:
                     self.history.append({"role": role, "content": content})

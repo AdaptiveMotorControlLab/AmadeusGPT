@@ -244,9 +244,11 @@ class AnimalManager(Manager):
             # only import here because people who choose the minimal installation might not have deeplabcut 
             import deeplabcut
             from deeplabcut.modelzoo.video_inference import video_inference_superanimal            
-            print (f"going to inference video with {self.superanimal_name}")
-            keypoint_file_path = video_file_path.replace('.mp4', '_' + self.superanimal_name + '.h5')
+            video_suffix = Path(video_file_path).suffix
+            
+            keypoint_file_path = video_file_path.replace(video_suffix, '_' + self.superanimal_name + '.h5')
             if not os.path.exists(keypoint_file_path):
+                print (f"going to inference video with {self.superanimal_name}")
                 video_inference_superanimal(videos = [self.config['video_info']['video_file_path']],
                                             superanimal_name = self.superanimal_name,
                                             max_individuals=self.max_individuals,
