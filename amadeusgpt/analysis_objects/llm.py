@@ -191,7 +191,7 @@ class VisualLLM(LLM):
 
         """
 
-        from amadeusgpt.system_prompts.visual import _get_system_prompt
+        from amadeusgpt.system_prompts.visual_llm import _get_system_prompt
         self.system_prompt = _get_system_prompt()
         analysis = sandbox.exec_namespace["behavior_analysis"]
         scene_image = analysis.visual_manager.get_scene_image()
