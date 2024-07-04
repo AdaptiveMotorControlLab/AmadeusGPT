@@ -145,10 +145,7 @@ class LLM(AnalysisObject):
                         }
                     ]}
                     
-                    self.context_window.append(message)                    
-                    
-                    
-               
+                    self.context_window.append(message)                                                                           
 
     def clean_context_window(self):
         while len(self.context_window) > 1:
@@ -203,10 +200,16 @@ class VisualLLM(LLM):
         base64_image = base64.b64encode(image_bytes.getvalue()).decode('utf-8')       
         self.update_history("system", self.system_prompt)
         self.update_history("user", "here is the image", encoded_image = base64_image)
-        response = self.connect_gpt(self.context_window, max_tokens=2000)
-        print (response)
-        #text = response.choices[0].message.content.strip()
+        response = self.connect_gpt(self.context_window, max_tokens=2000)        
+        text = response.choices[0].message.content.strip()
 
+        pattern = r"```python(.*?)```"
+        if len(re.findall(pattern, text, re.DOTALL)) == 0:
+            return None
+        else:
+            json_string = re.findall(pattern, text, re.DOTALL)[0]
+            json_obj = json.loads(json_string)
+            return json_obj
 
 class CodeGenerationLLM(LLM):
     """
