@@ -80,6 +80,7 @@ class AnimalManager(Manager):
         self.model_manager = model_manager
         self.animals: List[AnimalSeq] = []
         self.full_keypoint_names = []
+        self.superanimal_predicted_video = None
         self.init_pose()
 
     def configure_animal_from_meta(self, meta_info):
@@ -246,16 +247,18 @@ class AnimalManager(Manager):
             from deeplabcut.modelzoo.video_inference import video_inference_superanimal            
             video_suffix = Path(video_file_path).suffix
             
-            keypoint_file_path = video_file_path.replace(video_suffix, '_' + self.superanimal_name + '.h5')
+            keypoint_file_path = video_file_path.replace(video_suffix, '_' + self.superanimal_name + '.h5')            
+            self.superanimal_predicted_video = keypoint_file_path.replace('.h5', '_labeled_after_adapt.mp4')
+            
             if not os.path.exists(keypoint_file_path):
                 print (f"going to inference video with {self.superanimal_name}")
                 video_inference_superanimal(videos = [self.config['video_info']['video_file_path']],
                                             superanimal_name = self.superanimal_name,
                                             max_individuals=self.max_individuals,
                                             video_adapt = True)
+
             
             if os.path.exists(keypoint_file_path):
-
                 self.config['keypoint_info']['keypoint_file_path'] = keypoint_file_path
                 self.init_pose()
 

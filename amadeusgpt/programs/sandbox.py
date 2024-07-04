@@ -32,6 +32,7 @@ def create_message(query, sandbox):
         "function_rets": None,
         "sandbox": sandbox,
         "out_videos": [],
+        "pose_video": None,
         "meta_info": None
     }
 
@@ -401,6 +402,7 @@ The usage and the parameters of the functions are provided."""
         behavior_analysis = self.exec_namespace["behavior_analysis"]
         n_animals = behavior_analysis.animal_manager.get_n_individuals()
         bodypart_names = behavior_analysis.animal_manager.get_keypoint_names()
+        qa_message["pose_video"] = behavior_analysis.animal_manager.superanimal_predicted_video
         visual_manager = behavior_analysis.visual_manager
         plots = []       
         if isinstance(function_rets, tuple):

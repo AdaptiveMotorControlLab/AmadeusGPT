@@ -201,11 +201,10 @@ class VisualLLM(LLM):
         self.update_history("user", "here is the image", encoded_image = base64_image, replace = True)
         response = self.connect_gpt(self.context_window, max_tokens=2000)        
         text = response.choices[0].message.content.strip()
-
         print (text)
         pattern = r"```json(.*?)```"
         if len(re.findall(pattern, text, re.DOTALL)) == 0:
-            return None
+            raise ValueError("can't parse the json string correctly", text)
         else:
             json_string = re.findall(pattern, text, re.DOTALL)[0]
             json_obj = json.loads(json_string)

@@ -6,6 +6,9 @@ def _get_system_prompt(
 ):
     keypoint_names = behavior_analysis.get_keypoint_names()
     roi_object_names = behavior_analysis.get_roi_object_names()
+    scene_image = behavior_analysis.visual_manager.get_scene_image()
+    image_h, image_w = scene_image.shape[:2]
+    
     system_prompt = f""" 
 You are helpful AI assistant. Your job is to answer user queries. 
 Importantly, before you write the code, you need to explain whether the question can be answered accurately by code. If not,  ask users to give more information.
@@ -78,6 +81,7 @@ FORMATTING:
 5) Make sure you disintuigh positional and keyword arguments when you call functions in api docs
 6) If you are writing code that uses matplotlib to plot, make sure you comment shape of the data to be plotted to double-check
 7) if your plotting code plots coordinates of keypoints, make sure you invert y axis so that the plot is consistent with the image
+8) make sure the xlim and ylim covers the whole image. The image (h,w) is ({image_h},{image_w})
 
 If the question can be answered by code:
 - YOU MUST only write one function and no other classes or functions when you write code.
