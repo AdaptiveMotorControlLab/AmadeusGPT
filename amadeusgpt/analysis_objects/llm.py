@@ -120,34 +120,32 @@ class LLM(AnalysisObject):
                 self.context_window.append({"role": role, "content": content})
         else:
 
-            if replace == True:
-                if len(self.history) == 2:
-                    self.history[1]["content"] = content
-                    self.context_window[1]["content"] = content
-                else:
-                    self.history.append({"role": role, "content": content})
-                    self.context_window.append({"role": role, "content": content})
-
+            if encoded_image is None:
+                self.history.append({"role": role, "content": content})
+                num_AI_messages = (len(self.context_window) - 1) // 2
+                if num_AI_messages == self.keep_last_n_messages:
+                    print ("doing active forgetting")
+                    # we forget the oldest AI message and corresponding answer
+                    self.context_window.pop(1)
+                    self.context_window.pop(1)
+                new_message = {"role": role, "content": content}
             else:
-                if encoded_image is None:
-                    self.history.append({"role": role, "content": content})
-                    num_AI_messages = (len(self.context_window) - 1) // 2
-                    if num_AI_messages == self.keep_last_n_messages:
-                        print ("doing active forgetting")
-                        # we forget the oldest AI message and corresponding answer
-                        self.context_window.pop(1)
-                        self.context_window.pop(1)
-                    self.context_window.append({"role": role, "content": content})
-                else:
+                new_message = {"role": "user", "content": [
+                    {"type": "text", "text": ""},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{encoded_image}"}
+                    }
+                ]}
 
-                    message = {"role": "user", "content": [
-                        {"type": "text", "text": ""},
-                        {"type": "image_url", "image_url": {
-                            "url": f"data:image/jpeg;base64,{encoded_image}"}
-                        }
-                    ]}
-                    
-                    self.context_window.append(message)                                                                           
+            self.history.append(new_message)
+            
+            if replace == True:
+                if len(self.context_window) == 2:
+                    self.context_window[1] = new_message
+                else:
+                    self.context_window.append(new_message)
+                
+
 
     def clean_context_window(self):
         while len(self.context_window) > 1:
@@ -200,7 +198,7 @@ class VisualLLM(LLM):
         image_bytes = io.BytesIO(buffer)
         base64_image = base64.b64encode(image_bytes.getvalue()).decode('utf-8')       
         self.update_history("system", self.system_prompt)
-        self.update_history("user", "here is the image", encoded_image = base64_image)
+        self.update_history("user", "here is the image", encoded_image = base64_image, replace = True)
         response = self.connect_gpt(self.context_window, max_tokens=2000)        
         text = response.choices[0].message.content.strip()
 
