@@ -32,8 +32,8 @@ def create_message(query, sandbox):
         "function_rets": None,
         "sandbox": sandbox,
         "out_videos": [],
+        "meta_info": None
     }
-
 
 class SandboxBase:
     """
@@ -193,11 +193,29 @@ class Sandbox(SandboxBase):
         self.config = config
         self.messages = []
         self.exec_namespace = {"__builtins__": __builtins__}
+        # update_namespace initializes behavior analysis
         self.update_namespace()
+        # then we can configure behavior analysis using vlm
+        self.configure_using_vlm()
         self.visual_cache = {}
         self.llms = {}
         self.query = None
         self.matched_modules = []
+
+    def configure_using_vlm(self):
+         # example meta_info:
+        """
+        {
+        "description": "Top-down view of a laboratory setting with a small animal marked with colored dots on a white surface. Various laboratory equipment and objects are visible in the background.",
+        "individuals": 1,
+        "species": "topview_mouse",
+        "background_objects": ["laboratory equipment", "white surface", "colored dots"]
+        }
+        """
+        json_obj = self.llms["visual_llm"].speak(self)
+        # configure meta info on the analysis managers
+        analysis = self.exec_namespace["behavior_analysis"]
+        analysis.animal_manager.configure_animal_from_meta(json_obj)
 
     def get_core_api_docs(self):
         """
@@ -441,6 +459,8 @@ The usage and the parameters of the functions are provided."""
         post_process_llm = []  # ['self_debug', 'diagnosis']
         self.query = user_query
         self.llms["code_generator"].speak(self)
+       
+
         return qa_message
 
     def step(self, user_query, number_of_debugs=1):

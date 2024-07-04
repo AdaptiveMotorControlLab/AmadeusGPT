@@ -198,6 +198,13 @@ class VisualLLM(LLM):
         encoded_image = self.encode_image(scene_image)
         self.update_history("user", encoded_image)
 
+        pattern = r"```python(.*?)```"
+        if len(re.findall(pattern, text, re.DOTALL)) == 0:
+            return None
+        else:
+            json_string = re.findall(pattern, text, re.DOTALL)[0]
+            json_obj = json.loads(json_string)
+            return json_obj
 
 class CodeGenerationLLM(LLM):
     """

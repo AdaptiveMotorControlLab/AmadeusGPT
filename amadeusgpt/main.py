@@ -31,6 +31,7 @@ class AMADEUS:
         self.code_generator_llm = CodeGenerationLLM(config.get("llm_info", {}))
         self.self_debug_llm = SelfDebugLLM(config.get("llm_info", {}))
         self.diagnosis_llm = DiagnosisLLM(config.get("llm_info", {}))
+        self.visual_llm = VisualLLM(config.get("llm_info", {}))
         ### fields that decide the behavior of the application
         self.use_self_debug = True
         self.use_diagnosis = False
@@ -47,6 +48,7 @@ class AMADEUS:
 
         ## register the llm to the sandbox
         self.sandbox.register_llm("code_generator", self.code_generator_llm)
+        self.sandbox.register_llm("visual_llm", self.visual_llm)
         if self.use_self_debug:
             self.sandbox.register_llm("self_debug", self.self_debug_llm)
         if self.use_diagnosis:
