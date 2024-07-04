@@ -8,6 +8,8 @@ from .base import AnalysisObject
 import openai
 from openai import OpenAI
 import base64
+import cv2
+import io
 
 class LLM(AnalysisObject):
     total_tokens = 0
@@ -193,8 +195,7 @@ class VisualLLM(LLM):
         self.system_prompt = _get_system_prompt()
         analysis = sandbox.exec_namespace["behavior_analysis"]
         scene_image = analysis.visual_manager.get_scene_image()
-        import cv2
-        import io
+
         result, buffer = cv2.imencode('.jpeg', scene_image)     
         image_bytes = io.BytesIO(buffer)
         base64_image = base64.b64encode(image_bytes.getvalue()).decode('utf-8')       
@@ -203,6 +204,7 @@ class VisualLLM(LLM):
         response = self.connect_gpt(self.context_window, max_tokens=2000)        
         text = response.choices[0].message.content.strip()
 
+        print (text)
         pattern = r"```json(.*?)```"
         if len(re.findall(pattern, text, re.DOTALL)) == 0:
             return None

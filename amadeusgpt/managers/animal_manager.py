@@ -250,7 +250,7 @@ class AnimalManager(Manager):
                 video_inference_superanimal(videos = [self.config['video_info']['video_file_path']],
                                             superanimal_name = self.superanimal_name,
                                             max_individuals=self.max_individuals,
-                                            video_adapt = False)
+                                            video_adapt = True)
             
             if os.path.exists(keypoint_file_path):
 
