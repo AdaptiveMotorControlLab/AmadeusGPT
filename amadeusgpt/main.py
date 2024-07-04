@@ -82,19 +82,12 @@ class AMADEUS:
 
 
 if __name__ == "__main__":
-    config = Config("amadeusgpt/configs/MausHaus_template.yaml")
+    from amadeusgpt.config import Config   
+    from amadeusgpt.main import create_amadeus
+    from amadeusgpt.analysis_objects.llm import VisualLLM
+    config = Config("amadeusgpt/configs/EPM_template.yaml")
 
-    # amadeus = AMADEUS(config)
-    # query = "Give me events when mice are close"
-    # amadeus.step(query)
-
-    query = "Plot the trajectory with the keypoint butt"
     amadeus = create_amadeus(config)
     sandbox = amadeus.sandbox
-    analysis = sandbox.exec_namespace["behavior_analysis"]
-
-    analysis.object_manager.load_roi_objects("temp_roi_objects.pickle")
-
-    from amadeusgpt.programs.sandbox import render_temp_message
-
-    render_temp_message(query, sandbox)
+    visualLLm = VisualLLM(config)
+    visualLLm.speak(sandbox)

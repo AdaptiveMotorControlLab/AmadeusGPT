@@ -76,11 +76,8 @@ class LLM(AnalysisObject):
                     "model": self.gpt_model,
                     "messages": messages,
                     "max_tokens": self.max_tokens,
-                    "stop": None,
-                    "top_p": 1,
                     "temperature": 0.0,
                 }
-
                 response = client.chat.completions.create(**json_data)
 
                 LLM.total_tokens =  LLM.total_tokens + response.usage.prompt_tokens + response.usage.completion_tokens
@@ -394,3 +391,14 @@ Can you correct the code?
         function_code = re.findall(pattern, text, re.DOTALL)[0]
         qa_message["code"] = function_code
         qa_message["chain_of_thought"] = thought_process
+
+
+if __name__ == "__main__":
+    from amadeusgpt.config import Config   
+    from amadeusgpt.main import create_amadeus
+    config = Config("amadeusgpt/configs/EPM_template.yaml")
+
+    amadeus = create_amadeus(config)
+    sandbox = amadeus.sandbox
+    visualLLm = VisualLLM(config)
+    visualLLm.speak(sandbox)
