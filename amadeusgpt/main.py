@@ -11,7 +11,7 @@ warnings.filterwarnings("ignore")
 import os
 
 from amadeusgpt.analysis_objects.llm import (CodeGenerationLLM, DiagnosisLLM,
-                                             SelfDebugLLM)
+                                             SelfDebugLLM, VisualLLM)
 from amadeusgpt.integration_module_hub import IntegrationModuleHub
 
 amadeus_fac = {}
@@ -54,6 +54,9 @@ class AMADEUS:
         if self.use_diagnosis:
             self.sandbox.register_llm("diagnosis", self.diagnosis_llm)
 
+        # can only do this after the register process
+        self.sandbox.configure_using_vlm()
+            
     def match_integration_module(self, user_query: str):
         """
         Return a list of matched integration modules

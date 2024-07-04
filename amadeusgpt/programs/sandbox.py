@@ -196,14 +196,15 @@ class Sandbox(SandboxBase):
         # update_namespace initializes behavior analysis
         self.update_namespace()
         # then we can configure behavior analysis using vlm
-        self.configure_using_vlm()
+        self.meta_info = None
         self.visual_cache = {}
         self.llms = {}
+        # just easier to pass this around
         self.query = None
         self.matched_modules = []
 
     def configure_using_vlm(self):
-         # example meta_info:
+        # example meta_info:
         """
         {
         "description": "Top-down view of a laboratory setting with a small animal marked with colored dots on a white surface. Various laboratory equipment and objects are visible in the background.",
@@ -213,6 +214,7 @@ class Sandbox(SandboxBase):
         }
         """
         json_obj = self.llms["visual_llm"].speak(self)
+        self.meta_info = json_obj
         # configure meta info on the analysis managers
         analysis = self.exec_namespace["behavior_analysis"]
         analysis.animal_manager.configure_animal_from_meta(json_obj)
@@ -275,14 +277,6 @@ The usage and the parameters of the functions are provided."""
         for name, task_program in self.task_program_library.items():
             if task_program["creator"] != "human":
                 discovered_behaviors.append(name)
-        # if behavior_name not in self.visual_cache and behavior_name in discovered_behaviors:
-        #     os.makedirs(out_folder, exist_ok=True)
-        #     analysis.visual_manager.generate_video_clips_from_events(
-        #         out_folder,
-        #         video_file,
-        #         events,
-        #         behavior_name)
-        #     self.visual_cache[behavior_name] = 'set'
 
     def update_matched_integration_modules(self, matched_modules):
         self.matched_modules = matched_modules
@@ -455,6 +449,11 @@ The usage and the parameters of the functions are provided."""
 
     def llm_step(self, user_query):
         qa_message = create_message(user_query, self)
+
+        # so that the frontend can display it too
+        if self.meta_info is not None:
+            qa_message['meta_info'] = self.meta_info
+        
         self.messages.append(qa_message)
         post_process_llm = []  # ['self_debug', 'diagnosis']
         self.query = user_query
