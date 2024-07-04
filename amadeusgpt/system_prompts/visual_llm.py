@@ -1,13 +1,14 @@
 def _get_system_prompt():
     system_prompt = """
     Describe what you see in the image and fill in the following json string:
-
+    ```json
     {
         "description":
         "individuals": 
         "species": 
         "background_objects":
     }
+    ```
     The "descrition" has high level description of the image.
     The "individuals" indicates the number of animals in the image
     The "species" indicates the species of the animals in the image. You can only choose from one of "topview_mouse", "sideview_quadruped" or "others".

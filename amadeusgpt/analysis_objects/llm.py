@@ -204,7 +204,7 @@ class VisualLLM(LLM):
         print (text)
         pattern = r"```json(.*?)```"
         if len(re.findall(pattern, text, re.DOTALL)) == 0:
-            return None
+            raise ValueError("can't parse the json string correctly", text)
         else:
             json_string = re.findall(pattern, text, re.DOTALL)[0]
             json_obj = json.loads(json_string)
