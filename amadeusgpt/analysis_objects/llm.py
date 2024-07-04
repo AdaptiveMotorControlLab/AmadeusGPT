@@ -198,7 +198,7 @@ class VisualLLM(LLM):
         encoded_image = self.encode_image(scene_image)
         self.update_history("user", encoded_image)
 
-        pattern = r"```python(.*?)```"
+        pattern = r"```json(.*?)```"
         if len(re.findall(pattern, text, re.DOTALL)) == 0:
             return None
         else:

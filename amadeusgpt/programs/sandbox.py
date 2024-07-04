@@ -214,6 +214,7 @@ class Sandbox(SandboxBase):
         }
         """
         json_obj = self.llms["visual_llm"].speak(self)
+        
         self.meta_info = json_obj
         # configure meta info on the analysis managers
         analysis = self.exec_namespace["behavior_analysis"]
