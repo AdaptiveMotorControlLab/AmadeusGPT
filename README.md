@@ -25,16 +25,50 @@
   
 ## Install & Run AmadeusGPT🎻
 
-- AmadeusGPT is a Python package hosted on `pypi`. You can create a virtual env (conda, etc, see below*) or Docker and run:
+### Install with `pypi`
+
+- AmadeusGPT is a Python package hosted on `pypi`. You can create a virtual env (conda, etc, see below*) and run:
 ```python
 pip install 'amadeusgpt[streamlit]'
 ```
+Note that in order to access our demo video and keypoint files, you will need to clone the repo.
+
+### Install from the source
+
+We have prepared 3 bash installation scripts.  Make sure you edit the path of conda / forge to your in the installation scripts.
+
+```bash
+# Recommended if you are running AmadeusGPT without gpus. The installation is light-weight and you can only use it with movie files and keypoint output (.h5) from DeepLabCut.
+bash install_minimal.sh
+
+conda activate amadeusgpt-minimal
+```   
+
+```bash
+# Recommended if you are running on linux with gpus (We will add Windows and MacsOS support in the future).
+bash install_gpu.sh
+
+conda activate amadeusgpt-gpu
+```
+
+```bash
+#For MacOS users, if you are only playing with very small video files.
+bash install_cpu.sh
+
+conda activate amadeusgpt-cpu
+```
+### Setup OpenAI Key to use AmadeusGPT
+
  - Please note that you need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
 - If you want the **Streamlit Demo on your computer**, you will also need demo files that are supplied in our repo (see below**), so please git clone the repo and navigate into the `AmadeusGPT` directory. Then in your conda env/terminal run  `pip install 'amadeusgpt[streamlit]'` as described above. Then, to launch the Demo App execute in the terminal:
+
+### Try AmadeusGPT with local web app
 ```python
 make app
 ```
-- You can use AmadeusGPT directly in python: iPython, Jupyter Notebooks, Google Colab, etc. For a quick start, see our `\examples` directory that hosts demo data and a Jupyter Notebook! Enjoy!
+
+### Try AmadeusGPT with our example notebooks
+We provide example notebooks at [Notebooks](notebook)
 
 ## Citation
 
@@ -50,15 +84,6 @@ make app
 ```
 - arXiv preprint version **[AmadeusGPT: a natural language interface for interactive animal behavioral analysis](https://arxiv.org/abs/2307.04858)** by [Shaokai Ye](https://github.com/yeshaokai), [Jessy Lauer](https://github.com/jeylau), [Mu Zhou](https://github.com/zhoumu53), [Alexander Mathis](https://github.com/AlexEMG) & [Mackenzie W. Mathis](https://github.com/MMathisLab).
 
-### Install tips
-- *Make a new conda env: `conda create --name amadeusGPT python=3.9` then run `conda activate amadeusGPT` or you can also use our supplied conda if you git cloned the repo (navigate into the conda directory): `conda env create -f amadesuGPT.yml` then pip install amadeusGPT once created/launched.
-- **Git clone this repo: so please open a terminal, we recommend to download into Documents (so type `cd Documents`) and run `git clone https://github.com/AdaptiveMotorControlLab/AmadeusGPT.git` Then go into the dir (`cd AmadeusGPT`)
-- If you want to use SAM, you need to download the weights. Otherwise you will see the following message in the app: `Cannot find SAM checkpoints. Skipping SAM`. Download them and add to "static" directory: wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
-  
-###  Install trouble shooting:
-- If you hit an error during installing on an M1/M2 Macbook with installing HDF5, run `conda install h5py` in your conda env.
-- If you launch the app and get an ffmpeg error, `RuntimeError: No ffmpeg exe could be found. Install ffmpeg on your system, or set the IMAGEIO_FFMPEG_EXE environment variable.` try running `conda install ffmpeg`.
-- If you have an M1/M2 chip and use CEBRA within AmadeusGPT, and you get this error: `RuntimeError: Device type MPS is not supported for torch.Generator() api` run `pip install --upgrade torch`.
 
 ## License 
 
