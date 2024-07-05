@@ -549,7 +549,7 @@ class VisualManager(Manager):
         if total_duration < 0.0:
             return
 
-        fourcc = cv2.VideoWriter_fourcc(*"avc1")  # Adjust the codec as needed
+        fourcc = cv2.VideoWriter_fourcc(*"h264")  # Adjust the codec as needed
 
         out_videos = []        
         
@@ -667,8 +667,7 @@ class VisualManager(Manager):
                         )                 
                     out.write(frame)
                 offset += 1
-                if current_frame == time_slice[1]:
-                    
+                if current_frame == time_slice[1]:                    
                     out.release()
                     break
                     
