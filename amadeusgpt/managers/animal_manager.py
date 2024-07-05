@@ -248,14 +248,14 @@ class AnimalManager(Manager):
             video_suffix = Path(video_file_path).suffix
             
             keypoint_file_path = video_file_path.replace(video_suffix, '_' + self.superanimal_name + '.h5')            
-            self.superanimal_predicted_video = keypoint_file_path.replace('.h5', '_labeled_after_adapt.mp4')
+            self.superanimal_predicted_video = keypoint_file_path.replace('.h5', '_labeled.mp4')
             
             if not os.path.exists(keypoint_file_path):
                 print (f"going to inference video with {self.superanimal_name}")
                 video_inference_superanimal(videos = [self.config['video_info']['video_file_path']],
                                             superanimal_name = self.superanimal_name,
                                             max_individuals=self.max_individuals,
-                                            video_adapt = True)
+                                            video_adapt = False)
 
             
             if os.path.exists(keypoint_file_path):
