@@ -31,7 +31,7 @@ def create_message(query, sandbox):
         "error_message": None,
         "function_rets": None,
         "sandbox": sandbox,
-        "out_videos": [],
+        "out_videos": None,
         "pose_video": None,
         "meta_info": None
     }
@@ -424,9 +424,8 @@ The usage and the parameters of the functions are provided."""
                                 bodypart_names=bodypart_names, events=e
                             )
                         )
-                        qa_message["out_videos"].append(
-                            self.events_to_videos(e, self.get_function_name_from_string(qa_message["code"]))
-                        )
+                        qa_message["out_videos"] = self.events_to_videos(e, self.get_function_name_from_string(qa_message["code"]))
+                        
 
         elif (
             isinstance(function_rets, list)
@@ -442,9 +441,8 @@ The usage and the parameters of the functions are provided."""
             plots.append(
                 visual_manager.get_ethogram_visualization(events=function_rets)
             )
-            qa_message["out_videos"].append(
-                self.events_to_videos(function_rets, self.get_function_name_from_string(qa_message["code"]))
-            )
+            qa_message["out_videos"] = self.events_to_videos(function_rets, self.get_function_name_from_string(qa_message["code"]))
+            
         else:
             pass
         qa_message["plots"].extend(plots)
