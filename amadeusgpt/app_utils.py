@@ -548,25 +548,28 @@ def render_page_by_example(example):
 
     if example == "Custom":
         st.markdown("Provide your own video and keypoint file (in pairs)")
-        uploaded_keypoint_file = st.file_uploader(
-            "Choose keypoint files",
-            ["h5"],
-            accept_multiple_files=False,
-        )
-        uploaded_video_file = st.file_uploader(
-            "Choose video files",
-            VIDEO_EXTS,
-            accept_multiple_files=False,
-        )
+        save_dir = os.path.join("examples", example)
+        if "uploaded_keypoint_file" not in st.session_state:
+            uploaded_keypoint_file = st.file_uploader(
+                "Choose keypoint files",
+                ["h5"],
+                accept_multiple_files=False,
+            )
+            if uploaded_keypoint_file is not None:
+                path = save_uploaded_file(uploaded_keypoint_file, save_dir)
+                st.session_state["uploaded_keypoint_file"] = path
+                config["keypoint_info"]["keypoint_file_path"] = st.session_state["uploaded_keypoint_file"]
 
-        if uploaded_keypoint_file is not None:
-            save_dir = os.path.join("examples", example)
-            config["keypoint_info"]["keypoint_file_path"] = save_uploaded_file(
-                uploaded_keypoint_file, save_dir
+        if "uploaded_video_file" not in st.session_state:
+            uploaded_video_file = st.file_uploader(
+                "Choose video files",
+                VIDEO_EXTS,
+                accept_multiple_files=False,
             )
-            config["video_info"]["video_file_path"] = save_uploaded_file(
-                uploaded_video_file, save_dir
-            )
+            if uploaded_video_file is not None:
+                path = save_uploaded_file(uploaded_video_file, save_dir)
+                st.session_state["uploaded_video_file"] = uploaded_video_file
+                config["video_info"]["video_file_path"] = st.session_state["uploaded_video_file"]      
 
         ###### USER INPUT PANEL ######
         # get user input once getting the uploaded files
@@ -648,7 +651,6 @@ def render_page_by_example(example):
     st.session_state["example"] = example
 
     scene_image_path = get_scene_image(config)
-    video_file = config["video_info"]["video_file_path"]
 
     if scene_image_path is not None:
         img_data = base64.b64decode(scene_image_path)
@@ -673,8 +675,12 @@ def render_page_by_example(example):
             st.caption("Raw video from Horse-30")
         else:
             st.caption("DeepLabCut-SuperAnimal tracked video")
-        if video_file:
-            st.video(video_file)
+        if config["video_info"]["video_file_path"] and config["video_info"]["video_file_path"] is not None: 
+            st.video(config["video_info"]["video_file_path"])
+
+        if "uploaded_video_file" in st.session_state:
+            st.video(st.session_state["uploaded_video_file"])
+        
         # we only show objects for MausHaus for demo
         # if sam_image is not None:
         #     st.caption("SAM segmentation results")
