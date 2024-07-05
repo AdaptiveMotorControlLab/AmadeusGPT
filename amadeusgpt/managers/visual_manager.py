@@ -312,7 +312,7 @@ class VisualManager(Manager):
         axs: Optional[plt.Axes] = None,
     ):
         """
-        By default, it show just diplays the ethogram according
+        By default, it show just dislays the ethogram according
         to the output of the task program.
         However, since every event contains the information about the object, receiver animal and sender animal
         We can still make it more informative if we want

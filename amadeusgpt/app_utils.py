@@ -178,7 +178,7 @@ class AIMessage(BaseMessage):
                     if qa_message["error_message"] is not None:
                         # make the error message more visible with different color
                         st.markdown(f"Error: {qa_message['error_message']}\n ")
-                        # Remind users we are fixing the error by self debuging
+                        # Remind users we are fixing the error by self debugging
                         st.markdown(f"Let me try to fix the error by self-debugging\n ")
                         if not debug:
                             sandbox.llms["self_debug"].speak(sandbox)                        

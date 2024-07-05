@@ -39,7 +39,7 @@ class AMADEUS:
         self.smart_loading = False
         self.load_module_top_k = 3
         self.module_threshold = 0.3
-        ### fileds that serve as important storage
+        ### fields that serve as important storage
         # for long-term memory
         self.integration_module_hub = IntegrationModuleHub(config)
         #### sanbox that actually takes query and executes the code

@@ -26,7 +26,7 @@ class TaskProgram:
     All the function body in the json_obj should look like following:
 
     The task program usually involve with a series of API calls and return a list of events
-    The LLM agent should be able to craft, reuse task program for abitrary tasks
+    The LLM agent should be able to craft, reuse task program for arbitrary tasks
 
     def task_program_name(config) -> List[BaseEvent]:
         analysis = AnimalBehaviorAnalysis(config)

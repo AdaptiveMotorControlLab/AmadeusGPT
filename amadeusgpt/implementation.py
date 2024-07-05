@@ -12,7 +12,7 @@ from .programs.api_registry import (CORE_API_REGISTRY, DEFAULT_REGISTRY,
                                     INTEGRATION_API_REGISTRY)
 
 """
-write a class called FuncObj that inhertis from pydantic BaseModel that takes a function string,
+write a class called FuncObj that inherits from pydantic BaseModel that takes a function string,
 use AST to parse the function string to input and output types, function name, args, kwargs, and function body
 """
 
@@ -48,7 +48,7 @@ class AnimalBehaviorAnalysis:
         self.relationship_manager = RelationshipManager(
             config, self.animal_manager, self.object_manager, use_cache=use_cache
         )
-        # event manager needs refernce to object_manager, animal_manager, and relationship_manager
+        # event manager needs reference to object_manager, animal_manager, and relationship_manager
         self.event_manager = EventManager(
             config,
             self.object_manager,
