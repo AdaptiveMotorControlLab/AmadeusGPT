@@ -51,7 +51,7 @@ class VisualManager(Manager):
         self.animal_manager = animal_manager
         self.object_manager = object_manager
 
-    def get_scene_image(self):
+    def get_scene_image(self):        
         scene_frame_index = self.config["video_info"]["scene_frame_number"]
         cap = cv2.VideoCapture(self.config["video_info"]["video_file_path"])
         cap.set(cv2.CAP_PROP_POS_FRAMES, scene_frame_index)
@@ -549,22 +549,28 @@ class VisualManager(Manager):
         if total_duration < 0.0:
             return
 
-        fourcc = cv2.VideoWriter_fourcc(*"avc1")  # Adjust the codec as needed
-        out = cv2.VideoWriter(
-            os.path.join(out_folder, f"{out_name}"),
-            fourcc,
-            30.0,
-            (int(cap.get(3)), int(cap.get(4))),
-        )
+        fourcc = cv2.VideoWriter_fourcc(*"h264")  # Adjust the codec as needed
 
-        for triple in data:
+        out_videos = []        
+        
+        for idx, triple in enumerate(data):
+
+            out_video_path = os.path.join(out_folder, out_name.replace(".mp4", f"_{idx}.mp4"))
+            out = cv2.VideoWriter(
+                out_video_path,
+                fourcc,
+                30.0,
+                (int(cap.get(3)), int(cap.get(4))),
+            )
+            out_videos.append(out_video_path)
+            
             time_slice = triple["time_slice"]
             sender_animal_name = triple["sender_animal_name"]
             sender_keypoints = triple["sender_keypoints"]
             receiver_keypoints = triple["receiver_keypoints"]
             cap.set(cv2.CAP_PROP_POS_FRAMES, time_slice[0])
             offset = 0
-
+            
             while cap.isOpened():
                 current_frame = time_slice[0] + offset
                 ret, frame = cap.read()
@@ -658,17 +664,20 @@ class VisualManager(Manager):
                             (0, 255, 0),
                             2,
                             cv2.LINE_AA,
-                        )
-
+                        )                 
                     out.write(frame)
                 offset += 1
-                if current_frame == time_slice[1]:
+                if current_frame == time_slice[1]:                    
+                    out.release()
                     break
+                    
 
         # Release everything when job is finished
-        cap.release()
-        out.release()
+        cap.release()        
         cv2.destroyAllWindows()
+        print ('out videos'* 10)
+        print (out_videos)
+        return out_videos
 
     def generate_video_clips_from_events(
         self, out_folder, video_file, events: List[BaseEvent], behavior_name
@@ -683,5 +692,5 @@ class VisualManager(Manager):
         videoname = video_file.split("/")[-1].replace(".mp4", "").replace(".avi", "")
         video_name = f"{videoname}_{behavior_name}_video.mp4"
 
-        self.write_video(out_folder, video_file, video_name, events)
-        return os.path.join(out_folder, video_name)
+        out_videos = self.write_video(out_folder, video_file, video_name, events)
+        return out_videos

@@ -31,9 +31,10 @@ def create_message(query, sandbox):
         "error_message": None,
         "function_rets": None,
         "sandbox": sandbox,
-        "out_videos": [],
+        "out_videos": None,
+        "pose_video": None,
+        "meta_info": None
     }
-
 
 class SandboxBase:
     """
@@ -193,11 +194,32 @@ class Sandbox(SandboxBase):
         self.config = config
         self.messages = []
         self.exec_namespace = {"__builtins__": __builtins__}
+        # update_namespace initializes behavior analysis
         self.update_namespace()
+        # then we can configure behavior analysis using vlm
+        self.meta_info = None
         self.visual_cache = {}
         self.llms = {}
+        # just easier to pass this around
         self.query = None
         self.matched_modules = []
+
+    def configure_using_vlm(self):
+        # example meta_info:
+        """
+        {
+        "description": "Top-down view of a laboratory setting with a small animal marked with colored dots on a white surface. Various laboratory equipment and objects are visible in the background.",
+        "individuals": 1,
+        "species": "topview_mouse",
+        "background_objects": ["laboratory equipment", "white surface", "colored dots"]
+        }
+        """
+        json_obj = self.llms["visual_llm"].speak(self)
+        
+        self.meta_info = json_obj
+        # configure meta info on the analysis managers
+        analysis = self.exec_namespace["behavior_analysis"]
+        analysis.animal_manager.configure_animal_from_meta(json_obj)
 
     def get_core_api_docs(self):
         """
@@ -257,14 +279,6 @@ The usage and the parameters of the functions are provided."""
         for name, task_program in self.task_program_library.items():
             if task_program["creator"] != "human":
                 discovered_behaviors.append(name)
-        # if behavior_name not in self.visual_cache and behavior_name in discovered_behaviors:
-        #     os.makedirs(out_folder, exist_ok=True)
-        #     analysis.visual_manager.generate_video_clips_from_events(
-        #         out_folder,
-        #         video_file,
-        #         events,
-        #         behavior_name)
-        #     self.visual_cache[behavior_name] = 'set'
 
     def update_matched_integration_modules(self, matched_modules):
         self.matched_modules = matched_modules
@@ -388,6 +402,7 @@ The usage and the parameters of the functions are provided."""
         behavior_analysis = self.exec_namespace["behavior_analysis"]
         n_animals = behavior_analysis.animal_manager.get_n_individuals()
         bodypart_names = behavior_analysis.animal_manager.get_keypoint_names()
+        qa_message["pose_video"] = behavior_analysis.animal_manager.superanimal_predicted_video
         visual_manager = behavior_analysis.visual_manager
         plots = []       
         if isinstance(function_rets, tuple):
@@ -409,9 +424,8 @@ The usage and the parameters of the functions are provided."""
                                 bodypart_names=bodypart_names, events=e
                             )
                         )
-                        qa_message["out_videos"].append(
-                            self.events_to_videos(e, self.get_function_name_from_string(qa_message["code"]))
-                        )
+                        qa_message["out_videos"] = self.events_to_videos(e, self.get_function_name_from_string(qa_message["code"]))
+                        
 
         elif (
             isinstance(function_rets, list)
@@ -427,9 +441,8 @@ The usage and the parameters of the functions are provided."""
             plots.append(
                 visual_manager.get_ethogram_visualization(events=function_rets)
             )
-            qa_message["out_videos"].append(
-                self.events_to_videos(function_rets, self.get_function_name_from_string(qa_message["code"]))
-            )
+            qa_message["out_videos"] = self.events_to_videos(function_rets, self.get_function_name_from_string(qa_message["code"]))
+            
         else:
             pass
         qa_message["plots"].extend(plots)
@@ -437,10 +450,17 @@ The usage and the parameters of the functions are provided."""
 
     def llm_step(self, user_query):
         qa_message = create_message(user_query, self)
+
+        # so that the frontend can display it too
+        if self.meta_info is not None:
+            qa_message['meta_info'] = self.meta_info
+        
         self.messages.append(qa_message)
         post_process_llm = []  # ['self_debug', 'diagnosis']
         self.query = user_query
         self.llms["code_generator"].speak(self)
+       
+
         return qa_message
 
     def step(self, user_query, number_of_debugs=1):

@@ -80,8 +80,23 @@ class AnimalManager(Manager):
         self.model_manager = model_manager
         self.animals: List[AnimalSeq] = []
         self.full_keypoint_names = []
-
+        self.superanimal_predicted_video = None
         self.init_pose()
+
+    def configure_animal_from_meta(self, meta_info):
+        """
+        Set the max individuals here
+        Set the superanimal model here
+        """
+        self.max_individuals = int(meta_info['individuals'])
+        species =  meta_info['species']
+        if species == 'topview_mouse':
+            self.superanimal_name = 'superanimal_topviewmouse_hrnetw32'
+        elif species == 'sideview_quadruped':
+            self.superanimal_name = 'superanimal_quadruped_hrnetw32'
+        else:
+            self.superanimal_name = None
+
 
     def init_pose(self):
         keypoint_info = self.config["keypoint_info"]
@@ -224,18 +239,26 @@ class AnimalManager(Manager):
         video_file_path = self.config['video_info']['video_file_path']
         if os.path.exists(video_file_path) and keypoint_file_path is None:
 
+            if self.superanimal_name is None:
+                raise ValueError("Couldn't determine the species of the animal from the image. Change the scene index")
+
+            # only import here because people who choose the minimal installation might not have deeplabcut 
             import deeplabcut
-            from deeplabcut.modelzoo.video_inference import video_inference_superanimal
-            superanimal_name = 'superanimal_topviewmouse_hrnetw32'
+            from deeplabcut.modelzoo.video_inference import video_inference_superanimal            
+            video_suffix = Path(video_file_path).suffix
             
-            keypoint_file_path = video_file_path.replace('.mp4', '_' + superanimal_name + '.h5')
+            keypoint_file_path = video_file_path.replace(video_suffix, '_' + self.superanimal_name + '.h5')            
+            self.superanimal_predicted_video = keypoint_file_path.replace('.h5', '_labeled.mp4')
+            
             if not os.path.exists(keypoint_file_path):
+                print (f"going to inference video with {self.superanimal_name}")
                 video_inference_superanimal(videos = [self.config['video_info']['video_file_path']],
-                                            superanimal_name = superanimal_name,
+                                            superanimal_name = self.superanimal_name,
+                                            max_individuals=self.max_individuals,
                                             video_adapt = False)
+
             
             if os.path.exists(keypoint_file_path):
-
                 self.config['keypoint_info']['keypoint_file_path'] = keypoint_file_path
                 self.init_pose()
 

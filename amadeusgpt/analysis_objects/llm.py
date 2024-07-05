@@ -8,6 +8,8 @@ from .base import AnalysisObject
 import openai
 from openai import OpenAI
 import base64
+import cv2
+import io
 
 class LLM(AnalysisObject):
     total_tokens = 0
@@ -76,11 +78,8 @@ class LLM(AnalysisObject):
                     "model": self.gpt_model,
                     "messages": messages,
                     "max_tokens": self.max_tokens,
-                    "stop": None,
-                    "top_p": 1,
                     "temperature": 0.0,
                 }
-
                 response = client.chat.completions.create(**json_data)
 
                 LLM.total_tokens =  LLM.total_tokens + response.usage.prompt_tokens + response.usage.completion_tokens
@@ -121,36 +120,32 @@ class LLM(AnalysisObject):
                 self.context_window.append({"role": role, "content": content})
         else:
 
-            if replace == True:
-                if len(self.history) == 2:
-                    self.history[1]["content"] = content
-                    self.context_window[1]["content"] = content
-                else:
-                    self.history.append({"role": role, "content": content})
-                    self.context_window.append({"role": role, "content": content})
-
+            if encoded_image is None:
+                self.history.append({"role": role, "content": content})
+                num_AI_messages = (len(self.context_window) - 1) // 2
+                if num_AI_messages == self.keep_last_n_messages:
+                    print ("doing active forgetting")
+                    # we forget the oldest AI message and corresponding answer
+                    self.context_window.pop(1)
+                    self.context_window.pop(1)
+                new_message = {"role": role, "content": content}
             else:
-                if encoded_image is None:
-                    self.history.append({"role": role, "content": content})
-                    num_AI_messages = (len(self.context_window) - 1) // 2
-                    if num_AI_messages == self.keep_last_n_messages:
-                        print ("doing active forgetting")
-                        # we forget the oldest AI message and corresponding answer
-                        self.context_window.pop(1)
-                        self.context_window.pop(1)
-                    self.context_window.append({"role": role, "content": content})
+                new_message = {"role": "user", "content": [
+                    {"type": "text", "text": ""},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{encoded_image}"}
+                    }
+                ]}
+
+            self.history.append(new_message)
+            
+            if replace == True:
+                if len(self.context_window) == 2:
+                    self.context_window[1] = new_message
                 else:
-                    message = {
-                        "role": "user", "content": [
-                        {"type": "text", "text": content},
-                        {"type": "image_url", "image_url": {
-                        "url": f"data:image/png;base64,{encoded_image}"}
-                        }]
-                    }                                            
-                    self.context_window.append(message) 
-    
-                    
-               
+                    self.context_window.append(new_message)
+                
+
 
     def clean_context_window(self):
         while len(self.context_window) > 1:
@@ -194,13 +189,26 @@ class VisualLLM(LLM):
 
         """
 
-        from amadeusgpt.system_prompts.visual import _get_system_prompt
+        from amadeusgpt.system_prompts.visual_llm import _get_system_prompt
         self.system_prompt = _get_system_prompt()
         analysis = sandbox.exec_namespace["behavior_analysis"]
         scene_image = analysis.visual_manager.get_scene_image()
-        encoded_image = self.encode_image(scene_image)
-        self.update_history("user", encoded_image)
 
+        result, buffer = cv2.imencode('.jpeg', scene_image)     
+        image_bytes = io.BytesIO(buffer)
+        base64_image = base64.b64encode(image_bytes.getvalue()).decode('utf-8')       
+        self.update_history("system", self.system_prompt)
+        self.update_history("user", "here is the image", encoded_image = base64_image, replace = True)
+        response = self.connect_gpt(self.context_window, max_tokens=2000)        
+        text = response.choices[0].message.content.strip()
+        print (text)
+        pattern = r"```json(.*?)```"
+        if len(re.findall(pattern, text, re.DOTALL)) == 0:
+            raise ValueError("can't parse the json string correctly", text)
+        else:
+            json_string = re.findall(pattern, text, re.DOTALL)[0]
+            json_obj = json.loads(json_string)
+            return json_obj
 
 class CodeGenerationLLM(LLM):
     """
@@ -394,3 +402,14 @@ Can you correct the code?
         function_code = re.findall(pattern, text, re.DOTALL)[0]
         qa_message["code"] = function_code
         qa_message["chain_of_thought"] = thought_process
+
+
+if __name__ == "__main__":
+    from amadeusgpt.config import Config   
+    from amadeusgpt.main import create_amadeus
+    config = Config("amadeusgpt/configs/EPM_template.yaml")
+
+    amadeus = create_amadeus(config)
+    sandbox = amadeus.sandbox
+    visualLLm = VisualLLM(config)
+    visualLLm.speak(sandbox)

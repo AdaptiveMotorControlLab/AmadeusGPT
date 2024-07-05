@@ -4,6 +4,7 @@ channels:
     - defaults
 dependencies:
     - python==3.10
+    - pytables==3.8.0
     - hdf5
     - pip
     - jupyter

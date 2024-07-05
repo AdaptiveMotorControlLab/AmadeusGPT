@@ -11,7 +11,7 @@ warnings.filterwarnings("ignore")
 import os
 
 from amadeusgpt.analysis_objects.llm import (CodeGenerationLLM, DiagnosisLLM,
-                                             SelfDebugLLM)
+                                             SelfDebugLLM, VisualLLM)
 from amadeusgpt.integration_module_hub import IntegrationModuleHub
 
 amadeus_fac = {}
@@ -31,6 +31,7 @@ class AMADEUS:
         self.code_generator_llm = CodeGenerationLLM(config.get("llm_info", {}))
         self.self_debug_llm = SelfDebugLLM(config.get("llm_info", {}))
         self.diagnosis_llm = DiagnosisLLM(config.get("llm_info", {}))
+        self.visual_llm = VisualLLM(config.get("llm_info", {}))
         ### fields that decide the behavior of the application
         self.use_self_debug = True
         self.use_diagnosis = False
@@ -47,11 +48,15 @@ class AMADEUS:
 
         ## register the llm to the sandbox
         self.sandbox.register_llm("code_generator", self.code_generator_llm)
+        self.sandbox.register_llm("visual_llm", self.visual_llm)
         if self.use_self_debug:
             self.sandbox.register_llm("self_debug", self.self_debug_llm)
         if self.use_diagnosis:
             self.sandbox.register_llm("diagnosis", self.diagnosis_llm)
 
+        # can only do this after the register process
+        self.sandbox.configure_using_vlm()
+            
     def match_integration_module(self, user_query: str):
         """
         Return a list of matched integration modules
@@ -80,21 +85,19 @@ class AMADEUS:
         result = self.sandbox.llm_step(user_query)
         return result
 
+    def get_analysis(self):
+        sandbox = self.sandbox
+        analysis = sandbox.exec_namespace['behavior_analysis']
+        return analysis
+
 
 if __name__ == "__main__":
-    config = Config("amadeusgpt/configs/MausHaus_template.yaml")
+    from amadeusgpt.config import Config   
+    from amadeusgpt.main import create_amadeus
+    from amadeusgpt.analysis_objects.llm import VisualLLM
+    config = Config("amadeusgpt/configs/EPM_template.yaml")
 
-    # amadeus = AMADEUS(config)
-    # query = "Give me events when mice are close"
-    # amadeus.step(query)
-
-    query = "Plot the trajectory with the keypoint butt"
     amadeus = create_amadeus(config)
     sandbox = amadeus.sandbox
-    analysis = sandbox.exec_namespace["behavior_analysis"]
-
-    analysis.object_manager.load_roi_objects("temp_roi_objects.pickle")
-
-    from amadeusgpt.programs.sandbox import render_temp_message
-
-    render_temp_message(query, sandbox)
+    visualLLm = VisualLLM(config)
+    visualLLm.speak(sandbox)
