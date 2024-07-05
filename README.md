@@ -31,7 +31,7 @@
 ```python
 pip install 'amadeusgpt[streamlit]'
 ```
-Note that in order to access our demo video and keypoint files, you will need to clone the repo.
+Note that in order to access our demo video and keypoint files, we recommend to install from the source.
 
 ### Install from the source
 
