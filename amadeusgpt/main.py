@@ -85,6 +85,11 @@ class AMADEUS:
         result = self.sandbox.llm_step(user_query)
         return result
 
+    def get_analysis(self):
+        sandbox = self.sandbox
+        analysis = sandbox.exec_namespace['behavior_analysis']
+        return analysis
+
 
 if __name__ == "__main__":
     from amadeusgpt.config import Config   
