@@ -35,31 +35,44 @@ Note that in order to access our demo video and keypoint files, you will need to
 
 ### Install from the source
 
-We have prepared 3 bash installation scripts.  Make sure you edit the path of conda / forge to your in the installation scripts.
+#### Minimal installation
+**Recommended for:** Running AmadeusGPT without GPUs. This setup is lightweight and is limited to processing movie files and keypoint outputs (.h5) from DeepLabCut.
 
 ```bash
-# Recommended if you are running AmadeusGPT without gpus. The installation is light-weight and you can only use it with movie files and keypoint output (.h5) from DeepLabCut.
+# Install the minimal environment
 bash install_minimal.sh
 
+# Activate the conda environment
 conda activate amadeusgpt-minimal
-```   
+```
+
+#### GPU installation
+**Recommended for:** Users on Linux with GPUs. Support for Windows and MacOS will be added in the future.
 
 ```bash
-# Recommended if you are running on linux with gpus (We will add Windows and MacsOS support in the future).
+# Install the gpu environment
 bash install_gpu.sh
 
+# Activate the conda environment
 conda activate amadeusgpt-gpu
 ```
 
+#### CPU installation
+**Recommended for:** MacOS / Linux users working with very small video files.
+
 ```bash
-#For MacOS users, if you are only playing with very small video files.
+# Install the cpu environment
 bash install_cpu.sh
 
+# Activate the conda environment
 conda activate amadeusgpt-cpu
 ```
+
+
 ### Setup OpenAI Key to use AmadeusGPT
 
- - Please note that you need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
+
+- Please note that you need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
 - If you want the **Streamlit Demo on your computer**, you will also need demo files that are supplied in our repo (see below**), so please git clone the repo and navigate into the `AmadeusGPT` directory. Then in your conda env/terminal run  `pip install 'amadeusgpt[streamlit]'` as described above. Then, to launch the Demo App execute in the terminal:
 
 ### Try AmadeusGPT with local web app
@@ -70,11 +83,12 @@ make app
 ### Try AmadeusGPT with our example notebooks
 We provide example notebooks at [Notebooks](notebook)
 
+
 ## Citation
 
   If you use ideas or code from this project in your work, please cite us  using the following BibTeX entry. 🙏
 
- ```
+```
 @article{ye2023amadeusGPT,
       title={AmadeusGPT: a natural language interface for interactive animal behavioral analysis}, 
       author={Shaokai Ye and Jessy Lauer and Mu Zhou and Alexander Mathis and Mackenzie Weygandt Mathis},
