@@ -552,16 +552,17 @@ class VisualManager(Manager):
         fourcc = cv2.VideoWriter_fourcc(*"avc1")  # Adjust the codec as needed
 
         out_videos = []        
-
+        
         for idx, triple in enumerate(data):
 
+            out_video_path = os.path.join(out_folder, out_name.replace(".mp4", f"_{idx}.mp4"))
             out = cv2.VideoWriter(
-                os.path.join(out_folder, f"{out_name}_{idx}"),
+                out_video_path,
                 fourcc,
                 30.0,
                 (int(cap.get(3)), int(cap.get(4))),
             )
-            out_videos.append(os.path.join(out_folder, f"{out_name}_{idx}"))
+            out_videos.append(out_video_path)
             
             time_slice = triple["time_slice"]
             sender_animal_name = triple["sender_animal_name"]
@@ -663,18 +664,20 @@ class VisualManager(Manager):
                             (0, 255, 0),
                             2,
                             cv2.LINE_AA,
-                        )
-
+                        )                 
                     out.write(frame)
                 offset += 1
                 if current_frame == time_slice[1]:
+                    
+                    out.release()
                     break
+                    
 
         # Release everything when job is finished
-        cap.release()
-        out.release()
+        cap.release()        
         cv2.destroyAllWindows()
-        
+        print ('out videos'* 10)
+        print (out_videos)
         return out_videos
 
     def generate_video_clips_from_events(
