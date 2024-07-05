@@ -550,21 +550,26 @@ class VisualManager(Manager):
             return
 
         fourcc = cv2.VideoWriter_fourcc(*"avc1")  # Adjust the codec as needed
-        out = cv2.VideoWriter(
-            os.path.join(out_folder, f"{out_name}"),
-            fourcc,
-            30.0,
-            (int(cap.get(3)), int(cap.get(4))),
-        )
 
-        for triple in data:
+        out_videos = []        
+
+        for idx, triple in enumerate(data):
+
+            out = cv2.VideoWriter(
+                os.path.join(out_folder, f"{out_name}_{idx}"),
+                fourcc,
+                30.0,
+                (int(cap.get(3)), int(cap.get(4))),
+            )
+            out_videos.append(os.path.join(out_folder, f"{out_name}_{idx}"))
+            
             time_slice = triple["time_slice"]
             sender_animal_name = triple["sender_animal_name"]
             sender_keypoints = triple["sender_keypoints"]
             receiver_keypoints = triple["receiver_keypoints"]
             cap.set(cv2.CAP_PROP_POS_FRAMES, time_slice[0])
             offset = 0
-
+            
             while cap.isOpened():
                 current_frame = time_slice[0] + offset
                 ret, frame = cap.read()
@@ -669,6 +674,8 @@ class VisualManager(Manager):
         cap.release()
         out.release()
         cv2.destroyAllWindows()
+        
+        return out_videos
 
     def generate_video_clips_from_events(
         self, out_folder, video_file, events: List[BaseEvent], behavior_name
@@ -683,5 +690,5 @@ class VisualManager(Manager):
         videoname = video_file.split("/")[-1].replace(".mp4", "").replace(".avi", "")
         video_name = f"{videoname}_{behavior_name}_video.mp4"
 
-        self.write_video(out_folder, video_file, video_name, events)
-        return os.path.join(out_folder, video_name)
+        out_videos = self.write_video(out_folder, video_file, video_name, events)
+        return out_videos
