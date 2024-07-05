@@ -21,5 +21,4 @@ jobs:
       - name: Codespell
         uses: codespell-project/actions-codespell@v2
         with:
-          args: "--skip=*.ipynb"
           config_file: .codespellrc
