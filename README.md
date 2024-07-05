@@ -69,11 +69,27 @@ conda activate amadeusgpt-cpu
 ```
 
 
-### Setup OpenAI Key to use AmadeusGPT
+### Setup OpenAI API Key to use AmadeusGPT
 
+**Why OpenAI API Key is needed** AmadeusGPT relies on API calls of OpenAI (we will add more options in the future) for language understanding and code writing.
+
+You can either add this into your environment by following:
+
+```bash
+export OPENAI_API_KEY='your API key' 
+```
+
+Or inside your python script or jupyter notebook, add this line in the beginning of the file
+
+
+```python
+import os
+os.environ["OPENAI_API_KEY"] = 'your api key' 
+```
 
 - Please note that you need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
-- If you want the **Streamlit Demo on your computer**, you will also need demo files that are supplied in our repo (see below**), so please git clone the repo and navigate into the `AmadeusGPT` directory. Then in your conda env/terminal run  `pip install 'amadeusgpt[streamlit]'` as described above. Then, to launch the Demo App execute in the terminal:
+
+
 
 ### Try AmadeusGPT with local web app
 ```python
