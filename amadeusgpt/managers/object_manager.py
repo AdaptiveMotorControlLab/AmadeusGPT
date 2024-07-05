@@ -60,6 +60,7 @@ class ObjectManager(Manager):
         pass
 
     def get_roi_object_names(self) -> List[str]:
+        
         return [obj.name for obj in self.roi_objects]
 
     def get_roi_objects(self) -> List[Object]:
