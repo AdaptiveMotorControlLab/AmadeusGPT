@@ -81,9 +81,7 @@ class ObjectManager(Manager):
         self.roi_objects = self.filter_duplicates(self.roi_objects)
 
     def save_roi_objects(self, path: str) -> None:
-        roi_obects = self.get_roi_objects()       
-        for roi in roi_obects:
-            print(roi.name)
+        roi_obects = self.get_roi_objects()               
         data = {}
         for obj in roi_obects:
             data[obj.name] = {"Path": obj.Path}
