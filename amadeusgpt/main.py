@@ -14,30 +14,9 @@ from amadeusgpt.analysis_objects.llm import (CodeGenerationLLM, DiagnosisLLM,
                                              SelfDebugLLM, VisualLLM)
 from amadeusgpt.integration_module_hub import IntegrationModuleHub
 
-amadeus_fac = {}
-
-
-# using the config file to cache the amadeus instance
-# not sure if this is the best practice
-def create_amadeus(config: Config):
-    if str(config) not in amadeus_fac:
-        amadeus_fac[str(config)] = AMADEUS(config)
-    return amadeus_fac[str(config)]
-
 from amadeusgpt.analysis_objects.llm import (CodeGenerationLLM, DiagnosisLLM,
                                              SelfDebugLLM, VisualLLM)
 from amadeusgpt.integration_module_hub import IntegrationModuleHub
-
-amadeus_fac = {}
-
-
-# using the config file to cache the amadeus instance
-# not sure if this is the best practice
-def create_amadeus(config: Config):
-    if str(config) not in amadeus_fac:
-        amadeus_fac[str(config)] = AMADEUS(config)
-    return amadeus_fac[str(config)]
-
 
 class AMADEUS:
     def __init__(self, config: Dict[str, Any]):
@@ -107,11 +86,11 @@ class AMADEUS:
 if __name__ == "__main__":
     from amadeusgpt.analysis_objects.llm import VisualLLM
     from amadeusgpt.config import Config
-    from amadeusgpt.main import create_amadeus
+
 
     config = Config("amadeusgpt/configs/EPM_template.yaml")
 
-    amadeus = create_amadeus(config)
+    amadeus = AMADEUS(config)
     sandbox = amadeus.sandbox
     visualLLm = VisualLLM(config)
     visualLLm.speak(sandbox)
