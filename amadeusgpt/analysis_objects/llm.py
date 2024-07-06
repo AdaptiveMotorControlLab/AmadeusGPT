@@ -118,7 +118,7 @@ class LLM(AnalysisObject):
 
         return response
 
-    def update_history(self, role, content, encoded_image=None, replace=False):
+    def update_history(self, role, content, encoded_image = None, replace=False):
         if role == "system":
             if len(self.history) > 0:
                 self.history[0]["content"] = content
@@ -132,35 +132,26 @@ class LLM(AnalysisObject):
                 self.history.append({"role": role, "content": content})
                 num_AI_messages = (len(self.context_window) - 1) // 2
                 if num_AI_messages == self.keep_last_n_messages:
-                    print("doing active forgetting")
+                    print ("doing active forgetting")
                     # we forget the oldest AI message and corresponding answer
                     self.context_window.pop(1)
                     self.context_window.pop(1)
                 new_message = {"role": role, "content": content}
             else:
-                if encoded_image is None:
-                    self.history.append({"role": role, "content": content})
-                    num_AI_messages = (len(self.context_window) - 1) // 2
-                    if num_AI_messages == self.keep_last_n_messages:
-                        print("doing active forgetting")
-                        # we forget the oldest AI message and corresponding answer
-                        self.context_window.pop(1)
-                        self.context_window.pop(1)
-                    self.context_window.append({"role": role, "content": content})
-                else:
-                    message = {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": content},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/png;base64,{encoded_image}"
-                                },
-                            },
-                        ],
+                new_message = {"role": "user", "content": [
+                    {"type": "text", "text": ""},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{encoded_image}"}
                     }
-                    self.context_window.append(message)
+                ]}
+
+            self.history.append(new_message)
+            
+            if replace == True:
+                if len(self.context_window) == 2:
+                    self.context_window[1] = new_message
+                else:
+                    self.context_window.append(new_message)
 
     def clean_context_window(self):
         while len(self.context_window) > 1:
@@ -287,66 +278,6 @@ class CodeGenerationLLM(LLM):
 
         # update both history and context window
         self.update_history("system", self.system_prompt)
-
-
-class MutationLLM(LLM):
-    def __init__(self, config):
-        super().__init__(config)
-
-    def update_system_prompt(self, sandbox):
-        from amadeusgpt.system_prompts.mutation import _get_system_prompt
-
-        self.system_prompt = _get_system_prompt(sandbox)
-        # update both history and context window
-        self.update_history("system", self.system_prompt)
-
-    def speak(self, sandbox):
-        # TODO maybe we don't need to keep the history
-        """
-        Speak to the chat channel
-        """
-        # query = "Please start. Make sure you provide one task program a time. Thanks a million!"
-        query = "Please start. Thanks a million!"
-        self.update_system_prompt(sandbox)
-        self.update_history("user", query, replace=True)
-        response = self.connect_gpt(self.context_window, max_tokens=4000)
-        text = response.choices[0].message.content.strip()
-        sandbox.chat_channel.chain_of_thought.append(response)
-        return text
-
-
-class BreedLLM(LLM):
-    def __init__(self, config):
-        super().__init__(config)
-
-    def update_system_prompt(self, sandbox):
-        from amadeusgpt.system_prompts.breed import _get_system_prompt
-
-        behavior1_docs, behavior2_docs, composition_type = sandbox.get_breed_info()
-
-        self.system_prompt = _get_system_prompt(
-            behavior1_docs, behavior2_docs, composition_type
-        )
-
-        # update both history and context window
-
-        self.update_history("system", self.system_prompt)
-
-    def speak(self, sandbox):
-        # TODO maybe we don't need to keep the history
-        """
-        Speak to the chat channel
-        """
-        query = "Now write the template function. Make sure your answer is concise and don't mention anything about filtering such as smooth_window or min_window\n"
-        self.update_system_prompt(sandbox)
-        self.update_history("user", query, replace=True)
-
-        response = self.connect_gpt(self.context_window, max_tokens=400)
-        text = response.choices[0].message.content.strip()
-        sandbox.chat_channel.chain_of_thought.append(response)
-
-        return text
-
 
 class DiagnosisLLM(LLM):
     """

@@ -8,7 +8,6 @@ from amadeusgpt.programs.sandbox import Sandbox
 from amadeusgpt.utils import *
 
 warnings.filterwarnings("ignore")
-import os
 
 from amadeusgpt.analysis_objects.llm import (CodeGenerationLLM, DiagnosisLLM,
                                              SelfDebugLLM, VisualLLM)
@@ -73,11 +72,7 @@ class AMADEUS:
                 modules.append(query_module)
 
                 # parse the query result by loading active loading
-        return modules
-
-    def chat_iteration(self, user_query):
-        qa_message = self.sandbox.llm_step(user_query)
-        return qa_message
+        return modules  
 
     def step(self, user_query):
         integration_module_names = self.match_integration_module(user_query)

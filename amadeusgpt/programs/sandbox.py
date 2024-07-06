@@ -399,7 +399,6 @@ The usage and the parameters of the functions are provided."""
     def render_qa_message(self, qa_message):
         function_rets = qa_message["function_rets"]
         behavior_analysis = self.exec_namespace["behavior_analysis"]
-        n_animals = behavior_analysis.animal_manager.get_n_individuals()
         bodypart_names = behavior_analysis.animal_manager.get_keypoint_names()
         qa_message["pose_video"] = (
             behavior_analysis.animal_manager.superanimal_predicted_video
@@ -464,7 +463,6 @@ The usage and the parameters of the functions are provided."""
             qa_message["meta_info"] = self.meta_info
 
         self.messages.append(qa_message)
-        post_process_llm = []  # ['self_debug', 'diagnosis']
         self.query = user_query
         self.llms["code_generator"].speak(self)
 
@@ -484,7 +482,14 @@ The usage and the parameters of the functions are provided."""
         return qa_message
 
     def step(self, user_query, number_of_debugs=1):
+        """
+        Currently not used. We tried to seperate LLM inference and code execution
+        """            
         qa_message = create_message(user_query, self)
+
+        if self.meta_info is not None:
+            qa_message["meta_info"] = self.meta_info
+
         self.messages.append(qa_message)
 
         self.query = user_query
@@ -595,68 +600,4 @@ if __name__ == "__main__":
     for name, roi_object in roi_objects.items():
         analysis.object_manager.add_roi_object(ROIObject(name, roi_object["Path"]))
 
-    render_temp_message("random query", sandbox)
-
-    # def get_head_dips_events(config: Config):
-    #     """
-    #     Identify and count the number of head_dips events.
-
-    #     Parameters:
-    #     ----------
-    #     config: Config
-
-    #     Returns:
-    #     -------
-    #     head_dips_events: List[BaseEvent]
-    #         List of events where head_dips behavior occurs.
-    #     num_bouts: int
-    #         Number of bouts for head_dips behavior.
-    #     """
-    #     # Create an instance of AnimalBehaviorAnalysis
-    #     analysis = create_analysis(config)
-
-    #     # Get events where mouse_center and neck are inside ROI0
-    #     mouse_center_neck_in_ROI0_events = analysis.get_animals_object_events(
-    #         object_name='ROI0',
-    #         query='overlap == True',
-    #         bodypart_names=['mouse_center', 'neck'],
-    #         min_window=1,
-    #         max_window=100000,
-    #         negate=False
-    #     )
-    #     # print ("mouse center neck in ROI0")
-    #     # print (len(mouse_center_neck_in_ROI0_events))
-    #     # for event in mouse_center_neck_in_ROI0_events:
-    #     #     print (event)
-
-    #     # Get events where head_midpoint is outside ROI1
-    #     head_midpoint_outside_ROI1_events = analysis.get_animals_object_events(
-    #         object_name='ROI1',
-    #         query='overlap == True',
-    #         bodypart_names=['head_midpoint'],
-    #         min_window=1,
-    #         max_window=100000,
-    #         negate=True
-    #     )
-    #     # print ('mouse head not in ROI1')
-    #     # print (len(head_midpoint_outside_ROI1_events))
-    #     # for event in head_midpoint_outside_ROI1_events:
-    #     #     print (event)
-
-    #     # Combine the events to define head_dips behavior
-    #     head_dips_events = analysis.get_composite_events(
-    #         events_A=mouse_center_neck_in_ROI0_events,
-    #         events_B=head_midpoint_outside_ROI1_events,
-    #         composition_type='logical_and',
-    #         max_interval_between_sequential_events=0,
-    #         min_window=1,
-    #         max_window=100000
-    #     )
-    #     print ('head dips events', len(head_dips_events))
-
-    #     # Count the number of bouts for head_dips behavior
-    #     num_bouts = len(head_dips_events)
-
-    #     return head_dips_events, num_bouts
-
-    # get_head_dips_events(config)
+    render_temp_message("random query", sandbox)   
