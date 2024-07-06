@@ -8,6 +8,21 @@ from amadeusgpt.programs.sandbox import Sandbox
 from amadeusgpt.utils import *
 
 warnings.filterwarnings("ignore")
+import os
+
+from amadeusgpt.analysis_objects.llm import (CodeGenerationLLM, DiagnosisLLM,
+                                             SelfDebugLLM, VisualLLM)
+from amadeusgpt.integration_module_hub import IntegrationModuleHub
+
+amadeus_fac = {}
+
+
+# using the config file to cache the amadeus instance
+# not sure if this is the best practice
+def create_amadeus(config: Config):
+    if str(config) not in amadeus_fac:
+        amadeus_fac[str(config)] = AMADEUS(config)
+    return amadeus_fac[str(config)]
 
 from amadeusgpt.analysis_objects.llm import (CodeGenerationLLM, DiagnosisLLM,
                                              SelfDebugLLM, VisualLLM)
