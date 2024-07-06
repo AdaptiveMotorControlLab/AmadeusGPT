@@ -1,7 +1,5 @@
 keypoint_info:
-  keypoint_file_path: 
-  model_checkpoint: ""
-  model_name: ""
+  keypoint_file_path:  
   body_orientation_keypoints:
     neck: "nose"
     tail_base: "tail_base"
@@ -15,5 +13,4 @@ object_info:
   load_objects_from_disk: false
 video_info:
   scene_frame_number: 100
-  pixels_per_cm: 8
   video_file_path: 
