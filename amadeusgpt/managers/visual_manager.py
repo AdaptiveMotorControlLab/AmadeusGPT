@@ -1,15 +1,11 @@
 import glob
 import os
-from calendar import c
-from sched import Event
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import streamlit as st
 from matplotlib.patches import Wedge
-
 from amadeusgpt.analysis_objects.event import BaseEvent
 from amadeusgpt.analysis_objects.object import AnimalSeq
 from amadeusgpt.analysis_objects.visualization import (EventVisualization,

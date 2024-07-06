@@ -92,7 +92,6 @@ class Relationship(AnalysisObject):
         return self.__name__
 
     def query_relationship(self, query_name: str) -> ndarray:
-
         ret = self.data[query_name]
         return ret
 
@@ -244,16 +243,25 @@ class AnimalAnimalRelationship(Relationship):
                 head_cs_inv, receiver_animal.get_center()
             )
 
-        relative_velocity = (
-            sender_animal.get_velocity() - receiver_animal.get_velocity()
-        )
-        relative_velocity_magnitude = np.linalg.norm(relative_velocity, axis=2)
-        # Then, average these magnitudes over all keypoints for each frame
-        relative_speed = np.nanmean(relative_velocity_magnitude, axis=1)
+        # relative_velocity = (
+        #     sender_animal.get_velocity() - receiver_animal.get_velocity()
+        # )
+        # relative_velocity_magnitude = np.linalg.norm(relative_velocity, axis=2)
+        # # Then, average these magnitudes over all keypoints for each frame
+        # relative_speed = np.nanmean(relative_velocity_magnitude, axis=1)
+
+        sender_pos = sender_animal.get_center()
+        receiver_pos = receiver_animal.get_center()
+        direction_vector = receiver_pos - sender_pos
+        sender_velocity = np.nanmean(sender_animal.get_velocity(), axis = 1)
+        norm_direction_vector = direction_vector / np.linalg.norm(direction_vector)
+        relative_speed = np.einsum('ij,ij->i', sender_velocity, norm_direction_vector)
+
         closest_distance = np.nanmin(
             get_pairwise_distance(sender_animal.keypoints, receiver_animal.keypoints),
             axis=(1, 2),
         )
+        print ('relative_speed', relative_speed.mean())
         ret = {
             "distance": distance,
             "overlap": overlap,
@@ -267,6 +275,6 @@ class AnimalAnimalRelationship(Relationship):
         if angles is not None:
             ret["relative_angle"] = angles
         if orientation is not None:
-            ret["orientation"] = orientation
+            ret["orientation"] = orientation 
 
         return ret

@@ -89,6 +89,9 @@ class AMADEUS:
         sandbox = self.sandbox
         analysis = sandbox.exec_namespace['behavior_analysis']
         return analysis
+    
+    def run_task_program(self, task_program_name: str):
+        return self.sandbox.run_task_program(task_program_name)
 
 
 if __name__ == "__main__":

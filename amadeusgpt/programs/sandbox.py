@@ -6,16 +6,12 @@ import re
 import traceback
 import typing
 from functools import wraps
-
 import matplotlib.pyplot as plt
 import numpy as np
-
 from amadeusgpt.analysis_objects.analysis_factory import create_analysis
 from amadeusgpt.analysis_objects.event import BaseEvent
 from amadeusgpt.analysis_objects.relationship import Orientation
 from amadeusgpt.config import Config
-from amadeusgpt.implementation import AnimalBehaviorAnalysis
-from amadeusgpt.managers import visual_manager
 from amadeusgpt.programs.api_registry import (CORE_API_REGISTRY,
                                               INTEGRATION_API_REGISTRY)
 from amadeusgpt.programs.task_program_registry import (TaskProgram,
@@ -462,12 +458,24 @@ The usage and the parameters of the functions are provided."""
        
 
         return qa_message
+    
+    def run_task_program(self, task_program_name):
+        """
+        Sandbox is also responsible for running task program
+        """
+        task_program = self.task_program_library[task_program_name]
+        self.query = "run the task program"
+        qa_message = create_message(self.query, self)
+        qa_message["code"] = task_program["source_code"]
+        self.messages.append(qa_message)  
+        self.code_execution(qa_message)
+        qa_message = self.render_qa_message(qa_message)
+        return qa_message              
 
     def step(self, user_query, number_of_debugs=1):
         qa_message = create_message(user_query, self)
         self.messages.append(qa_message)
 
-        post_process_llm = ["self_debug"]
         self.query = user_query
         self.llms["code_generator"].speak(self)
         # all these llms collectively compose a amadeus_answer

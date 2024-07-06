@@ -1,14 +1,10 @@
 import re
 from typing import Any, Dict, List, Literal, Optional, Set, Union
-
 import numpy as np
-
-from amadeusgpt.analysis_objects import event
 from amadeusgpt.analysis_objects.event import BaseEvent, Event, EventGraph
 from amadeusgpt.analysis_objects.relationship import Orientation, Relationship
 from amadeusgpt.programs.api_registry import (register_class_methods,
                                               register_core_api)
-from amadeusgpt.utils import timer_decorator
 
 from .animal_manager import AnimalManager
 from .base import Manager, cache_decorator
@@ -182,8 +178,9 @@ class EventManager(Manager):
             self.animal_manager.update_roi_keypoint_by_names(bodypart_names)
         ret_events = []
         pattern = r"(==|<=|>=|<|>)"
-        comparison_operator = re.findall(pattern, query)[0]
-        query_name = query.split(comparison_operator)[0]
+        # note we need to strip off the spaces
+        comparison_operator = re.findall(pattern, query)[0].strip()
+        query_name = query.split(comparison_operator)[0].strip()
         comparison = comparison_operator + "".join(query.split(comparison_operator)[1:])
 
         for sender_animal_name in self.animal_manager.get_animal_names():
@@ -233,7 +230,6 @@ class EventManager(Manager):
 
         mask = relationship.query_relationship(relation_query)
 
-        #print ('mask', mask)
         # determine whether the mask is a numpy of float or numpy of boolean
 
         if mask.dtype != bool:
@@ -318,9 +314,10 @@ class EventManager(Manager):
             for query in cross_animal_query_list:
                 # assert that query must contain one of the operators
                 # find the operator
+                # note we need to strip the spaces
+                comparison_operator = re.findall(pattern, query)[0].strip()
+                _query = query.split(comparison_operator)[0].strip()
 
-                comparison_operator = re.findall(pattern, query)[0]
-                _query = query.split(comparison_operator)[0]
                 _comparison = comparison_operator + "".join(
                     query.split(comparison_operator)[1:]
                 )

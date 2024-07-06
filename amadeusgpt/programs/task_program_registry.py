@@ -1,23 +1,8 @@
 import ast
 import json
-import os
-import typing
 from collections import defaultdict
-from typing import Any, Callable, Dict, List
-
-from numpy import ndarray
-
-from amadeusgpt.config import Config
-from amadeusgpt.implementation import AnimalBehaviorAnalysis
+from typing import Any, Callable
 from amadeusgpt.utils import func2json
-
-required_classes = {"AnimalBehaviorAnalysis": AnimalBehaviorAnalysis, "Config": Config}
-required_types = {
-    name: getattr(typing, name) for name in dir(typing) if not name.startswith("_")
-}
-required_types.update({"ndarray": ndarray})
-
-
 class TaskProgram:
     """
     The task program in the system should be uniquely tracked by the id
@@ -46,9 +31,7 @@ class TaskProgram:
     __call__(): should take the context and run the program in a sandbox.
     In the future we use docker container to run it
 
-    """
-
-    exec_namespace = None
+    """    
     cache = defaultdict(dict)
 
     def __init__(
@@ -76,9 +59,16 @@ class TaskProgram:
         self.json_obj["parents"] = parents
         self.json_obj["mutation_from"] = mutation_from
         self.json_obj["generation"] = generation
+        
 
     def __setitem__(self, key, value):
         self.json_obj[key] = value
+
+    def display(self):
+        print (self.json_obj['name'],
+                self.json_obj['source_code'],
+                self.json_obj['description'])
+               
 
     def __getitem__(self, key):
         """
@@ -130,29 +120,7 @@ class TaskProgram:
 
     def validate(self):
         pass
-
-    def __call__(self, config) -> Any:
-        namespace = TaskProgram.exec_namespace
-        function_name = self.json_obj["name"]
-        keypoint_file = config["keypoint_info"]["keypoint_file_path"]
-        keypoint_type = keypoint_file.split(".")[-1]
-        videoname = keypoint_file.split("/")[-1].replace(keypoint_type, "")
-        if self.json_obj["source_code"] is not None:
-            exec(self.json_obj["source_code"], namespace)
-            function = namespace[function_name]
-        else:
-            assert self.json_obj["func_pointer"] is not None
-            function = self.json_obj["func_pointer"]
-            namespace[function_name] = function
-        call_str = f"{function_name}(config)"
-        if videoname in TaskProgram.cache[function_name]:
-            return TaskProgram.cache[function_name][videoname]
-        else:
-            exec(f"result = {call_str}", namespace)
-            result = namespace["result"]
-
-        return result
-
+  
 
 class TaskProgramLibrary:
     """
@@ -160,10 +128,7 @@ class TaskProgramLibrary:
     There are following types of task programs:
     1) Custom task programs that are created by the user (can be loaded from disk)
     2) Task programs that are created by LLMs
-
-
     """
-
     LIBRARY = {}
 
     @classmethod
@@ -216,13 +181,6 @@ class TaskProgramLibrary:
         Get the task programs
         """
         return cls.LIBRARY
-
-    @classmethod
-    def bind_exec_namespace(cls, exec_namespace):
-        """
-        For task programs to execute, we need to bind the namespace
-        """
-        TaskProgram.exec_namespace = exec_namespace
 
     @classmethod
     def save(cls, out_path):

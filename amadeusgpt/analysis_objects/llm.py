@@ -198,9 +198,14 @@ class VisualLLM(LLM):
         self.system_prompt = _get_system_prompt()
         analysis = sandbox.exec_namespace["behavior_analysis"]
         scene_image = analysis.visual_manager.get_scene_image()
-        encoded_image = self.encode_image(scene_image)
-        self.update_history("user", encoded_image)
+        result, buffer = cv2.imencode('.jpeg', scene_image)     
+        image_bytes = io.BytesIO(buffer)
+        base64_image = base64.b64encode(image_bytes.getvalue()).decode('utf-8')   
 
+        self.update_history("system", self.system_prompt)
+        self.update_history("user", "here is the image", encoded_image = base64_image, replace = True)
+        response = self.connect_gpt(self.context_window, max_tokens=2000)        
+        text = response.choices[0].message.content.strip()
         print (text)
         pattern = r"```json(.*?)```"
         if len(re.findall(pattern, text, re.DOTALL)) == 0:
@@ -208,7 +213,7 @@ class VisualLLM(LLM):
         else:
             json_string = re.findall(pattern, text, re.DOTALL)[0]
             json_obj = json.loads(json_string)
-            return json_obj
+            return json_obj      
 
 class CodeGenerationLLM(LLM):
     """
