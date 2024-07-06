@@ -6,6 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Wedge
+
 from amadeusgpt.analysis_objects.event import BaseEvent
 from amadeusgpt.analysis_objects.object import AnimalSeq
 from amadeusgpt.analysis_objects.visualization import (EventVisualization,
@@ -47,7 +48,7 @@ class VisualManager(Manager):
         self.animal_manager = animal_manager
         self.object_manager = object_manager
 
-    def get_scene_image(self):        
+    def get_scene_image(self):
         scene_frame_index = self.config["video_info"]["scene_frame_number"]
         cap = cv2.VideoCapture(self.config["video_info"]["video_file_path"])
         cap.set(cv2.CAP_PROP_POS_FRAMES, scene_frame_index)
@@ -547,11 +548,13 @@ class VisualManager(Manager):
 
         fourcc = cv2.VideoWriter_fourcc(*"avc1")  # Adjust the codec as needed
 
-        out_videos = []        
-        
+        out_videos = []
+
         for idx, triple in enumerate(data):
 
-            out_video_path = os.path.join(out_folder, out_name.replace(".mp4", f"_{idx}.mp4"))
+            out_video_path = os.path.join(
+                out_folder, out_name.replace(".mp4", f"_{idx}.mp4")
+            )
             out = cv2.VideoWriter(
                 out_video_path,
                 fourcc,
@@ -559,14 +562,14 @@ class VisualManager(Manager):
                 (int(cap.get(3)), int(cap.get(4))),
             )
             out_videos.append(out_video_path)
-            
+
             time_slice = triple["time_slice"]
             sender_animal_name = triple["sender_animal_name"]
             sender_keypoints = triple["sender_keypoints"]
             receiver_keypoints = triple["receiver_keypoints"]
             cap.set(cv2.CAP_PROP_POS_FRAMES, time_slice[0])
             offset = 0
-            
+
             while cap.isOpened():
                 current_frame = time_slice[0] + offset
                 ret, frame = cap.read()
@@ -660,19 +663,18 @@ class VisualManager(Manager):
                             (0, 255, 0),
                             2,
                             cv2.LINE_AA,
-                        )                 
+                        )
                     out.write(frame)
                 offset += 1
-                if current_frame == time_slice[1]:                    
+                if current_frame == time_slice[1]:
                     out.release()
                     break
-                    
 
         # Release everything when job is finished
-        cap.release()        
+        cap.release()
         cv2.destroyAllWindows()
-        print ('out videos'* 10)
-        print (out_videos)
+        print("out videos" * 10)
+        print(out_videos)
         return out_videos
 
     def generate_video_clips_from_events(

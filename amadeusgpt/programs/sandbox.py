@@ -6,8 +6,10 @@ import re
 import traceback
 import typing
 from functools import wraps
+
 import matplotlib.pyplot as plt
 import numpy as np
+
 from amadeusgpt.analysis_objects.analysis_factory import create_analysis
 from amadeusgpt.analysis_objects.event import BaseEvent
 from amadeusgpt.analysis_objects.relationship import Orientation
@@ -29,8 +31,9 @@ def create_message(query, sandbox):
         "sandbox": sandbox,
         "out_videos": None,
         "pose_video": None,
-        "meta_info": None
+        "meta_info": None,
     }
+
 
 class SandboxBase:
     """
@@ -211,7 +214,7 @@ class Sandbox(SandboxBase):
         }
         """
         json_obj = self.llms["visual_llm"].speak(self)
-        
+
         self.meta_info = json_obj
         # configure meta info on the analysis managers
         analysis = self.exec_namespace["behavior_analysis"]
@@ -398,18 +401,24 @@ The usage and the parameters of the functions are provided."""
         behavior_analysis = self.exec_namespace["behavior_analysis"]
         n_animals = behavior_analysis.animal_manager.get_n_individuals()
         bodypart_names = behavior_analysis.animal_manager.get_keypoint_names()
-        qa_message["pose_video"] = behavior_analysis.animal_manager.superanimal_predicted_video
+        qa_message["pose_video"] = (
+            behavior_analysis.animal_manager.superanimal_predicted_video
+        )
         visual_manager = behavior_analysis.visual_manager
-        plots = []       
+        plots = []
         if isinstance(function_rets, tuple):
             # could be plotting tuple
             if isinstance(function_rets[0], plt.Figure):
                 # this is for "return fig, ax"
                 plots.append(function_rets)
 
-            else:               
+            else:
                 for e in function_rets:
-                    if isinstance(e, list) and len(e) > 0 and isinstance(e[0], BaseEvent):
+                    if (
+                        isinstance(e, list)
+                        and len(e) > 0
+                        and isinstance(e[0], BaseEvent)
+                    ):
                         # here we need to understand what we do with the events
                         # we have ethogram plot, keypoint plot, head orientation plot, scene plot
                         # and animal interaction plot
@@ -420,8 +429,9 @@ The usage and the parameters of the functions are provided."""
                                 bodypart_names=bodypart_names, events=e
                             )
                         )
-                        qa_message["out_videos"] = self.events_to_videos(e, self.get_function_name_from_string(qa_message["code"]))
-                        
+                        qa_message["out_videos"] = self.events_to_videos(
+                            e, self.get_function_name_from_string(qa_message["code"])
+                        )
 
         elif (
             isinstance(function_rets, list)
@@ -437,8 +447,10 @@ The usage and the parameters of the functions are provided."""
             plots.append(
                 visual_manager.get_ethogram_visualization(events=function_rets)
             )
-            qa_message["out_videos"] = self.events_to_videos(function_rets, self.get_function_name_from_string(qa_message["code"]))
-            
+            qa_message["out_videos"] = self.events_to_videos(
+                function_rets, self.get_function_name_from_string(qa_message["code"])
+            )
+
         else:
             pass
         qa_message["plots"].extend(plots)
@@ -449,16 +461,15 @@ The usage and the parameters of the functions are provided."""
 
         # so that the frontend can display it too
         if self.meta_info is not None:
-            qa_message['meta_info'] = self.meta_info
-        
+            qa_message["meta_info"] = self.meta_info
+
         self.messages.append(qa_message)
         post_process_llm = []  # ['self_debug', 'diagnosis']
         self.query = user_query
         self.llms["code_generator"].speak(self)
-       
 
         return qa_message
-    
+
     def run_task_program(self, task_program_name):
         """
         Sandbox is also responsible for running task program
@@ -467,10 +478,10 @@ The usage and the parameters of the functions are provided."""
         self.query = "run the task program"
         qa_message = create_message(self.query, self)
         qa_message["code"] = task_program["source_code"]
-        self.messages.append(qa_message)  
+        self.messages.append(qa_message)
         self.code_execution(qa_message)
         qa_message = self.render_qa_message(qa_message)
-        return qa_message              
+        return qa_message
 
     def step(self, user_query, number_of_debugs=1):
         qa_message = create_message(user_query, self)
@@ -548,29 +559,31 @@ def render_temp_message(query, sandbox):
         print("after code execution")
         print(len(qa_message["function_rets"]))
         events = qa_message["function_rets"]
-       
+
     sandbox.render_qa_message(qa_message)
-      
+
     if qa_message["function_rets"] is not None:
         st.markdown(qa_message["function_rets"])
 
     plots = qa_message["plots"]
-    print ('plots', plots)
+    print("plots", plots)
     for fig, axe in plots:
         filename = save_figure_to_tempfile(fig)
         st.image(filename, width=600)
 
     videos = qa_message["out_videos"]
-    print ('videos', videos)
+    print("videos", videos)
     for video in videos:
         st.video(video)
 
 
 if __name__ == "__main__":
     # testing qa message
+    import pickle
+
     from amadeusgpt.analysis_objects.object import ROIObject
     from amadeusgpt.main import create_amadeus
-    import pickle
+
     config = Config("amadeusgpt/configs/EPM_template.yaml")
 
     amadeus = create_amadeus(config)

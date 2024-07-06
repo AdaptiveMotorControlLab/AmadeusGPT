@@ -1,6 +1,8 @@
 import re
 from typing import Any, Dict, List, Literal, Optional, Set, Union
+
 import numpy as np
+
 from amadeusgpt.analysis_objects.event import BaseEvent, Event, EventGraph
 from amadeusgpt.analysis_objects.relationship import Orientation, Relationship
 from amadeusgpt.programs.api_registry import (register_class_methods,
@@ -189,7 +191,6 @@ class EventManager(Manager):
             state = self.animal_manager.query_animal_states(
                 sender_animal_name, query_name
             )
-           
 
             # must be of shape (n_frames, n_kpts, n_dim)
             assert (
@@ -198,7 +199,7 @@ class EventManager(Manager):
             if len(state.shape) == 3:
                 state = np.nanmedian(state, axis=(1, 2))
             relation_string = "state" + comparison
-        
+
             mask = eval(relation_string)
 
             events = Event.mask2events(
@@ -321,7 +322,7 @@ class EventManager(Manager):
                 _comparison = comparison_operator + "".join(
                     query.split(comparison_operator)[1:]
                 )
-             
+
                 events = self.get_events_from_relationship(
                     relationship, _query, _comparison, smooth_window_size
                 )
@@ -441,8 +442,10 @@ class EventManager(Manager):
                 # so we cannot require objects to match. This causes some ambiguity.
                 animal_object_subgraph = EventGraph.fuse_subgraph_by_kvs(
                     graph,
-                    {"sender_animal_name": animal_name,},
-                      #"object_names": object_name},
+                    {
+                        "sender_animal_name": animal_name,
+                    },
+                    # "object_names": object_name},
                     number_of_overlap_for_fusion=2,
                 )
                 graphs.append(animal_object_subgraph)

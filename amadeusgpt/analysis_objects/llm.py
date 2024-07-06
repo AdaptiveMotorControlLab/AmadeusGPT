@@ -1,15 +1,19 @@
+import base64
+import io
 import json
 import os
 import re
 import time
 import traceback
-from amadeusgpt.utils import AmadeusLogger
-from .base import AnalysisObject
+
+import cv2
 import openai
 from openai import OpenAI
-import base64
-import cv2
-import io
+
+from amadeusgpt.utils import AmadeusLogger
+
+from .base import AnalysisObject
+
 
 class LLM(AnalysisObject):
     total_tokens = 0
@@ -26,7 +30,6 @@ class LLM(AnalysisObject):
         self.context_window = []
         # only for logging and long-term memory usage.
         self.history = []
-    
 
     def encode_image(self, image_path):
         with open(image_path, "rb") as image_file:
@@ -42,10 +45,10 @@ class LLM(AnalysisObject):
         # if openai version is less than 1
         return self.connect_gpt_oai_1(messages, **kwargs)
 
-    def connect_gpt_oai_1(self, messages, **kwargs): 
+    def connect_gpt_oai_1(self, messages, **kwargs):
         """
         This is routed to openai > 1.0 interfaces
-        """       
+        """
 
         if self.config.get("use_streamlit", False):
             if "OPENAI_API_KEY" in os.environ:
@@ -82,10 +85,15 @@ class LLM(AnalysisObject):
                 }
                 response = client.chat.completions.create(**json_data)
 
-                LLM.total_tokens =  LLM.total_tokens + response.usage.prompt_tokens + response.usage.completion_tokens
+                LLM.total_tokens = (
+                    LLM.total_tokens
+                    + response.usage.prompt_tokens
+                    + response.usage.completion_tokens
+                )
                 LLM.total_cost += (
                     LLM.prices[self.gpt_model]["input"] * response.usage.prompt_tokens
-                    + LLM.prices[self.gpt_model]["output"] * response.usage.completion_tokens
+                    + LLM.prices[self.gpt_model]["output"]
+                    * response.usage.completion_tokens
                 )
                 print("current total cost", round(LLM.total_cost, 2), "$")
                 print("current total tokens", LLM.total_tokens)
@@ -110,7 +118,7 @@ class LLM(AnalysisObject):
 
         return response
 
-    def update_history(self, role, content, encoded_image = None, replace=False):
+    def update_history(self, role, content, encoded_image=None, replace=False):
         if role == "system":
             if len(self.history) > 0:
                 self.history[0]["content"] = content
@@ -124,7 +132,7 @@ class LLM(AnalysisObject):
                 self.history.append({"role": role, "content": content})
                 num_AI_messages = (len(self.context_window) - 1) // 2
                 if num_AI_messages == self.keep_last_n_messages:
-                    print ("doing active forgetting")
+                    print("doing active forgetting")
                     # we forget the oldest AI message and corresponding answer
                     self.context_window.pop(1)
                     self.context_window.pop(1)
@@ -134,23 +142,25 @@ class LLM(AnalysisObject):
                     self.history.append({"role": role, "content": content})
                     num_AI_messages = (len(self.context_window) - 1) // 2
                     if num_AI_messages == self.keep_last_n_messages:
-                        print ("doing active forgetting")
+                        print("doing active forgetting")
                         # we forget the oldest AI message and corresponding answer
                         self.context_window.pop(1)
                         self.context_window.pop(1)
                     self.context_window.append({"role": role, "content": content})
                 else:
                     message = {
-                        "role": "user", "content": [
-                        {"type": "text", "text": content},
-                        {"type": "image_url", "image_url": {
-                        "url": f"data:image/png;base64,{encoded_image}"}
-                        }]
-                    }                                            
-                    self.context_window.append(message) 
-    
-                    
-               
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": content},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/png;base64,{encoded_image}"
+                                },
+                            },
+                        ],
+                    }
+                    self.context_window.append(message)
 
     def clean_context_window(self):
         while len(self.context_window) > 1:
@@ -185,6 +195,7 @@ class LLM(AnalysisObject):
 class VisualLLM(LLM):
     def __init__(self, config):
         super().__init__(config)
+
     def speak(self, sandbox):
         """
         Only to comment about one image
@@ -195,25 +206,29 @@ class VisualLLM(LLM):
         """
 
         from amadeusgpt.system_prompts.visual_llm import _get_system_prompt
+
         self.system_prompt = _get_system_prompt()
         analysis = sandbox.exec_namespace["behavior_analysis"]
         scene_image = analysis.visual_manager.get_scene_image()
-        result, buffer = cv2.imencode('.jpeg', scene_image)     
+        result, buffer = cv2.imencode(".jpeg", scene_image)
         image_bytes = io.BytesIO(buffer)
-        base64_image = base64.b64encode(image_bytes.getvalue()).decode('utf-8')   
+        base64_image = base64.b64encode(image_bytes.getvalue()).decode("utf-8")
 
         self.update_history("system", self.system_prompt)
-        self.update_history("user", "here is the image", encoded_image = base64_image, replace = True)
-        response = self.connect_gpt(self.context_window, max_tokens=2000)        
+        self.update_history(
+            "user", "here is the image", encoded_image=base64_image, replace=True
+        )
+        response = self.connect_gpt(self.context_window, max_tokens=2000)
         text = response.choices[0].message.content.strip()
-        print (text)
+        print(text)
         pattern = r"```json(.*?)```"
         if len(re.findall(pattern, text, re.DOTALL)) == 0:
             raise ValueError("can't parse the json string correctly", text)
         else:
             json_string = re.findall(pattern, text, re.DOTALL)[0]
             json_obj = json.loads(json_string)
-            return json_obj      
+            return json_obj
+
 
 class CodeGenerationLLM(LLM):
     """
@@ -222,7 +237,6 @@ class CodeGenerationLLM(LLM):
 
     def __init__(self, config):
         super().__init__(config)
-  
 
     def speak(self, sandbox):
         """
@@ -265,10 +279,8 @@ class CodeGenerationLLM(LLM):
         task_program_docs = sandbox.get_task_program_docs()
         query_block = sandbox.get_query_block()
 
-        behavior_analysis = sandbox.exec_namespace[
-            "behavior_analysis"
-        ]
-       
+        behavior_analysis = sandbox.exec_namespace["behavior_analysis"]
+
         self.system_prompt = _get_system_prompt(
             query_block, core_api_docs, task_program_docs, behavior_analysis
         )
@@ -280,7 +292,6 @@ class CodeGenerationLLM(LLM):
 class MutationLLM(LLM):
     def __init__(self, config):
         super().__init__(config)
-    
 
     def update_system_prompt(self, sandbox):
         from amadeusgpt.system_prompts.mutation import _get_system_prompt
@@ -307,7 +318,6 @@ class MutationLLM(LLM):
 class BreedLLM(LLM):
     def __init__(self, config):
         super().__init__(config)
-    
 
     def update_system_prompt(self, sandbox):
         from amadeusgpt.system_prompts.breed import _get_system_prompt
@@ -342,7 +352,6 @@ class DiagnosisLLM(LLM):
     """
     Resource management for testing and error handling
     """
-    
 
     @classmethod
     def get_system_prompt(
@@ -410,8 +419,9 @@ Can you correct the code?
 
 
 if __name__ == "__main__":
-    from amadeusgpt.config import Config   
+    from amadeusgpt.config import Config
     from amadeusgpt.main import create_amadeus
+
     config = Config("amadeusgpt/configs/EPM_template.yaml")
 
     amadeus = create_amadeus(config)

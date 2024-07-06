@@ -112,7 +112,7 @@ class AIMessage(BaseMessage):
             amadeus_answer = amadeus_answer.to_dict()
         self.data.update(amadeus_answer)
 
-    def render(self, debug = False):
+    def render(self, debug=False):
         """
         We use the getter for better encapsulation
         overall structure of what to be rendered
@@ -181,9 +181,9 @@ class AIMessage(BaseMessage):
                         # Remind users we are fixing the error by self debugging
                         st.markdown(f"Let me try to fix the error by self-debugging\n ")
                         if not debug:
-                            sandbox.llms["self_debug"].speak(sandbox)                        
+                            sandbox.llms["self_debug"].speak(sandbox)
                             qa_message = sandbox.code_execution(qa_message)
-                            self.render(debug = True)
+                            self.render(debug=True)
                     # do not need to execute the block one more time
                     if not self.rendered:
                         self.rendered = True
@@ -558,7 +558,9 @@ def render_page_by_example(example):
             if uploaded_keypoint_file is not None:
                 path = save_uploaded_file(uploaded_keypoint_file, save_dir)
                 st.session_state["uploaded_keypoint_file"] = path
-                config["keypoint_info"]["keypoint_file_path"] = st.session_state["uploaded_keypoint_file"]
+                config["keypoint_info"]["keypoint_file_path"] = st.session_state[
+                    "uploaded_keypoint_file"
+                ]
 
         if "uploaded_video_file" not in st.session_state:
             uploaded_video_file = st.file_uploader(
@@ -569,7 +571,9 @@ def render_page_by_example(example):
             if uploaded_video_file is not None:
                 path = save_uploaded_file(uploaded_video_file, save_dir)
                 st.session_state["uploaded_video_file"] = uploaded_video_file
-                config["video_info"]["video_file_path"] = st.session_state["uploaded_video_file"]      
+                config["video_info"]["video_file_path"] = st.session_state[
+                    "uploaded_video_file"
+                ]
 
         ###### USER INPUT PANEL ######
         # get user input once getting the uploaded files
@@ -675,12 +679,15 @@ def render_page_by_example(example):
             st.caption("Raw video from Horse-30")
         else:
             st.caption("DeepLabCut-SuperAnimal tracked video")
-        if config["video_info"]["video_file_path"] and config["video_info"]["video_file_path"] is not None: 
+        if (
+            config["video_info"]["video_file_path"]
+            and config["video_info"]["video_file_path"] is not None
+        ):
             st.video(config["video_info"]["video_file_path"])
 
         if "uploaded_video_file" in st.session_state:
             st.video(st.session_state["uploaded_video_file"])
-        
+
         # we only show objects for MausHaus for demo
         # if sam_image is not None:
         #     st.caption("SAM segmentation results")

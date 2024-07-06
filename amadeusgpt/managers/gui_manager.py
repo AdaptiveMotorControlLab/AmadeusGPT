@@ -7,11 +7,11 @@ import numpy as np
 from matplotlib.path import Path
 from matplotlib.widgets import Button, PolygonSelector
 
+from amadeusgpt.analysis_objects.object import ROIObject
 from amadeusgpt.programs.api_registry import (register_class_methods,
                                               register_core_api)
 
 from .base import Manager
-from amadeusgpt.analysis_objects.object import ROIObject
 from .object_manager import ObjectManager
 
 
@@ -52,7 +52,7 @@ class ROISelector:
         # Here you can add any further processing of the polygons
         self.object_manager.roi_objects = []
         for idx, path in enumerate(self.paths):
-            self.object_manager.add_roi_object(ROIObject(f'ROI{idx}', path))
+            self.object_manager.add_roi_object(ROIObject(f"ROI{idx}", path))
 
         # Assuming the object_manager's add_roi_object is meant to handle the completed polygons
 

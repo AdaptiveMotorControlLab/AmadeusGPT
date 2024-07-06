@@ -298,7 +298,7 @@ class AnimalSeq(Animal):
 
     def set_head_orientation_keypoints(
         self, head_orientation_keypoints: Dict[str, Any]
-    ):        
+    ):
         self.nose_name = head_orientation_keypoints["nose"]
         self.neck_name = head_orientation_keypoints["neck"]
         self.support_head_orientation = True

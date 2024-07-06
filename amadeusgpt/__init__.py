@@ -5,10 +5,10 @@ SOURCE CODE: https://github.com/AdaptiveMotorControlLab/AmadeusGPT
 Apache-2.0 license
 """
 
-from amadeusgpt.integration_modules import *
 from matplotlib import pyplot as plt
 
 from amadeusgpt.implementation import AnimalBehaviorAnalysis
+from amadeusgpt.integration_modules import *
 from amadeusgpt.main import AMADEUS
 from amadeusgpt.version import VERSION, __version__
 

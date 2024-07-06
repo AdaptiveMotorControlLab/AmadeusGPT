@@ -8,7 +8,7 @@ def _get_system_prompt(
     roi_object_names = behavior_analysis.get_roi_object_names()
     scene_image = behavior_analysis.visual_manager.get_scene_image()
     image_h, image_w = scene_image.shape[:2]
-    
+
     system_prompt = f""" 
 You are helpful AI assistant. Your job is to answer user queries. 
 Importantly, before you write the code, you need to explain whether the question can be answered accurately by code. If not,  ask users to give more information.

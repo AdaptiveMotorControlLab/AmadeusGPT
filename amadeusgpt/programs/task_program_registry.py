@@ -2,7 +2,10 @@ import ast
 import json
 from collections import defaultdict
 from typing import Any, Callable
+
 from amadeusgpt.utils import func2json
+
+
 class TaskProgram:
     """
     The task program in the system should be uniquely tracked by the id
@@ -31,7 +34,8 @@ class TaskProgram:
     __call__(): should take the context and run the program in a sandbox.
     In the future we use docker container to run it
 
-    """    
+    """
+
     cache = defaultdict(dict)
 
     def __init__(
@@ -59,16 +63,16 @@ class TaskProgram:
         self.json_obj["parents"] = parents
         self.json_obj["mutation_from"] = mutation_from
         self.json_obj["generation"] = generation
-        
 
     def __setitem__(self, key, value):
         self.json_obj[key] = value
 
     def display(self):
-        print (self.json_obj['name'],
-                self.json_obj['source_code'],
-                self.json_obj['description'])
-               
+        print(
+            self.json_obj["name"],
+            self.json_obj["source_code"],
+            self.json_obj["description"],
+        )
 
     def __getitem__(self, key):
         """
@@ -120,7 +124,7 @@ class TaskProgram:
 
     def validate(self):
         pass
-  
+
 
 class TaskProgramLibrary:
     """
@@ -129,6 +133,7 @@ class TaskProgramLibrary:
     1) Custom task programs that are created by the user (can be loaded from disk)
     2) Task programs that are created by LLMs
     """
+
     LIBRARY = {}
 
     @classmethod

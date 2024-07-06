@@ -172,11 +172,13 @@ end: {self.end}
             mask |= event.generate_mask()
         negate_mask = ~mask
 
-        
-
         negate_events = Event.mask2events(
-            negate_mask, video_file_path, sender_animal_name,
-            set(), set(), smooth_window_size = 1
+            negate_mask,
+            video_file_path,
+            sender_animal_name,
+            set(),
+            set(),
+            smooth_window_size=1,
         )
 
         return negate_events
@@ -540,7 +542,7 @@ class EventGraph:
         For example, if there are two conditions to be met in the masks we look for locations that have overlap as 2
         """
         # retrieve all events that satisfy the conditions (k=v)
-        events = graph.traverse_by_kvs(merge_kvs)        
+        events = graph.traverse_by_kvs(merge_kvs)
         if not allow_more_than_2_overlap:
             assert (
                 Event.check_max_in_sum(events) <= number_of_overlap_for_fusion

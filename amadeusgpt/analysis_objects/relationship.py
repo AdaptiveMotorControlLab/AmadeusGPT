@@ -71,7 +71,7 @@ def calc_angle_in_egocentric_animal(mouse_cs_inv, p):
         p_in_mouse[:, 1], p_in_mouse[:, 0]
     )  # relative angle between the object and the mouse body axis
     theta = np.rad2deg(theta % (2 * np.pi))
- 
+
     return theta
 
 
@@ -253,9 +253,9 @@ class AnimalAnimalRelationship(Relationship):
         sender_pos = sender_animal.get_center()
         receiver_pos = receiver_animal.get_center()
         direction_vector = receiver_pos - sender_pos
-        sender_velocity = np.nanmean(sender_animal.get_velocity(), axis = 1)
+        sender_velocity = np.nanmean(sender_animal.get_velocity(), axis=1)
         norm_direction_vector = direction_vector / np.linalg.norm(direction_vector)
-        relative_speed = np.einsum('ij,ij->i', sender_velocity, norm_direction_vector)
+        relative_speed = np.einsum("ij,ij->i", sender_velocity, norm_direction_vector)
 
         closest_distance = np.nanmin(
             get_pairwise_distance(sender_animal.keypoints, receiver_animal.keypoints),
@@ -274,6 +274,6 @@ class AnimalAnimalRelationship(Relationship):
         if angles is not None:
             ret["relative_angle"] = angles
         if orientation is not None:
-            ret["orientation"] = orientation 
+            ret["orientation"] = orientation
 
         return ret
