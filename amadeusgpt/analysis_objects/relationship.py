@@ -261,7 +261,6 @@ class AnimalAnimalRelationship(Relationship):
             get_pairwise_distance(sender_animal.keypoints, receiver_animal.keypoints),
             axis=(1, 2),
         )
-        print ('relative_speed', relative_speed.mean())
         ret = {
             "distance": distance,
             "overlap": overlap,
