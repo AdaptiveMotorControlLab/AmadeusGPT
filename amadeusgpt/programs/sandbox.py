@@ -6,10 +6,8 @@ import re
 import traceback
 import typing
 from functools import wraps
-
 import matplotlib.pyplot as plt
 import numpy as np
-
 from amadeusgpt.analysis_objects.analysis_factory import create_analysis
 from amadeusgpt.analysis_objects.event import BaseEvent
 from amadeusgpt.analysis_objects.relationship import Orientation
@@ -18,10 +16,42 @@ from amadeusgpt.programs.api_registry import (CORE_API_REGISTRY,
                                               INTEGRATION_API_REGISTRY)
 from amadeusgpt.programs.task_program_registry import (TaskProgram,
                                                        TaskProgramLibrary)
+from pathlib import Path
+
+
+class QA_Message(dict):
+    def __init__(self, *args, **kwargs):
+        super(QA_Message, self).__init__(*args, **kwargs)
+
+    def get_masks(self):
+        function_rets = self["function_rets"]
+        # if function_ret is a list of events
+        if (
+            isinstance(function_rets, list)
+            and len(function_rets) > 0
+            and isinstance(function_rets[0], BaseEvent)
+        ):
+            events = function_rets
+            masks = []
+            for event in events:
+                masks.append(event.generate_mask())
+            return np.array(masks)
+        else:
+            raise ValueError("No events found in the function_rets")
+        
+    def get_serializable(self):
+        """
+        Only part of qa messages are serializable.
+        """
+        selected_keys = ['query', 'code', 'chain_of_thought', 'function_rets', 'meta_info']
+        ret = {}
+        for key in selected_keys:
+            ret[key] = self[key]
+        return ret
 
 
 def create_message(query, sandbox):
-    return {
+    return QA_Message({
         "query": query,
         "code": None,
         "chain_of_thought": None,
@@ -32,7 +62,7 @@ def create_message(query, sandbox):
         "out_videos": None,
         "pose_video": None,
         "meta_info": None,
-    }
+    })
 
 
 class SandboxBase:
@@ -192,16 +222,21 @@ class Sandbox(SandboxBase):
         self.task_program_library = TaskProgramLibrary().get_task_programs()
         self.config = config
         self.messages = []
+        # initialize the code execution namespace with builtins
         self.exec_namespace = {"__builtins__": __builtins__}
         # update_namespace initializes behavior analysis
         self.update_namespace()
         # then we can configure behavior analysis using vlm
         self.meta_info = None
-        self.visual_cache = {}
+        # where llms are stored
         self.llms = {}
         # just easier to pass this around
         self.query = None
         self.matched_modules = []
+        # result cache keeps the qa_message using the query as the key:
+        self.result_cache = {}
+        # configure how to save the results to a result folder
+        self.result_folder = Path(self.config["result_info"].get("result_folder", "./results"))
 
     def configure_using_vlm(self):
         # example meta_info:
@@ -322,9 +357,6 @@ The usage and the parameters of the functions are provided."""
         # to allow the program to access existing task programs
         self.exec_namespace["task_programs"] = TaskProgramLibrary.get_task_programs()
 
-    def parse_function_results(self, function_rets):
-        pass
-
     def code_execution(self, qa_message):
         # add main function into the namespace
         self.update_namespace()
@@ -388,7 +420,8 @@ The usage and the parameters of the functions are provided."""
     def events_to_videos(self, events, function_name):
         behavior_analysis = self.exec_namespace["behavior_analysis"]
         visual_manager = behavior_analysis.visual_manager
-        out_folder = "event_clips"
+        # save video clips to the result folder
+        out_folder = str(self.result_folder)
         os.makedirs(out_folder, exist_ok=True)
         behavior_name = "_".join(function_name.split(" "))
         video_file = self.config["video_info"]["video_file_path"]
@@ -449,9 +482,7 @@ The usage and the parameters of the functions are provided."""
             qa_message["out_videos"] = self.events_to_videos(
                 function_rets, self.get_function_name_from_string(qa_message["code"])
             )
-
-        else:
-            pass
+     
         qa_message["plots"].extend(plots)
         return qa_message
 
@@ -463,9 +494,10 @@ The usage and the parameters of the functions are provided."""
             qa_message["meta_info"] = self.meta_info
 
         self.messages.append(qa_message)
+        # there might be better way to set this
         self.query = user_query
         self.llms["code_generator"].speak(self)
-
+        self.result_cache[user_query] = qa_message
         return qa_message
 
     def run_task_program(self, task_program_name):
@@ -473,12 +505,14 @@ The usage and the parameters of the functions are provided."""
         Sandbox is also responsible for running task program
         """
         task_program = self.task_program_library[task_program_name]
-        self.query = "run the task program"
+        # there might be better way to set this
+        self.query = task_program_name
         qa_message = create_message(self.query, self)
         qa_message["code"] = task_program["source_code"]
         self.messages.append(qa_message)
         self.code_execution(qa_message)
         qa_message = self.render_qa_message(qa_message)
+        self.result_cache[task_program_name] = qa_message
         return qa_message
 
     def step(self, user_query, number_of_debugs=1):
@@ -503,7 +537,7 @@ The usage and the parameters of the functions are provided."""
                 qa_message = self.code_execution(qa_message)
 
         qa_message = self.render_qa_message(qa_message)
-
+        self.result_cache[user_query] = qa_message
         return qa_message
 
 

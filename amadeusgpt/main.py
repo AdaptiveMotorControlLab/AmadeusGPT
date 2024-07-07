@@ -18,6 +18,8 @@ from amadeusgpt.analysis_objects.llm import (CodeGenerationLLM, DiagnosisLLM,
                                              SelfDebugLLM, VisualLLM)
 from amadeusgpt.integration_module_hub import IntegrationModuleHub
 
+import pickle 
+
 class AMADEUS:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
@@ -81,16 +83,42 @@ class AMADEUS:
 
     def run_task_program(self, task_program_name: str):
         return self.sandbox.run_task_program(task_program_name)
+    
+    def save_results(self, out_folder: str| None = None):
+        """
+        Save the results of the qa message (since it has all the information needed)
+        """
+        if out_folder is None:
+            result_folder = self.sandbox.result_folder
+        else:
+            result_folder = out_folder
+        # make sure it exists
+        os.makedirs(result_folder, exist_ok=True)
+        results = self.sandbox.result_cache
 
+        ret = {}
+        for query in results:
+            ret[query] = results[query].get_serializable()
+
+        # save results to a pickle file
+        with open (os.path.join(result_folder, "results.pickle"), "wb") as f:
+            pickle.dump(ret, f)
+
+    def load_results(self, result_folder: str | None = None ):
+        if result_folder is None:
+            result_folder = self.sandbox.result_folder
+        else:
+            result_folder = result_folder
+        
+        with open (os.path.join(result_folder, "results.pickle"), "rb") as f:
+            results = pickle.load(f)
+        self.sandbox.result_cache = results
+
+    def get_results(self):
+        return self.sandbox.result_cache
 
 if __name__ == "__main__":
     from amadeusgpt.analysis_objects.llm import VisualLLM
     from amadeusgpt.config import Config
-
-
     config = Config("amadeusgpt/configs/EPM_template.yaml")
-
-    amadeus = AMADEUS(config)
-    sandbox = amadeus.sandbox
-    visualLLm = VisualLLM(config)
-    visualLLm.speak(sandbox)
+    amadeus = AMADEUS(config)   
