@@ -678,7 +678,7 @@ class VisualManager(Manager):
         return out_videos
 
     def generate_video_clips_from_events(
-        self, out_folder, video_file, events: List[BaseEvent], behavior_name
+        self, out_folder, events: List[BaseEvent], behavior_name
     ):
         """
         This function takes a list of events and generates video clips from the events
@@ -686,6 +686,7 @@ class VisualManager(Manager):
         2) For the same event on the same video, we plot the animal name and the "sender" of the event
         3) Then we write those videos to the disk
         """
+        video_file = self.config["video_info"]["video_file_path"]
 
         videoname = video_file.split("/")[-1].replace(".mp4", "").replace(".avi", "")
         video_name = f"{videoname}_{behavior_name}_video.mp4"

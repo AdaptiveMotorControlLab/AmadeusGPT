@@ -77,11 +77,17 @@ class AMADEUS:
         return result
 
     def get_analysis(self):
-        sandbox = self.sandbox
-        analysis = sandbox.exec_namespace["behavior_analysis"]
+        """
+        Every sandbox stores a unique "behavior analysis" instance in its namespace
+        Therefore, get analysis gets the current sandbox's analysis.
+        """
+        analysis = self.sandbox.exec_namespace["behavior_analysis"]
         return analysis
 
     def run_task_program(self, task_program_name: str):
+        """
+        Execute the task program on the currently holding sandbox
+        """
         return self.sandbox.run_task_program(task_program_name)
     
     def save_results(self, out_folder: str| None = None):

@@ -1,21 +1,14 @@
 import ast
-import copy
 import inspect
-import re
 import sys
 import time
 import traceback
 from itertools import groupby
 from operator import itemgetter
-from pydoc import doc
 from typing import Any, Dict, Sequence
-
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
-from numpy import ndarray
 from scipy.ndimage.filters import uniform_filter1d
-
 from amadeusgpt.logger import AmadeusLogger
 
 
@@ -63,23 +56,6 @@ def moving_average(x: Sequence, window_size: int, pos: str = "centered"):
     return uniform_filter1d(x, window_size, mode="constant", origin=origin)
 
 
-def moving_variance(x, window_size):
-    """
-    Blazing fast implementation of a moving variance.
-    :param x: ndarray, 1D input
-    :param window_size: int, window length
-    :return: 1D ndarray of length len(x)-window+1
-    """
-    nrows = x.size - window_size + 1
-    n = x.strides[0]
-    mat = np.lib.stride_tricks.as_strided(
-        x,
-        shape=(nrows, window_size),
-        strides=(n, n),
-    )
-    return np.var(mat, axis=1)
-
-
 def smooth_boolean_mask(x: Sequence, window_size: int):
     # `window_size` should be at least twice as large as the
     # minimal number of consecutive frames to be smoothed out.
@@ -107,136 +83,6 @@ def get_video_length(video_path):
     fps = video.get(cv2.CAP_PROP_FPS)
     n_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
     return int(n_frames)
-
-
-def frame_number_to_minute_seconds(frame_number, video_path):
-    fps = get_fps(video_path)
-    temp = frame_number / fps
-    minutes = int(temp // 60)
-    seconds = int(temp % 60)
-    ret = f"{minutes:02d}:{seconds:02d}"
-    return ret
-
-
-def search_generated_func(text):
-    functions = []
-    lines = text.split("\n")
-    func_names = []
-    i = 0
-
-    while i < len(lines):
-        line = lines[i]
-        func_signature = "def task_program"
-        if line.startswith(func_signature):
-            start = line.index("def ") + 4
-            end = line.index("(")
-            func_name = line[start:end]
-            func_names.append(func_name)
-            function_lines = [line]
-            nesting_level = 0
-            i += 1
-
-            while i < len(lines):
-                line = lines[i]
-                # Check for nested function definitions
-                if line.lstrip().startswith("def "):
-                    nesting_level += 1
-                elif line.lstrip().startswith("return") and nesting_level > 0:
-                    nesting_level -= 1
-                elif line.lstrip().startswith("return") and nesting_level == 0:
-                    function_lines.append(line)
-                    break
-
-                function_lines.append(line)
-                i += 1
-
-            functions.append("\n".join(function_lines))
-        i += 1
-
-    return functions, func_names
-
-
-def search_external_module_for_context_window(text):
-    """
-    just include everything
-    """
-    functions = []
-    i = 0
-    lines = text.split("\n")
-    func_names = []
-    while i < len(lines):
-        line = lines[i].strip()
-        func_signature = "def "
-        if line.strip() == "":
-            i += 1
-            continue
-        if line.startswith(func_signature):
-            start = line.index("def ") + 4
-            end = line.index("(")
-            func_name = line[start:end]
-            func_names.append(func_name)
-            function_lines = [line]
-            in_function = True
-            while in_function:
-                i += 1
-                if i == len(lines):
-                    break
-                next_line = lines[i].rstrip()
-                if not next_line.startswith((" ", "\t")):
-                    in_function = False
-                    continue
-                function_lines.append(next_line)
-            functions.append("\n".join(function_lines))
-        else:
-            i += 1
-    return functions, func_names
-
-
-def search_external_module_for_task_program_table(text):
-    """
-    in this case, just include everything
-    """
-    functions = []
-    i = 0
-    lines = text.split("\n")
-    lines_copy = copy.deepcopy(lines)
-    func_names = []
-    example_indentation = " " * 4
-    while i < len(lines):
-        if lines[i].startswith("def "):
-            start = lines[i].index("def ") + 4
-            end = lines[i].index("(")
-            func_name = lines[i][start:end]
-            func_names.append(func_name)
-        if "" not in lines[i]:
-            i += 1
-            continue
-        else:
-            lines[i] = lines[i].replace("", "").strip()
-        line = lines[i].strip()
-        func_signature = "def "
-        if line.strip() == "":
-            i += 1
-            continue
-        if line.startswith("def "):
-            function_lines = [line]
-            in_function = True
-            while in_function:
-                i += 1
-                if i == len(lines):
-                    break
-                next_line = lines[i].rstrip()
-                if "" not in lines_copy[i]:
-                    in_function = False
-                    continue
-                function_lines.append(
-                    next_line.replace("", "").replace(example_indentation, "", 1)
-                )
-            functions.append("\n".join(function_lines))
-        else:
-            i += 1
-
-    return functions, func_names
 
 
 def filter_kwargs_for_function(func, kwargs):
@@ -385,20 +231,3 @@ def func2json(func):
         }
         return json_obj
 
-
-def get_func_name_from_func_string(function_string: str):
-    import ast
-
-    # Parse the string into an AST
-    parsed_ast = ast.parse(function_string)
-
-    # Initialize a variable to hold the function name
-    function_name = None
-
-    # Traverse the AST
-    for node in ast.walk(parsed_ast):
-        if isinstance(node, ast.FunctionDef):
-            function_name = node.name
-            break
-
-    return function_name

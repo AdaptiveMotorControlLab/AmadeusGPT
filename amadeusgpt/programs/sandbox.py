@@ -305,15 +305,6 @@ The usage and the parameters of the functions are provided."""
     def copy(self):
         return Sandbox(self.config, self.api_registry)
 
-    def visual_validate(self, video_file, events, behavior_name):
-        # change video and keypoint file
-        analysis = create_analysis(self.config)
-        out_folder = os.path.join(self.config["evo_info"]["data_folder"], "inspection")
-        discovered_behaviors = []
-        for name, task_program in self.task_program_library.items():
-            if task_program["creator"] != "human":
-                discovered_behaviors.append(name)
-
     def update_matched_integration_modules(self, matched_modules):
         self.matched_modules = matched_modules
 
@@ -358,7 +349,8 @@ The usage and the parameters of the functions are provided."""
         self.exec_namespace["task_programs"] = TaskProgramLibrary.get_task_programs()
 
     def code_execution(self, qa_message):
-        # add main function into the namespace
+        # update the namespace in the beginning of code execution makes sure that 
+        # if there is a change in the config, we always use the newest config
         self.update_namespace()
         code = qa_message["code"]
         # not need to do further if there was no code found
@@ -424,12 +416,16 @@ The usage and the parameters of the functions are provided."""
         out_folder = str(self.result_folder)
         os.makedirs(out_folder, exist_ok=True)
         behavior_name = "_".join(function_name.split(" "))
-        video_file = self.config["video_info"]["video_file_path"]
         return visual_manager.generate_video_clips_from_events(
-            out_folder, video_file, events, behavior_name
+            out_folder, events, behavior_name
         )
 
     def render_qa_message(self, qa_message):
+        """
+        To be called after code execution.
+        If the function returns a list of events, we visualize those events to keypoint plot, ethogram plot and videos
+        if the function returns is a tuple of axe and figure, we put them into the plots filed 
+        """
         function_rets = qa_message["function_rets"]
         behavior_analysis = self.exec_namespace["behavior_analysis"]
         bodypart_names = behavior_analysis.animal_manager.get_keypoint_names()
@@ -487,6 +483,11 @@ The usage and the parameters of the functions are provided."""
         return qa_message
 
     def llm_step(self, user_query):
+        """
+        1) We first use gpt-4o to create meta_info describing the scene
+        2) We then ask LLM to generate code based on the query
+        3) We also cache the qa_message for future reference
+        """
         qa_message = create_message(user_query, self)
 
         # so that the frontend can display it too
@@ -502,7 +503,8 @@ The usage and the parameters of the functions are provided."""
 
     def run_task_program(self, task_program_name):
         """
-        Sandbox is also responsible for running task program
+        1) sandbox is also responsible for running task program
+        2) self.task_program_library references to a singleton so a different sandbox still has reference to the task program
         """
         task_program = self.task_program_library[task_program_name]
         # there might be better way to set this
@@ -542,6 +544,9 @@ The usage and the parameters of the functions are provided."""
 
 
 def save_figure_to_tempfile(fig):
+    """
+    Only used for debug
+    """
     import tempfile
 
     # save the figure
@@ -566,6 +571,9 @@ def save_figure_to_tempfile(fig):
 
 
 def render_temp_message(query, sandbox):
+    """
+    Only used for debug
+    """
     import streamlit as st
 
     qa_message = create_message("random query", sandbox)
