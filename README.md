@@ -96,6 +96,11 @@ os.environ["OPENAI_API_KEY"] = 'your api key'
 make app
 ```
 
+### What keypoint file format do we support?
+- If you only provide the raw video file, we use SuperAnimal models [SuperAnimal models] (https://www.nature.com/articles/s41467-024-48792-2) to predict your video. This is only supported with cpu or gpu installation. While we highly recommend gpu installation, we are working on faster, light-weight superanimal models to work on your CPU.
+- If you already have keypoint file corresponding to the video file, look up how we set-up the config file in the notebooks.  Right now we only support keypoint output from DeepLabCut. Other keypoint formats can be added upon feature requests.
+
+
 ### Try AmadeusGPT with our example notebooks
 We provide example notebooks at [Notebooks](notebook)
 
