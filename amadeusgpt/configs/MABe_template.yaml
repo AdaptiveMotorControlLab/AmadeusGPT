@@ -12,5 +12,5 @@ llm_info:
 object_info:
   load_objects_from_disk: false
 video_info:
-  scene_frame_number: 100
+  scene_frame_number: 1400
   video_file_path: "examples/MABe/EGS8X2MN4SSUGFWAV976.mp4"

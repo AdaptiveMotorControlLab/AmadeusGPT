@@ -673,8 +673,6 @@ class VisualManager(Manager):
         # Release everything when job is finished
         cap.release()
         cv2.destroyAllWindows()
-        print("out videos" * 10)
-        print(out_videos)
         return out_videos
 
     def generate_video_clips_from_events(

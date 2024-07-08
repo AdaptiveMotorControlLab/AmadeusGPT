@@ -17,7 +17,7 @@ from amadeusgpt.programs.api_registry import (CORE_API_REGISTRY,
 from amadeusgpt.programs.task_program_registry import (TaskProgram,
                                                        TaskProgramLibrary)
 from pathlib import Path
-
+from collections import defaultdict
 
 class QA_Message(dict):
     def __init__(self, *args, **kwargs):
@@ -233,8 +233,17 @@ class Sandbox(SandboxBase):
         # just easier to pass this around
         self.query = None
         self.matched_modules = []
-        # result cache keeps the qa_message using the query as the key:
-        self.result_cache = {}
+        # example result_cahe
+        """
+        {'query' :  
+            {
+                'file1.mp4':  QA_Message(),
+                'file2.mp4':  QA_Message(),
+            }
+        }         
+        """
+
+        self.result_cache = defaultdict(dict)
         # configure how to save the results to a result folder
         self.result_folder = Path(self.config["result_info"].get("result_folder", "./results"))
 
@@ -497,24 +506,30 @@ The usage and the parameters of the functions are provided."""
         self.messages.append(qa_message)
         # there might be better way to set this
         self.query = user_query
-        self.llms["code_generator"].speak(self)
-        self.result_cache[user_query] = qa_message
+        self.llms["code_generator"].speak(self)        
+        self.result_cache[user_query][self.config['video_info']['video_file_path']] = qa_message
         return qa_message
 
-    def run_task_program(self, task_program_name):
+    def run_task_program(self, config: Config, task_program_name: str):
         """
         1) sandbox is also responsible for running task program
         2) self.task_program_library references to a singleton so a different sandbox still has reference to the task program
         """
+        # update the config 
+        self.config = config
+
         task_program = self.task_program_library[task_program_name]
         # there might be better way to set this
         self.query = task_program_name
         qa_message = create_message(self.query, self)
         qa_message["code"] = task_program["source_code"]
         self.messages.append(qa_message)
+
+        # code execution will use the latest config, if updated
         self.code_execution(qa_message)
+
         qa_message = self.render_qa_message(qa_message)
-        self.result_cache[task_program_name] = qa_message
+        self.result_cache[task_program_name][config['video_info']['video_file_path']] = qa_message
         return qa_message
 
     def step(self, user_query, number_of_debugs=1):
@@ -539,7 +554,7 @@ The usage and the parameters of the functions are provided."""
                 qa_message = self.code_execution(qa_message)
 
         qa_message = self.render_qa_message(qa_message)
-        self.result_cache[user_query] = qa_message
+        self.result_cache[user_query][self.config['video_info']['video_file_path']] = qa_message
         return qa_message
 
 

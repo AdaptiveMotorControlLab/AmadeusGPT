@@ -17,7 +17,7 @@ from amadeusgpt.integration_module_hub import IntegrationModuleHub
 from amadeusgpt.analysis_objects.llm import (CodeGenerationLLM, DiagnosisLLM,
                                              SelfDebugLLM, VisualLLM)
 from amadeusgpt.integration_module_hub import IntegrationModuleHub
-
+from collections import defaultdict
 import pickle 
 
 class AMADEUS:
@@ -84,11 +84,16 @@ class AMADEUS:
         analysis = self.sandbox.exec_namespace["behavior_analysis"]
         return analysis
 
-    def run_task_program(self, task_program_name: str):
+    def run_task_program(self, config: Config, task_program_name: str):
         """
         Execute the task program on the currently holding sandbox
+        Parameters
+        -----------
+        config: a config specifies the movie file and the keypoint file to run task program
+        task_program_name: the name of the task program to run
+
         """
-        return self.sandbox.run_task_program(task_program_name)
+        return self.sandbox.run_task_program(config, task_program_name)
     
     def save_results(self, out_folder: str| None = None):
         """
@@ -102,9 +107,10 @@ class AMADEUS:
         os.makedirs(result_folder, exist_ok=True)
         results = self.sandbox.result_cache
 
-        ret = {}
+        ret = defaultdict(dict)
         for query in results:
-            ret[query] = results[query].get_serializable()
+            for video_file_path in results[query]:
+                ret[query][video_file_path] = results[query][video_file_path].get_serializable()
 
         # save results to a pickle file
         with open (os.path.join(result_folder, "results.pickle"), "wb") as f:

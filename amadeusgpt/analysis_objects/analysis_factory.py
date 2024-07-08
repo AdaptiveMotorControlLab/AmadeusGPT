@@ -1,5 +1,6 @@
 from amadeusgpt.implementation import AnimalBehaviorAnalysis
 
+
 analysis_fac = {}
 
 def create_analysis(config):
