@@ -506,8 +506,15 @@ The usage and the parameters of the functions are provided."""
         self.messages.append(qa_message)
         # there might be better way to set this
         self.query = user_query
-        self.llms["code_generator"].speak(self)        
+        self.llms["code_generator"].speak(self)
+        # cache the resulted qa message for future use
         self.result_cache[user_query][self.config['video_info']['video_file_path']] = qa_message
+
+        # task program that is written by llm is automatically registered to be used in the future
+        
+        if qa_message['code'] is not None:
+            TaskProgramLibrary.register_task_program(creator="llm")(qa_message['code'])
+
         return qa_message
 
     def run_task_program(self, config: Config, task_program_name: str):
@@ -532,30 +539,30 @@ The usage and the parameters of the functions are provided."""
         self.result_cache[task_program_name][config['video_info']['video_file_path']] = qa_message
         return qa_message
 
-    def step(self, user_query, number_of_debugs=1):
-        """
-        Currently not used. We tried to seperate LLM inference and code execution
-        """            
-        qa_message = create_message(user_query, self)
+    # def step(self, user_query, number_of_debugs=1):
+    #     """
+    #     Currently not used. We tried to seperate LLM inference and code execution
+    #     """            
+    #     qa_message = create_message(user_query, self)
 
-        if self.meta_info is not None:
-            qa_message["meta_info"] = self.meta_info
+    #     if self.meta_info is not None:
+    #         qa_message["meta_info"] = self.meta_info
 
-        self.messages.append(qa_message)
+    #     self.messages.append(qa_message)
 
-        self.query = user_query
-        self.llms["code_generator"].speak(self)
-        # all these llms collectively compose a amadeus_answer
-        qa_message = self.code_execution(qa_message)
+    #     self.query = user_query
+    #     self.llms["code_generator"].speak(self)
+    #     # all these llms collectively compose a amadeus_answer
+    #     qa_message = self.code_execution(qa_message)
 
-        if qa_message["error_message"] is not None:
-            for i in range(number_of_debugs):
-                self.llms["self_debug"].speak(self)
-                qa_message = self.code_execution(qa_message)
+    #     if qa_message["error_message"] is not None:
+    #         for i in range(number_of_debugs):
+    #             self.llms["self_debug"].speak(self)
+    #             qa_message = self.code_execution(qa_message)
 
-        qa_message = self.render_qa_message(qa_message)
-        self.result_cache[user_query][self.config['video_info']['video_file_path']] = qa_message
-        return qa_message
+    #     qa_message = self.render_qa_message(qa_message)
+    #     self.result_cache[user_query][self.config['video_info']['video_file_path']] = qa_message
+    #     return qa_message
 
 
 def save_figure_to_tempfile(fig):

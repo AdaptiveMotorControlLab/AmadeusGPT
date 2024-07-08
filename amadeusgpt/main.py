@@ -20,6 +20,8 @@ from amadeusgpt.integration_module_hub import IntegrationModuleHub
 from collections import defaultdict
 import pickle 
 
+from amadeusgpt.programs.task_program_registry import TaskProgramLibrary
+
 class AMADEUS:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
@@ -128,6 +130,9 @@ class AMADEUS:
 
     def get_results(self):
         return self.sandbox.result_cache
+    
+    def get_task_programs(self):
+        return TaskProgramLibrary.get_task_programs()
 
 if __name__ == "__main__":
     from amadeusgpt.analysis_objects.llm import VisualLLM
