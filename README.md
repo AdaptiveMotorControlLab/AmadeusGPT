@@ -35,7 +35,7 @@ Note that in order to access our demo video and keypoint files, we recommend to 
 
 ### Install from the source
 
-**Make sure you eidt those installation scripts to point to your own conda path before you run them**
+**Make sure you edit those installation scripts to point to your own conda path before you run them**
 
 #### Minimal installation
 **Recommended for:** Running AmadeusGPT without GPUs. This setup is lightweight and is limited to processing movie files and keypoint outputs (.h5) from DeepLabCut.
