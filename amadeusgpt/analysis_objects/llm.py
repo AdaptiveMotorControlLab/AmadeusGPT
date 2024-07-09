@@ -5,13 +5,11 @@ import os
 import re
 import time
 import traceback
-
+import numpy as np 
 import cv2
 import openai
 from openai import OpenAI
-
 from amadeusgpt.utils import AmadeusLogger
-
 from .base import AnalysisObject
 
 
@@ -118,7 +116,32 @@ class LLM(AnalysisObject):
 
         return response
 
-    def update_history(self, role, content, encoded_image = None, replace=False):
+    # image list can be image byte or image array
+    def prepare_multi_image_content(self, image_list):
+        """
+        """
+        encoded_image_list = []
+        for image in image_list:
+            # images from matplotlib etc.
+            if isinstance(image, io.BytesIO):
+                base64_image = base64.b64encode(image_bytes.getvalue()).decode("utf-8")
+            # images from opencv
+            elif isinstance(image, np.ndarray):
+                result, buffer = cv2.imencode(".jpeg", image)
+                image_bytes = io.BytesIO(buffer)
+                base64_image = base64.b64encode(image_bytes.getvalue()).decode("utf-8")
+
+            encoded_image_list.append(base64_image)
+        multi_image_content =  [{"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{encoded_image}"}
+            } for encoded_image in encoded_image_list]
+        return multi_image_content
+
+    def update_history(self, role, content, multi_image_content = None, in_place=False):
+        """
+        multi_image_content: can support multi image content for gpt-4o or euiqvalent
+        in_place: always use the index 1 as the user message. This is for LLM does not need to keep a history
+        """
         if role == "system":
             if len(self.history) > 0:
                 self.history[0]["content"] = content
@@ -128,30 +151,26 @@ class LLM(AnalysisObject):
                 self.context_window.append({"role": role, "content": content})
         else:
 
-            if encoded_image is None:
-                self.history.append({"role": role, "content": content})
-                num_AI_messages = (len(self.context_window) - 1) // 2
-                if num_AI_messages == self.keep_last_n_messages:
-                    print ("doing active forgetting")
-                    # we forget the oldest AI message and corresponding answer
-                    self.context_window.pop(1)
-                    self.context_window.pop(1)
+            if multi_image_content is None:                              
                 new_message = {"role": role, "content": content}
             else:
-                new_message = {"role": "user", "content": [
-                    {"type": "text", "text": ""},
-                    {"type": "image_url", "image_url": {
-                        "url": f"data:image/jpeg;base64,{encoded_image}"}
-                    }
-                ]}
-
+                new_message = {"role": role, "content": multi_image_content
+                  }
+                
             self.history.append(new_message)
+            # responsible for active forgetting 
+            num_AI_messages = (len(self.context_window) - 1) // 2            
+            if num_AI_messages == self.keep_last_n_messages:
+                print ("doing active forgetting")
+                # we forget the oldest AI message and corresponding answer
+                # index 0 is reserved for system prompt so we always pop index 1
+                self.context_window.pop(1)
+                self.context_window.pop(1)
             
-            if replace == True:
-                if len(self.context_window) == 2:
-                    self.context_window[1] = new_message
-                else:
-                    self.context_window.append(new_message)
+            if in_place == True:
+                assert len(self.context_window) == 2, "context window should have only 2 elements"
+                self.context_window[1] = new_message
+               
 
     def clean_context_window(self):
         while len(self.context_window) > 1:
@@ -187,27 +206,19 @@ class VisualLLM(LLM):
     def __init__(self, config):
         super().__init__(config)
 
-    def speak(self, sandbox):
+    def speak(self, sandbox, image: np.ndarray):
         """
         Only to comment about one image
         #1) What animal is there, how many and what superanimal model we should use
         #2) report the background object list
         #3) We format them in json format
-
         """
-
         from amadeusgpt.system_prompts.visual_llm import _get_system_prompt
-
-        self.system_prompt = _get_system_prompt()
-        analysis = sandbox.exec_namespace["behavior_analysis"]
-        scene_image = analysis.visual_manager.get_scene_image()
-        result, buffer = cv2.imencode(".jpeg", scene_image)
-        image_bytes = io.BytesIO(buffer)
-        base64_image = base64.b64encode(image_bytes.getvalue()).decode("utf-8")
-
+        self.system_prompt = _get_system_prompt()        
+        multi_image_content = self.prepare_multi_image_content([image])
         self.update_history("system", self.system_prompt)
         self.update_history(
-            "user", "here is the image", encoded_image=base64_image, replace=True
+            "user", "here is the image", multi_image_content=multi_image_content, in_place=True
         )
         response = self.connect_gpt(self.context_window, max_tokens=2000)
         text = response.choices[0].message.content.strip()
@@ -240,6 +251,7 @@ class CodeGenerationLLM(LLM):
         self.update_history("user", query)
         response = self.connect_gpt(self.context_window, max_tokens=2000)
         text = response.choices[0].message.content.strip()
+        # need to keep the memory of the answers from LLM
         self.update_history("assistant", text)
 
         # we need to consider better ways to parse functions
