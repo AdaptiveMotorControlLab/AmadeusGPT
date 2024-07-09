@@ -7,3 +7,5 @@ conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvi
 pip install "git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut"
 pip install pycocotools
 pip install -e .[streamlit]
+# install the python kernel
+python -m ipykernel install --user --name amadeusgpt-gpu --display-name "amadeusgpt-gpu"
