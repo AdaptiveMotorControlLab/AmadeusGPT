@@ -512,7 +512,7 @@ The usage and the parameters of the functions are provided."""
 
         # task program that is written by llm is automatically registered to be used in the future
         
-        if qa_message['code'] is not None:
+        if qa_message['code'] is not None and qa_message['error_message'] is None:
             TaskProgramLibrary.register_task_program(creator="llm")(qa_message['code'])
 
         return qa_message
