@@ -122,7 +122,7 @@ class AnimalSeq(Animal):
     def query_states(self, query: str) -> ndarray:
         assert query in [
             "speed",
-            "acceleration",
+            "acceleration_mag",
             "bodypart_pairwise_distance",
         ], f"{query} is not supported"
 
@@ -172,8 +172,9 @@ class AnimalSeq(Animal):
         Returns the magnitude of the acceleration vector    
         """
         accelerations = self.get_acceleration()
-        acceleration_mag = np.linalg.norm(accelerations, axis=-1)    
-        assert len(acceleration_mag.shape) == 2
+        acceleration_mag = np.linalg.norm(accelerations, axis=-1)  
+        acceleration_mag = np.expand_dims(acceleration_mag, axis=-1)
+        assert len(acceleration_mag.shape) == 3
         return acceleration_mag
 
     def get_bodypart_wise_relation(self):
@@ -230,5 +231,18 @@ if __name__ == "__main__":
     # unit testing the shape of kinematics data
     # acceleration, acceleration_mag, velocity, speed, and keypoints
 
+    from amadeusgpt.config import Config
+    from amadeusgpt.main import AMADEUS
+    config = Config("/Users/shaokaiye/AmadeusGPT-dev/amadeusgpt/configs/MausHaus_template.yaml")
+    amadeus = AMADEUS(config)
+    analysis = amadeus.get_analysis()
+    # get an instance of animal
+    animal = analysis.animal_manager.get_animals()[0]
 
+    print ("velocity shape", animal.get_velocity().shape)
+    print ("speed shape", animal.get_speed().shape)
+    print ("acceleration shape", animal.get_acceleration().shape)
+    print ("acceleration_mag shape", animal.get_acceleration_mag().shape)
+
+    print(animal.query_states("acceleration_mag").shape)
 

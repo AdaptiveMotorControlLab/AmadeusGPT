@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from numpy import ndarray
 
-from amadeusgpt.analysis_objects.object import AnimalSeq
+from amadeusgpt.analysis_objects.animal import AnimalSeq
 from amadeusgpt.programs.api_registry import (register_class_methods,
                                               register_core_api)
 
