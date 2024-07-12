@@ -168,8 +168,11 @@ class LLM(AnalysisObject):
                 self.context_window.pop(1)
             
             if in_place == True:
-                assert len(self.context_window) == 2, "context window should have only 2 elements"
-                self.context_window[1] = new_message
+                assert len(self.context_window) <= 2, "context window should have only 2 elements"
+                if len(self.context_window) == 2:
+                    self.context_window[1] = new_message
+                else:
+                    self.context_window.append(new_message)
                
 
     def clean_context_window(self):

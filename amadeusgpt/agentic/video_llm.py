@@ -2,8 +2,7 @@ from amadeusgpt.analysis_objects.llm import LLM
 import cv2
 import numpy as np 
 import time 
-import openai
-from openai import OpenAI
+from amadeusgpt.config import Config
 import base64
 import io 
 
@@ -69,13 +68,12 @@ class VideoSampler:
         return video_data
 
 
-class VideoLLM:
+class VideoLLM(LLM):
     """
     Run GPT-4o on concatenated frames of a video
     """
     def __init__(self, config):
-        super().__init__()
-
+        super().__init__(config)
     def encode_image(self, image):
         result, buffer = cv2.imencode(".jpeg", image)
         image_bytes = io.BytesIO(buffer)
@@ -124,44 +122,34 @@ class VideoLLM:
         out.release()
         print(f"Video saved as {output_path}")
 
-    def run(self, video_data):
+    def speak(self, video_data):
+        from amadeusgpt.agentic.video_llm_prompt import _get_system_prompt
+        self.system_prompt = _get_system_prompt()    
         temp = [e for e in video_data.values()]
         images = []
         for segment in temp:
             images.extend(segment)
         print ('total images GPT-4 sees', len(images))
         self.images_to_video(images, 'gpt4_sees_this.mp4', 30)
-        client = OpenAI()
-        encoded_images = [self.encode_image(image) for image in images]
-        video_content =  [{"type": "image_url", "image_url": {
-                        "url": f"data:image/jpeg;base64,{encoded_image}"}
-        } for encoded_image in encoded_images]
-
-        messages = \
-        [
-        {
-        "role": 'system',
-        "content":
-          'You are an expert in animal behavior analysis especially lab mice. You will be given a video of a mouse in a home cage. The markers on the mouse are keypoints of the animal from DeepLabCut. You will be asked to observe the video and describe the habit or behavior the mouse is exhibiting.',
-        },
-        {      
-        "role": "user", "content":  video_content
-        }
-        ]
-        response = client.chat.completions.create(
-            model="gpt-4o", messages=messages, max_tokens=1000
-        )
-        print (response)
+        multi_image_content = self.prepare_multi_image_content(images)       
+        self.update_history("system", self.system_prompt)
+        self.update_history(
+            "user", "This video is about a mouse in its home cage.", multi_image_content=multi_image_content, in_place = True)
+        
+        response = self.connect_gpt(self.context_window, max_tokens=2000)
+        text = response.choices[0].message.content.strip()
+        print(text)
+       
 
 
 if __name__  ==  '__main__':
     video_path = '/Users/shaokaiye/AmadeusGPT-dev/examples/MausHaus/maushaus_trimmedDLC_snapshot-1000_labeled_x264.mp4'
+    config = Config('/Users/shaokaiye/AmadeusGPT-dev/amadeusgpt/configs/template.yaml')
     segment_duration = 10
-    frames_per_segment = 4
+    frames_per_segment = 1
 
     video_sampler = VideoSampler(video_path, segment_duration, frames_per_segment)
     video_data = video_sampler.process_video()
 
-    video_llm = VideoLLM(config=None)
-
-    video_llm.run(video_data)
+    video_llm = VideoLLM(config=config)
+    video_llm.speak(video_data)
