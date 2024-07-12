@@ -137,7 +137,7 @@ class VideoLLM(LLM):
         self.update_history("system", self.system_prompt)
         self.update_history(
             "user", "This video is about a mouse in its home cage.", multi_image_content=multi_image_content, in_place = True)
-
+         
         response = self.connect_gpt(self.context_window)
         text = response.choices[0].message.content.strip()
         print(text)
@@ -153,7 +153,6 @@ if __name__  ==  '__main__':
     video_sampler = VideoSampler(video_path, segment_duration, frames_per_segment)
     video_data = video_sampler.process_video()
 
-    video_data = {k:v for k,v in video_data.items() if k < 1}
-    print (video_data)
+    video_data = {k:v for k,v in video_data.items() if k < 30}
     video_llm = VideoLLM(config=config)
     video_llm.speak(video_data)

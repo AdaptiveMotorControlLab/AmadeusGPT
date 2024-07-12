@@ -20,7 +20,7 @@ class LLM(AnalysisObject):
 
     def __init__(self, config):
         self.config = config
-        self.max_tokens = config.get("max_tokens", 36000)
+        self.max_tokens = config.get("max_tokens", 4096)
         self.gpt_model = config.get("gpt_model", "gpt-4o")
         self.keep_last_n_messages = config.get("keep_last_n_messages", 2)
 
@@ -168,11 +168,13 @@ class LLM(AnalysisObject):
                 self.context_window.pop(1)
             
             if in_place == True:
-                assert len(self.context_window) <= 2, "context window should have only 2 elements"
+                assert len(self.context_window) <= 2, "context window should have no more than 2 elements"
                 if len(self.context_window) == 2:
                     self.context_window[1] = new_message
                 else:
                     self.context_window.append(new_message)
+            else:
+                self.context_window.append(new_message)
                
 
     def clean_context_window(self):
