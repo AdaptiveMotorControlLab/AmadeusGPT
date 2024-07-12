@@ -152,6 +152,8 @@ class LLM(AnalysisObject):
                     self.context_window[1] = new_message
                 else:
                     self.context_window.append(new_message)
+            else:
+                self.context_window.append(new_message)
 
     def clean_context_window(self):
         while len(self.context_window) > 1:
