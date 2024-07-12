@@ -20,7 +20,7 @@ class LLM(AnalysisObject):
 
     def __init__(self, config):
         self.config = config
-        self.max_tokens = config.get("max_tokens", 6000)
+        self.max_tokens = config.get("max_tokens", 36000)
         self.gpt_model = config.get("gpt_model", "gpt-4o")
         self.keep_last_n_messages = config.get("keep_last_n_messages", 2)
 
@@ -366,11 +366,6 @@ Can you correct the code?
 
 if __name__ == "__main__":
     from amadeusgpt.config import Config
-    from amadeusgpt.main import create_amadeus
 
-    config = Config("amadeusgpt/configs/EPM_template.yaml")
+    config = Config("/Users/shaokaiye/AmadeusGPT-dev/amadeusgpt/configs/MausHaus_template.yaml")
 
-    amadeus = create_amadeus(config)
-    sandbox = amadeus.sandbox
-    visualLLm = VisualLLM(config)
-    visualLLm.speak(sandbox)

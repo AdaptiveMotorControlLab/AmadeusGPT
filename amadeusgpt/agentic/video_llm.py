@@ -131,12 +131,14 @@ class VideoLLM(LLM):
             images.extend(segment)
         print ('total images GPT-4 sees', len(images))
         self.images_to_video(images, 'gpt4_sees_this.mp4', 30)
+     
+
         multi_image_content = self.prepare_multi_image_content(images)       
         self.update_history("system", self.system_prompt)
         self.update_history(
             "user", "This video is about a mouse in its home cage.", multi_image_content=multi_image_content, in_place = True)
-        
-        response = self.connect_gpt(self.context_window, max_tokens=2000)
+
+        response = self.connect_gpt(self.context_window)
         text = response.choices[0].message.content.strip()
         print(text)
        
@@ -151,5 +153,7 @@ if __name__  ==  '__main__':
     video_sampler = VideoSampler(video_path, segment_duration, frames_per_segment)
     video_data = video_sampler.process_video()
 
+    video_data = {k:v for k,v in video_data.items() if k < 1}
+    print (video_data)
     video_llm = VideoLLM(config=config)
     video_llm.speak(video_data)

@@ -23,7 +23,7 @@ import pickle
 from amadeusgpt.programs.task_program_registry import TaskProgramLibrary
 
 class AMADEUS:
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any] | Config):
         self.config = config
         self.code_generator_llm = CodeGenerationLLM(config.get("llm_info", {}))
         self.self_debug_llm = SelfDebugLLM(config.get("llm_info", {}))
@@ -52,7 +52,7 @@ class AMADEUS:
             self.sandbox.register_llm("diagnosis", self.diagnosis_llm)
 
         # can only do this after the register process
-        self.sandbox.configure_using_vlm()
+        # self.sandbox.configure_using_vlm()
 
     def match_integration_module(self, user_query: str):
         """
