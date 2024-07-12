@@ -64,7 +64,7 @@ class LLM(AnalysisObject):
             if "gpt_model" in st.session_state:
                 self.gpt_model = st.session_state["gpt_model"]
 
-        configurable_params = ["gpt_model", "max_tokens"]
+        configurable_params = ["gpt_model", "max_tokens", "temperature"]
 
         for param in configurable_params:
             if param in kwargs:
@@ -281,19 +281,17 @@ class CodeGenerationLLM(LLM):
 
         qa_message["chain_of_thought"] = thought_process
 
-    def update_system_prompt(self, sandbox):
+    def get_system_prompt(self, sandbox):
         from amadeusgpt.system_prompts.code_generator import _get_system_prompt
 
-        # get the formatted docs / blocks from the sandbox
-        core_api_docs = sandbox.get_core_api_docs()
-        task_program_docs = sandbox.get_task_program_docs()
-        query_block = sandbox.get_query_block()
-
-        behavior_analysis = sandbox.exec_namespace["behavior_analysis"]
-
-        self.system_prompt = _get_system_prompt(
-            query_block, core_api_docs, task_program_docs, behavior_analysis
+        return _get_system_prompt(
+            sandbox
         )
+
+    def update_system_prompt(self, sandbox):
+
+        # get the formatted docs / blocks from the sandbox      
+        self.system_prompt = self.get_system_prompt(sandbox)
 
         # update both history and context window
         self.update_history("system", self.system_prompt)

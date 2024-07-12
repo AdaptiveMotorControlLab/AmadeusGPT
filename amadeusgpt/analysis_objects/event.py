@@ -384,6 +384,8 @@ class EventGraph:
 
         return graph
 
+        
+
     @classmethod
     def init_from_mask(
         cls,
