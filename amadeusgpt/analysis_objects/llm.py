@@ -154,6 +154,8 @@ class LLM(AnalysisObject):
             if multi_image_content is None:                              
                 new_message = {"role": role, "content": content}
             else:
+                text_content = {"type": "text", "text": content}
+                multi_image_content = [text_content] + multi_image_content
                 new_message = {"role": role, "content": multi_image_content
                   }
                 

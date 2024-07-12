@@ -136,8 +136,8 @@ class VideoLLM(LLM):
         multi_image_content = self.prepare_multi_image_content(images)       
         self.update_history("system", self.system_prompt)
         self.update_history(
-            "user", "This video is about a mouse in its home cage.", multi_image_content=multi_image_content, in_place = True)
-         
+            "user", "This video is about a mouse in its home cage. The circular object in the center is a treadmill. The colorful dots are keypoints from DeepLabCut. You can ignore those dots.", multi_image_content=multi_image_content, in_place = True)
+
         response = self.connect_gpt(self.context_window)
         text = response.choices[0].message.content.strip()
         print(text)
