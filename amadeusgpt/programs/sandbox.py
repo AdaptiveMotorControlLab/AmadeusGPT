@@ -257,11 +257,13 @@ class Sandbox(SandboxBase):
         "background_objects": ["laboratory equipment", "white surface", "colored dots"]
         }
         """
-        json_obj = self.llms["visual_llm"].speak(self)
+        analysis = self.exec_namespace["behavior_analysis"]
+        scene_image = analysis.visual_manager.get_scene_image()
+        json_obj = self.llms["visual_llm"].speak(self, scene_image)
 
         self.meta_info = json_obj
         # configure meta info on the analysis managers
-        analysis = self.exec_namespace["behavior_analysis"]
+       
         analysis.animal_manager.configure_animal_from_meta(json_obj)
 
     def get_core_api_docs(self):
@@ -310,6 +312,14 @@ The usage and the parameters of the functions are provided."""
     def update_config(self, config):
         self.config = config
         self.update_namespace()
+    
+    def get_analysis(self):
+        """
+        Every sandbox stores a unique "behavior analysis" instance in its namespace
+        Therefore, get analysis gets the current sandbox's analysis.
+        """
+        analysis = self.exec_namespace["behavior_analysis"]
+        return analysis
 
     def copy(self):
         return Sandbox(self.config, self.api_registry)

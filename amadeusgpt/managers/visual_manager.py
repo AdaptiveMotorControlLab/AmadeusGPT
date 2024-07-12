@@ -8,7 +8,7 @@ import numpy as np
 from matplotlib.patches import Wedge
 
 from amadeusgpt.analysis_objects.event import BaseEvent
-from amadeusgpt.analysis_objects.object import AnimalSeq
+from amadeusgpt.analysis_objects.animal import AnimalSeq
 from amadeusgpt.analysis_objects.visualization import (EventVisualization,
                                                        GraphVisualization,
                                                        KeypointVisualization,

@@ -162,6 +162,7 @@ class EventManager(Manager):
         query: str
             Takes the form of {type_of_query}{comparison operator}{numerical value}.
             For example, at 'speed>50', type_of_query is 'speed', comparison operator is '>', and numerical value is 50.
+            Valid type_of_query ONLY INCLUDE "speed", "acceleration_mag" (magnitude of acceleration), "bodypart_pairwise_distance". 
             There can only be one compasion operator in the query.
         Returns
         -------
@@ -254,6 +255,7 @@ class EventManager(Manager):
         )
 
         return events
+
 
     # @cache_decorator
     @register_core_api
@@ -352,6 +354,14 @@ class EventManager(Manager):
         ret_events = Event.filter_events_by_duration(ret_events, min_window, max_window)
 
         return ret_events
+
+    @register_core_api
+    def get_duration(self, events: List[BaseEvent]) -> int:
+        """
+        This function is for calculating the total duration of a list events.
+        The return value is in seconds.
+        """
+        return sum([event.duration_in_seconds for event in events])
 
     @register_core_api
     def get_composite_events(

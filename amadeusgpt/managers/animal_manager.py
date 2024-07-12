@@ -7,13 +7,13 @@ import numpy as np
 import pandas as pd
 from numpy import ndarray
 
-from amadeusgpt.analysis_objects.object import AnimalSeq
+from amadeusgpt.analysis_objects.animal import AnimalSeq
 from amadeusgpt.programs.api_registry import (register_class_methods,
                                               register_core_api)
 
 from .base import Manager
 from .model_manager import ModelManager
-
+from amadeusgpt.analysis_objects.event import BaseEvent, Event
 
 def get_orientation_vector(cls, b1_name, b2_name):
     b1 = cls.get_keypoints()[:, :, cls.get_bodypart_index(b1_name), :]
@@ -219,6 +219,26 @@ class AnimalManager(Manager):
         return self.animals
 
     @register_core_api
+    def filter_array_by_events(self,
+                                array: np.ndarray, 
+                                animal_anme: str,
+                                events: List[Event]) -> np.ndarray:
+        """
+        Filter the array based on the events.
+        The array is describing the animal with animal_name. The expected shape (n_frames, n_kpts, n_dims)
+        It then returns the array filerted by the masks corresponding to the events.
+        """
+        assert len(events) > 0, "events must not be empty."
+        mask = np.zeros(events[0].data_length, dytpe=bool)
+
+        for event in events:
+            if event.sender_animal_name != animal_anme:
+                continue
+            mask[event.start:event.end + 1] = 1
+
+        return array[mask]
+
+    @register_core_api
     def get_animal_names(self) -> List[str]:
         """
         Get the names of all the animals.
@@ -234,10 +254,13 @@ class AnimalManager(Manager):
     def get_keypoints(self) -> ndarray:
         """
         Get the keypoints of animals. The shape is of shape  n_frames, n_individuals, n_kpts, n_dims
+        Optionally, you can pass a list of events to filter the keypoints based on the events.
         """
 
         keypoint_file_path = self.config["keypoint_info"]["keypoint_file_path"]
         video_file_path = self.config["video_info"]["video_file_path"]
+        
+
         if os.path.exists(video_file_path) and keypoint_file_path is None:
 
             if self.superanimal_name is None:
@@ -271,6 +294,7 @@ class AnimalManager(Manager):
             if os.path.exists(keypoint_file_path):
                 self.config["keypoint_info"]["keypoint_file_path"] = keypoint_file_path
                 self.init_pose()
+               
 
         ret = np.stack([animal.get_keypoints() for animal in self.animals], axis=1)
         return ret
@@ -281,7 +305,7 @@ class AnimalManager(Manager):
     ) -> ndarray:
         """
         Get the speed of all animals. The shape is  (n_frames, n_individuals, n_kpts, 1) # 1 is the scalar speed
-        The speed is an unsigned scalar value.
+        The speed is an unsigned scalar value. speed larger than 0 means moving.
         """
         return np.stack([animal.get_speed() for animal in self.animals], axis=1)
 
@@ -294,9 +318,9 @@ class AnimalManager(Manager):
         return np.stack([animal.get_velocity() for animal in self.animals], axis=1)
 
     @register_core_api
-    def get_acceleration(self) -> ndarray:
+    def get_acceleration_mag(self) -> ndarray:
         """
-        Get the acceleration. The shape is of shape  (n_frames, n_individuals, n_kpts, 2) # 2 is the x and y components
+        Get the magnitude of acceleration. The shape is of shape  (n_frames, n_individuals) # 2 is the x and y components
         The acceleration is a vector.
         """
         return np.stack([animal.get_acceleration() for animal in self.animals], axis=1)
@@ -322,7 +346,7 @@ class AnimalManager(Manager):
         """
         return self.full_keypoint_names
 
-    def query_animal_states(self, animal_name: str, query: str) -> ndarray:
+    def query_animal_states(self, animal_name: str, query: str) -> np.ndarray | None:
         for animal in self.animals:
             if animal.get_name() == animal_name:
                 return animal.query_states(query)
