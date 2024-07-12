@@ -92,12 +92,16 @@ class AnimalSeq(Animal):
         codes, verts = zip(*path_data)
         return mpath.Path(verts, codes)
 
-    def get_keypoints(self, average_keypoints=False) -> ndarray:
-        if average_keypoints:
-            return np.nanmedian(self.keypoints, axis=1)
+    def get_keypoints(self) -> ndarray:
+        # the shape should be (n_frames, n_keypoints, 2)
+        # extending to 3D?
+        assert len(self.keypoints.shape) == 3, f"keypoints shape is {self.keypoints.shape}"
         return self.keypoints
 
     def get_center(self):
+        """
+        median is more robust than mean
+        """
         return np.nanmedian(self.keypoints, axis=1).squeeze()
 
     def get_xmin(self):
@@ -219,6 +223,12 @@ class AnimalSeq(Animal):
         mouse_cs[:, :2, :2] = rot
         mouse_cs[:, :, 2] = np.c_[neck, np.ones(nrows)]
         return mouse_cs
+
+
+
+if __name__ == "__main__":
+    # unit testing the shape of kinematics data
+    # acceleration, acceleration_mag, velocity, speed, and keypoints
 
 
 
