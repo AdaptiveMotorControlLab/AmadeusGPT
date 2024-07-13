@@ -9,16 +9,14 @@ def code_related_prompt(sandbox):
     image_h, image_w = scene_image.shape[:2]
     animal_names = behavior_analysis.get_animal_names()
     prompt = f"""
-You could use apis from core_api_docs (they do not implementation details) and 
-task_program_docs (existing functions that capture behaviors). You can choose
-to reuse task programs or variables from previous steps. At the end, you need to write the main code.
-You will be provided with information that are organized in following blocks:
+
+We provide you additionl apis and task programs to help you write code.    
+
 coreapidocs: this block contains information about the core apis for class AnimalBehaviorAnalysis. They do not contain implementation details but you can use them to write code
 taskprograms: this block contains existing functions that capture behaviors. You can choose to reuse them in the main function.
 query: this block contains the user query that you need to answer using code
 
-
-Here is an example of how you can write the main function:
+Here is one example of how to put eeveything together:
 
 ```coreapidocs
 

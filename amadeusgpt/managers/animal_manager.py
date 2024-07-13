@@ -323,7 +323,7 @@ class AnimalManager(Manager):
         Get the magnitude of acceleration. The shape is of shape  (n_frames, n_individuals) # 2 is the x and y components
         The acceleration is a vector.
         """
-        return np.stack([animal.get_acceleration() for animal in self.animals], axis=1)
+        return np.stack([animal.get_acceleration_mag() for animal in self.animals], axis=1)
 
     @register_core_api
     def get_n_individuals(self) -> int:
