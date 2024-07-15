@@ -173,7 +173,6 @@ def wrap_instance_method(instance, method_name):
 class Sandbox(SandboxBase):
     def __init__(self, config):
         super().__init__()
-        self.task_program_library = TaskProgramLibrary().get_task_programs()
         self.config = config
         self.messages = []
         # initialize the code execution namespace with builtins
@@ -251,7 +250,7 @@ The usage and the parameters of the functions are provided."""
 
     def get_task_program_docs(self):
         ret = "```taskprograms\n"
-        for name, task_program in self.task_program_library.items():
+        for name, task_program in TaskProgramLibrary.get_task_programs().items():
             description = task_program.json_obj["docstring"]
             ret += f"{name}(config: Config): \n{description}\n"
         ret += "\n```"
@@ -289,7 +288,7 @@ The usage and the parameters of the functions are provided."""
             f = wrap_instance_method(analysis, api["name"])
             self.exec_namespace[api["name"]] = f
 
-        for name, task_program in self.task_program_library.items():
+        for name, task_program in TaskProgramLibrary.get_task_programs().items():
             self.exec_namespace[name] = task_program
 
         current_scope = globals()
@@ -366,6 +365,7 @@ The usage and the parameters of the functions are provided."""
         return function_name
 
     def register_task_program(self, task_program):
+
         TaskProgramLibrary.register_task_program(creator="human")(task_program)
 
     def clear_task_programs(self):
@@ -484,7 +484,7 @@ The usage and the parameters of the functions are provided."""
         # update the config 
         self.config = config
 
-        task_program = self.task_program_library[task_program_name]
+        task_program = TaskProgramLibrary.get_task_programs()[task_program_name]
         # there might be better way to set this
         self.query = task_program_name
         qa_message = create_message(self.query, self)

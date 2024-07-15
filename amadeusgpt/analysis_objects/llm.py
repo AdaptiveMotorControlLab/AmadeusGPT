@@ -40,9 +40,18 @@ class LLM(AnalysisObject):
         """
         raise NotImplementedError("This method should be implemented in the subclass")
 
+    def parse_json_string(self, text):
+        """
+        Text contains a json string with json block
+        """
+        pattern = r"```json(.*?)```"
+        json_string = re.findall(pattern, text, re.DOTALL)[0]
+        json_obj = json.loads(json_string)
+        return json_obj
+
     def create_qa_message(self, query, sandbox):
         return create_message(query, sandbox)
-
+    
 
     def connect_gpt(self, messages, **kwargs):
         # if openai version is less than 1
@@ -98,8 +107,10 @@ class LLM(AnalysisObject):
                     + LLM.prices[self.gpt_model]["output"]
                     * response.usage.completion_tokens
                 )
+                
                 print("current total cost", round(LLM.total_cost, 2), "$")
-                print("current total tokens", LLM.total_tokens)
+                print ("current input tokens", response.usage.prompt_tokens)
+                print("current accumulated tokens", LLM.total_tokens)
                 # TODO we need to calculate the actual dollar cost
                 break
 
@@ -181,7 +192,7 @@ class LLM(AnalysisObject):
                     self.context_window[1] = new_message
                 else:
                     self.context_window.append(new_message)
-            else:
+            else:                
                 self.context_window.append(new_message)
 
     def clean_context_window(self):

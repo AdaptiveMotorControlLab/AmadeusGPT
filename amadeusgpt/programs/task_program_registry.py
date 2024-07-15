@@ -140,8 +140,7 @@ class TaskProgramLibrary:
     def register_task_program(cls, creator="human", parents=None, mutation_from=None):
         # we need to add the relationship for the created
         # task program
-        def decorator(func):
-            print (func)
+        def decorator(func):        
             if isinstance(func, Callable) and not isinstance(func, TaskProgram):
                 json_obj = func2json(func)
                 id = len(cls.LIBRARY)

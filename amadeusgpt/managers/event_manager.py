@@ -381,7 +381,7 @@ class EventManager(Manager):
         ----------
         events_A: The first events to combine. When composition type is 'sequential', this event happens first.
         events_B: The second events to combine. When composition type is 'sequential', this event happens second.
-        max_interval_between_sequential_events: int, optional, default 15
+        max_interval_between_sequential_events: int, optional, default 15. Only used for 'sequential' composition type. The interval should be adjusted based on the nature of the two events.
         comopsition_type:
         'logical_and': two behaviors happen at the same time.
         'logical_or': one of the behaviors happen
