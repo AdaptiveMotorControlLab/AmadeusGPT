@@ -71,6 +71,7 @@ class AMADEUS:
 
                 # parse the query result by loading active loading
         return modules  
+       
 
     def step(self, user_query):
         integration_module_names = self.match_integration_module(user_query)
@@ -127,6 +128,9 @@ class AMADEUS:
         with open (os.path.join(result_folder, "results.pickle"), "rb") as f:
             results = pickle.load(f)
         self.sandbox.result_cache = results
+
+    def register_task_program(self, task_program, creator = "human"):
+        TaskProgramLibrary.register_task_program(creator = creator)(task_program)
 
     def get_results(self):
         return self.sandbox.result_cache

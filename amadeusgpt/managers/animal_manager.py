@@ -221,18 +221,22 @@ class AnimalManager(Manager):
     @register_core_api
     def filter_array_by_events(self,
                                 array: np.ndarray, 
-                                animal_anme: str,
+                                animal_name: str,
                                 events: List[Event]) -> np.ndarray:
         """
         Filter the array based on the events.
         The array is describing the animal with animal_name. The expected shape (n_frames, n_kpts, n_dims)
         It then returns the array filerted by the masks corresponding to the events.
+        If the events is empty, it will return a nan.
         """
-        assert len(events) > 0, "events must not be empty."
-        mask = np.zeros(events[0].data_length, dytpe=bool)
+
+        if len(events) == 0:
+            return np.ones_like(array) * np.nan
+        
+        mask = np.zeros(events[0].data_length, dtype=bool)
 
         for event in events:
-            if event.sender_animal_name != animal_anme:
+            if event.sender_animal_name != animal_name:
                 continue
             mask[event.start:event.end + 1] = 1
 
@@ -320,7 +324,7 @@ class AnimalManager(Manager):
     @register_core_api
     def get_acceleration_mag(self) -> ndarray:
         """
-        Get the magnitude of acceleration. The shape is of shape  (n_frames, n_individuals) # 2 is the x and y components
+        Get the magnitude of acceleration. The shape is of shape  (n_frames, n_individuals, 1)
         The acceleration is a vector.
         """
         return np.stack([animal.get_acceleration_mag() for animal in self.animals], axis=1)

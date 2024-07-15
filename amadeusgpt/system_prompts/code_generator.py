@@ -1,7 +1,7 @@
 def code_related_prompt(sandbox):
     query = sandbox.query
     core_api_docs = sandbox.get_core_api_docs()   
-    task_program_docs = sandbox.get_task_program_docs()
+    task_program_docs = sandbox.get_task_program_docs()     
     behavior_analysis = sandbox.get_analysis()
     keypoint_names = behavior_analysis.get_keypoint_names()
     object_names = behavior_analysis.object_manager.get_object_names()
@@ -66,10 +66,10 @@ Now that you have seen the examples, following is the information you need to wr
 {query}\n{core_api_docs}\n{task_program_docs}\n
 
 The keypoint names for the animals are: {keypoint_names}. Don't assume there are other keypoints.
-Available objects are: {object_names}. Don't assume there exist other objects.
+Available objects are: {object_names}. Don't assume there exist other objects. DO NOT define new objects.
 Present animals are: {animal_names}. Don't assume there exist other animals.
 
-FORMATTING:
+RULES:
 1) If you are asked to provide plotting code, make sure you don't call plt.show() but return a tuple figure, axs
 2) Make sure you must write a clear docstring for your code.
 3) Make sure your function signature looks like func_name(config: Config) 
@@ -78,6 +78,7 @@ FORMATTING:
 6) If you are writing code that uses matplotlib to plot, make sure you comment shape of the data to be plotted to double-check
 7) if your plotting code plots coordinates of keypoints, make sure you invert y axis so that the plot is consistent with the image
 8) make sure the xlim and ylim covers the whole image. The image (h,w) is ({image_h},{image_w})    
+9) Do not define your own objects (including grid objects). Only use  objects that are given to you.
 """
     return prompt
 

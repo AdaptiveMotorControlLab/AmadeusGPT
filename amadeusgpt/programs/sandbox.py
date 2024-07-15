@@ -18,53 +18,7 @@ from amadeusgpt.programs.task_program_registry import (TaskProgram,
                                                        TaskProgramLibrary)
 from pathlib import Path
 from collections import defaultdict
-
-class QA_Message(dict):
-    def __init__(self, *args, **kwargs):
-        super(QA_Message, self).__init__(*args, **kwargs)
-
-    def get_masks(self):
-        function_rets = self["function_rets"]
-        # if function_ret is a list of events
-        if (
-            isinstance(function_rets, list)
-            and len(function_rets) > 0
-            and isinstance(function_rets[0], BaseEvent)
-        ):
-            events = function_rets
-            masks = []
-            for event in events:
-                masks.append(event.generate_mask())
-            return np.array(masks)
-        else:
-            raise ValueError("No events found in the function_rets")
-        
-    def get_serializable(self):
-        """
-        Only part of qa messages are serializable.
-        """
-        selected_keys = ['query', 'code', 'chain_of_thought', 'function_rets', 'meta_info']
-        ret = {}
-        for key in selected_keys:
-            ret[key] = self[key]
-        return ret
-
-
-def create_message(query, sandbox):
-    return QA_Message({
-        "query": query,
-        "code": None,
-        "chain_of_thought": None,
-        "plots": [],
-        "error_message": None,
-        "function_rets": None,
-        "sandbox": sandbox,
-        "out_videos": None,
-        "pose_video": None,
-        "meta_info": None,
-    })
-
-
+from amadeusgpt.utils import create_message
 class SandboxBase:
     """
     This class takes task program library, api registry.
@@ -372,6 +326,7 @@ The usage and the parameters of the functions are provided."""
         # if there is a change in the config, we always use the newest config
         self.update_namespace()
         code = qa_message["code"]
+       
         # not need to do further if there was no code found
         if code is None:
             return qa_message
@@ -383,6 +338,7 @@ The usage and the parameters of the functions are provided."""
             exec(f"result = {call_str}", self.exec_namespace)
             qa_message["error_message"] = None
         except Exception as e:
+            print ("error occurs in code execution")
             # use traceback to get full error
             full_traceback = traceback.format_exc()
             print(full_traceback)
@@ -390,6 +346,8 @@ The usage and the parameters of the functions are provided."""
             return qa_message
         result = self.exec_namespace["result"]
         qa_message["function_rets"] = result
+
+        
 
         return qa_message
 
@@ -407,23 +365,14 @@ The usage and the parameters of the functions are provided."""
 
         return function_name
 
-    def register_task_program(self, code, parents=None, mutation_from=None):
-        self.update_namespace()
+    def register_task_program(self, task_program):
+        TaskProgramLibrary.register_task_program(creator="human")(task_program)
 
-        if isinstance(code, str):
-            TaskProgramLibrary.register_task_program(
-                creator="llm", parents=parents, mutation_from=mutation_from
-            )(code)
-
-        elif isinstance(code, TaskProgram):
-            TaskProgramLibrary.register_task_program(
-                creator="llm", parents=parents, mutation_from=mutation_from
-            )(code)
-
-        elif isinstance(code, dict):
-            TaskProgramLibrary.register_task_program(
-                creator="llm", parents=parents, mutation_from=mutation_from
-            )(code)
+    def clear_task_programs(self):
+        """
+        This functions cleans the task programs
+        """
+        TaskProgramLibrary.LIBRARY = {}
 
     def register_llm(self, name, llm):
         self.llms[name] = llm
@@ -527,7 +476,7 @@ The usage and the parameters of the functions are provided."""
 
         return qa_message
 
-    def run_task_program(self, config: Config, task_program_name: str):
+    def run_task_program(self, config: Config, task_program_name :str):
         """
         1) sandbox is also responsible for running task program
         2) self.task_program_library references to a singleton so a different sandbox still has reference to the task program
@@ -548,32 +497,7 @@ The usage and the parameters of the functions are provided."""
         qa_message = self.render_qa_message(qa_message)
         self.result_cache[task_program_name][config['video_info']['video_file_path']] = qa_message
         return qa_message
-
-    # def step(self, user_query, number_of_debugs=1):
-    #     """
-    #     Currently not used. We tried to seperate LLM inference and code execution
-    #     """            
-    #     qa_message = create_message(user_query, self)
-
-    #     if self.meta_info is not None:
-    #         qa_message["meta_info"] = self.meta_info
-
-    #     self.messages.append(qa_message)
-
-    #     self.query = user_query
-    #     self.llms["code_generator"].speak(self)
-    #     # all these llms collectively compose a amadeus_answer
-    #     qa_message = self.code_execution(qa_message)
-
-    #     if qa_message["error_message"] is not None:
-    #         for i in range(number_of_debugs):
-    #             self.llms["self_debug"].speak(self)
-    #             qa_message = self.code_execution(qa_message)
-
-    #     qa_message = self.render_qa_message(qa_message)
-    #     self.result_cache[user_query][self.config['video_info']['video_file_path']] = qa_message
-    #     return qa_message
-
+    
 
 def save_figure_to_tempfile(fig):
     """

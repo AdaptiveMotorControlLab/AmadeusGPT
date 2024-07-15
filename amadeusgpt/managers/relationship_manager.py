@@ -35,7 +35,6 @@ class RelationshipManager(Manager):
 
         # roi, sam, animals are all objects
         roi_objs = self.object_manager.get_roi_objects()
-        print(self.object_manager.roi_objects)
         seg_objs = self.object_manager.get_seg_objects()
         grid_objs = self.object_manager.get_grid_objects()
         animals = self.animal_manager.get_animals()

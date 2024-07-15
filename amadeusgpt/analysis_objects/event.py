@@ -165,8 +165,7 @@ end: {self.end}
         """
         mask = np.zeros(events[0].data_length, dtype=bool)
         sender_animal_name = events[0].sender_animal_name
-        for event in events:
-            assert sender_animal_name == event.sender_animal_name
+       
         video_file_path = events[0].video_file_path
         for event in events:
             mask |= event.generate_mask()

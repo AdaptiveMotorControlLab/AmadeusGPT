@@ -10,7 +10,7 @@ from amadeusgpt.managers.animal_manager import AnimalManager
 from amadeusgpt.managers.base import Manager
 from amadeusgpt.managers.model_manager import ModelManager
 from amadeusgpt.programs.api_registry import register_class_methods
-
+import os
 np.set_printoptions(suppress=True)
 
 
@@ -44,10 +44,11 @@ class ObjectManager(Manager):
         self.occupation_heatmap = {}
         #####
         # let's not use grid objects for now
-        # if os.path.exists(config['video_info']['video_file_path']):
-        #     self.create_grids()
+        if os.path.exists(config['video_info']['video_file_path']):
+            self.create_grids()
+            self.create_grid_objects()
         #     self.create_grid_labels()
-        #     self.create_grid_objects()
+             
 
     def summary(self):
         print("roi_objects: ", self.get_roi_object_names())
@@ -67,6 +68,9 @@ class ObjectManager(Manager):
         return self.roi_objects
 
     def filter_duplicates(self, roi_objects):
+        """
+        Certain GUI like streamlit canvas keeps adding the same object multiple times
+        """
         seen = set()
         unique_set = []
         for roi_object in roi_objects:
@@ -107,10 +111,10 @@ class ObjectManager(Manager):
         sam.save_to_pickle(sam.get_objects(video_file_path), pickle_path)
 
     def get_objects(self) -> List[Object]:
-        return self.roi_objects + self.seg_objects
+        return self.roi_objects + self.seg_objects + self.grid_objects
 
     def get_object_names(self) -> List[str]:
-        return self.get_roi_object_names() + self.get_seg_object_names()
+        return self.get_roi_object_names() + self.get_seg_object_names() + self.get_grid_object_names()
 
     def create_grids(self):
         """
@@ -159,6 +163,8 @@ class ObjectManager(Manager):
 
     def get_grid_objects(self) -> List[GridObject]:
         return self.grid_objects
+    def get_grid_object_names(self) -> List[str]:
+        return [obj.name for obj in self.grid_objects]
 
     def create_grid_labels(self):
         # there is a more efficient way to get animal-chessboard region relationships

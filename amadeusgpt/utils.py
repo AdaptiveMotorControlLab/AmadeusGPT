@@ -231,3 +231,50 @@ def func2json(func):
         }
         return json_obj
 
+
+class QA_Message(dict):
+    def __init__(self, *args, **kwargs):
+
+        super(QA_Message, self).__init__(*args, **kwargs)
+
+
+    def get_masks(self):
+        function_rets = self["function_rets"]
+        # if function_ret is a list of events
+        if (
+            isinstance(function_rets, list)
+            and len(function_rets) > 0
+            and isinstance(function_rets[0], BaseEvent)
+        ):
+            events = function_rets
+            masks = []
+            for event in events:
+                masks.append(event.generate_mask())
+            return np.array(masks)
+        else:
+            raise ValueError("No events found in the function_rets")
+        
+    def get_serializable(self):
+        """
+        Only part of qa messages are serializable.
+        """
+        selected_keys = ['query', 'code', 'chain_of_thought', 'function_rets', 'meta_info']
+        ret = {}
+        for key in selected_keys:
+            ret[key] = self[key]
+        return ret
+
+def create_message(query,
+                sandbox):
+    return QA_Message({
+        "query": query,
+        "code": None,
+        "chain_of_thought": None,
+        "plots": [],
+        "error_message": None,
+        "function_rets": None,
+        "sandbox": sandbox,
+        "out_videos": None,
+        "pose_video": None,
+        "meta_info": None,
+    })

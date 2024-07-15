@@ -11,6 +11,7 @@ import openai
 from openai import OpenAI
 from amadeusgpt.utils import AmadeusLogger
 from .base import AnalysisObject
+from amadeusgpt.utils import create_message
 
 
 class LLM(AnalysisObject):
@@ -38,6 +39,10 @@ class LLM(AnalysisObject):
         Speak to the chat channel
         """
         raise NotImplementedError("This method should be implemented in the subclass")
+
+    def create_qa_message(self, query, sandbox):
+        return create_message(query, sandbox)
+
 
     def connect_gpt(self, messages, **kwargs):
         # if openai version is less than 1
@@ -124,6 +129,7 @@ class LLM(AnalysisObject):
         for image in image_list:
             # images from matplotlib etc.
             if isinstance(image, io.BytesIO):
+                image_bytes = image
                 base64_image = base64.b64encode(image_bytes.getvalue()).decode("utf-8")
             # images from opencv
             elif isinstance(image, np.ndarray):
@@ -206,6 +212,17 @@ class LLM(AnalysisObject):
         thought_process = text.replace(function_code, "<python_code>")
 
         return text, function_code, thought_process
+    
+    def get_system_prompt(self, sandbox):
+        raise NotImplementedError("This method should be implemented in the subclass")
+    
+    def update_system_prompt(self, sandbox, **kwargs):
+
+        # get the formatted docs / blocks from the sandbox      
+        self.system_prompt = self.get_system_prompt(sandbox, **kwargs)
+
+        # update both history and context window
+        self.update_history("system", self.system_prompt)    
 
 
 class VisualLLM(LLM):
@@ -287,13 +304,6 @@ class CodeGenerationLLM(LLM):
             sandbox
         )
 
-    def update_system_prompt(self, sandbox):
-
-        # get the formatted docs / blocks from the sandbox      
-        self.system_prompt = self.get_system_prompt(sandbox)
-
-        # update both history and context window
-        self.update_history("system", self.system_prompt)
 
 class DiagnosisLLM(LLM):
     """

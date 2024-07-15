@@ -141,6 +141,7 @@ class TaskProgramLibrary:
         # we need to add the relationship for the created
         # task program
         def decorator(func):
+            print (func)
             if isinstance(func, Callable) and not isinstance(func, TaskProgram):
                 json_obj = func2json(func)
                 id = len(cls.LIBRARY)
@@ -177,6 +178,8 @@ class TaskProgramLibrary:
                     mutation_from=mutation_from,
                 )
                 cls.LIBRARY[json_obj["name"]] = task_program
+            else:
+                raise ValueError("The task program should be a function or a dictionary")
 
         return decorator
 

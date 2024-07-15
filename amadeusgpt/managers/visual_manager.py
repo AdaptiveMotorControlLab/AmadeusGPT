@@ -417,7 +417,7 @@ class VisualManager(Manager):
         return super().get_serializeable_list_names()
 
     def plot_chessboard_regions(self, frame: np.ndarray):
-        objects = self.object_manager.get_chessboard_region_objects()
+        objects = self.object_manager.get_grid_objects()
 
         for obj in objects:
             x_min, y_min, x_max, y_max = obj.x_min, obj.y_min, obj.x_max, obj.y_max
