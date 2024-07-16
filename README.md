@@ -20,27 +20,106 @@
 </div>
 
 - We use large language models (LLMs) to bridge natural language and behavior analysis.
-- This work is published at **NeurIPS2023!** Read the paper, [AmadeusGPT: a natural language interface for interactive animal behavioral analysis](https://www.google.com/search?q=amadeusgpt+openreview&sca_esv=590699485&rlz=1C5CHFA_enCH1059CH1060&ei=K1N6ZaHdKvmrur8PosOOkAo&ved=0ahUKEwjhnta83I2DAxX5le4BHaKhA6IQ4dUDCBE&uact=5&oq=amadeusgpt+openreview&gs_lp=Egxnd3Mtd2l6LXNlcnAiFWFtYWRldXNncHQgb3BlbnJldmlldzIHECEYoAEYCjIHECEYoAEYCki2HVDfAliOHHACeACQAQGYAYMDoAHaGaoBCDEuMTEuMS40uAEDyAEA-AEBwgIFECEYqwLCAggQABiABBiiBMICCBAAGIkFGKIE4gMEGAEgQYgGAQ&sclient=gws-wiz-serp#:~:text=AmadeusGPT%3A%20a%20natural,net%20%E2%80%BA%20pdf) by [Shaokai Ye](https://github.com/yeshaokai), [Jessy Lauer](https://github.com/jeylau), [Mu Zhou](https://github.com/zhoumu53), [Alexander Mathis](https://github.com/AlexEMG) & [Mackenzie W. Mathis](https://github.com/MMathisLab).
+- This work is published at **NeurIPS2023!** Read the paper, [AmadeusGPT: a natural language interface for interactive animal behavioral analysis]([https://www.google.com/search?q=amadeusgpt+openreview&sca_esv=590699485&rlz=1C5CHFA_enCH1059CH1060&ei=K1N6ZaHdKvmrur8PosOOkAo&ved=0ahUKEwjhnta83I2DAxX5le4BHaKhA6IQ4dUDCBE&uact=5&oq=amadeusgpt+openreview&gs_lp=Egxnd3Mtd2l6LXNlcnAiFWFtYWRldXNncHQgb3BlbnJldmlldzIHECEYoAEYCjIHECEYoAEYCki2HVDfAliOHHACeACQAQGYAYMDoAHaGaoBCDEuMTEuMS40uAEDyAEA-AEBwgIFECEYqwLCAggQABiABBiiBMICCBAAGIkFGKIE4gMEGAEgQYgGAQ&sclient=gws-wiz-serp#:~:text=AmadeusGPT%3A%20a%20natural,net%20%E2%80%BA%20pdf](https://proceedings.neurips.cc/paper_files/paper/2023/file/1456560769bbc38e4f8c5055048ea712-Paper-Conference.pdf)) by [Shaokai Ye](https://github.com/yeshaokai), [Jessy Lauer](https://github.com/jeylau), [Mu Zhou](https://github.com/zhoumu53), [Alexander Mathis](https://github.com/AlexEMG) & [Mackenzie W. Mathis](https://github.com/MMathisLab).
 - Like this project? Please consider giving us a star ⭐️!
   
 ## Install & Run AmadeusGPT🎻
 
-- AmadeusGPT is a Python package hosted on `pypi`. You can create a virtual env (conda, etc, see below*) or Docker and run:
+### Install with `pypi`
+
+- AmadeusGPT is a Python package hosted on `pypi`. You can create a virtual env (conda, etc, see below*) and run:
 ```python
 pip install 'amadeusgpt[streamlit]'
 ```
- - Please note that you need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
-- If you want the **Streamlit Demo on your computer**, you will also need demo files that are supplied in our repo (see below**), so please git clone the repo and navigate into the `AmadeusGPT` directory. Then in your conda env/terminal run  `pip install 'amadeusgpt[streamlit]'` as described above. Then, to launch the Demo App execute in the terminal:
+Note that in order to access our demo video and keypoint files, we recommend to install from the source.
+
+### Install from the source
+
+**Make sure you edit those installation scripts to point to your own conda path before you run them**
+
+#### Minimal installation
+**Recommended for:** Running AmadeusGPT without GPUs. This setup is lightweight and is limited to processing movie files and keypoint outputs (.h5) from DeepLabCut.
+
+```bash
+# Install the minimal environment
+bash install_minimal.sh
+
+# Activate the conda environment
+conda activate amadeusgpt-minimal
+```
+
+#### GPU installation
+**Recommended for:** Users on Linux with GPUs. Support for Windows and MacOS will be added in the future.
+
+```bash
+# Install the gpu environment
+bash install_gpu.sh
+
+# Activate the conda environment
+conda activate amadeusgpt-gpu
+```
+
+#### CPU installation
+**Recommended for:** MacOS / Linux users working with very small video files.
+
+```bash
+# Install the cpu environment
+bash install_cpu.sh
+
+# Activate the conda environment
+conda activate amadeusgpt-cpu
+```
+
+
+### Setup OpenAI API Key to use AmadeusGPT
+
+**Why OpenAI API Key is needed** AmadeusGPT relies on API calls of OpenAI (we will add more options in the future) for language understanding and code writing.
+
+You can either add this into your environment by following:
+
+```bash
+export OPENAI_API_KEY='your API key' 
+```
+
+Or inside your python script or jupyter notebook, add this line in the beginning of the file
+
+
+```python
+import os
+os.environ["OPENAI_API_KEY"] = 'your api key' 
+```
+
+- Please note that you need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
+
+
+
+### Try AmadeusGPT with local web app
 ```python
 make app
 ```
-- You can use AmadeusGPT directly in python: iPython, Jupyter Notebooks, Google Colab, etc. For a quick start, see our `\examples` directory that hosts demo data and a Jupyter Notebook! Enjoy!
+
+### Do I need to provide keypoint files?
+- If you only provide the raw video file, we use SuperAnimal models [SuperAnimal models](https://www.nature.com/articles/s41467-024-48792-2) to predict your video. This is only supported with cpu or gpu installation. While we highly recommend gpu installation, we are working on faster, light-weight superanimal models to work on your CPU.
+- If you already have keypoint file corresponding to the video file, look up how we set-up the config file in the notebooks.  Right now we only support keypoint output from DeepLabCut. Other keypoint formats can be added upon feature requests.
+
+
+### Try AmadeusGPT with our example notebooks
+We provide example notebooks at [Notebooks](notebook)
+
+### Notebook as use-case demo
+
+1) Draw ROI and ask when is the animal in the ROI.  [Demo](notebook/EPM_demo.ipynb)
+2) Obtain the binary mask for retrieved masks (for further sampling such as neural data pairing) [Demo](notebook/EPM_demo.ipynb)
+3) Use SuperAnimal video inference (make sure you use gpu or cpu installation) if you don't have corresponding DeepLabCut keypoint file [Demo](notebook/custom_mouse_demo.ipynb)
+4) Write you own integration modules and use them [Demo](notebook/Horse_demo.ipynb) [Source code](amadeusgpt/integration_modules). Make sure you delete the cached modules_embedding.pickle if you add new modules
+5) Multi-Animal social interaction.  [Demo](notebook/MABe_demo.ipynb)
+6) Reuse the task program generated by LLM and run it on different videos [Demo](notebook/MABe_demo.ipynb)
 
 ## Citation
 
   If you use ideas or code from this project in your work, please cite us  using the following BibTeX entry. 🙏
 
- ```
+```
 @article{ye2023amadeusGPT,
       title={AmadeusGPT: a natural language interface for interactive animal behavioral analysis}, 
       author={Shaokai Ye and Jessy Lauer and Mu Zhou and Alexander Mathis and Mackenzie Weygandt Mathis},
@@ -50,15 +129,6 @@ make app
 ```
 - arXiv preprint version **[AmadeusGPT: a natural language interface for interactive animal behavioral analysis](https://arxiv.org/abs/2307.04858)** by [Shaokai Ye](https://github.com/yeshaokai), [Jessy Lauer](https://github.com/jeylau), [Mu Zhou](https://github.com/zhoumu53), [Alexander Mathis](https://github.com/AlexEMG) & [Mackenzie W. Mathis](https://github.com/MMathisLab).
 
-### Install tips
-- *Make a new conda env: `conda create --name amadeusGPT python=3.9` then run `conda activate amadeusGPT` or you can also use our supplied conda if you git cloned the repo (navigate into the conda directory): `conda env create -f amadesuGPT.yml` then pip install amadeusGPT once created/launched.
-- **Git clone this repo: so please open a terminal, we recommend to download into Documents (so type `cd Documents`) and run `git clone https://github.com/AdaptiveMotorControlLab/AmadeusGPT.git` Then go into the dir (`cd AmadeusGPT`)
-- If you want to use SAM, you need to download the weights. Otherwise you will see the following message in the app: `Cannot find SAM checkpoints. Skipping SAM`. Download them and add to "static" directory: wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
-  
-###  Install trouble shooting:
-- If you hit an error during installing on an M1/M2 Macbook with installing HDF5, run `conda install h5py` in your conda env.
-- If you launch the app and get an ffmpeg error, `RuntimeError: No ffmpeg exe could be found. Install ffmpeg on your system, or set the IMAGEIO_FFMPEG_EXE environment variable.` try running `conda install ffmpeg`.
-- If you have an M1/M2 chip and use CEBRA within AmadeusGPT, and you get this error: `RuntimeError: Device type MPS is not supported for torch.Generator() api` run `pip install --upgrade torch`.
 
 ## License 
 

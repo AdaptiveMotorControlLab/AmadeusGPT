@@ -1,0 +1,16 @@
+keypoint_info:
+  keypoint_file_path: "examples/Horse/CollectedData_Byron.h5"
+  body_orientation_keypoints:
+    neck: "nose"
+    tail_base: "tail base"
+    animal_center: "neck"
+  head_orientation_keypoints:
+    nose: "nose"
+    neck: "neck" 
+llm_info:
+  keep_last_n_messages: 2 
+object_info:
+  load_objects_from_disk: false
+video_info:
+  scene_frame_number: 100
+  video_file_path: "examples/Horse/BrownHorseinShadow.mp4"

@@ -1,30 +1,104 @@
-def _get_system_prompt(interface_str, behavior_module_str):
-    system_prompt = f"You are helping to solving queries by writing function definition called task_program(). If not related to animal behavior analysis, you should write still the code inside task_program function. You do not need to execute as they will be executed in downstream.  If the query is related to animal behavior analysis, you should use the help from APIs that are explained in API docs: \n{interface_str}\n{behavior_module_str}\n Before you write code, make sure you meet following rules for behavior analysis related queries: \n"
-    system_prompt += "Rule 0: Check carefully the API docs for whether the query can be answered using functions from API docs. If not possible, try also be helpful. \n "
-    system_prompt += "Rule 1: (1) Do not access attributes of objects, unless attributes are written in the Arributes part of function docs. (2) Do not call any functions or object methods unless they are written in Methods part in the func docs. \n"
-    system_prompt += "Rule 2: Do not use animals_social_events if the query is not about multiple animal social behavior.  animals_state_events is used to capture animal kinematics related behaviors and animals_object_events is only used for animal object interaction.  \n"    
-    system_prompt += "Rule 3: When generating events, pay attention to whether it is simultaneous or sequential from the instruction. For example, events describing multiple bodyparts for one animal must be simultaneous events. \n"
-    system_prompt += "Rule 4: Never write code that requires importing python modules. All needed python modules are already imported \n"
-    system_prompt += "Rule 5: plot_trajectory(), compute_embedding_with_cebra_and_plot_embedding(), and compute_embedding_with_umap_and_plot_embedding() are wrapper of plt.scatter(). Therefore they share the same optional parameters.   \n"
-    system_prompt += "Rule 6: Do not create new axes and figures in the code if plotting functions from API docs are used. \n"
-    system_prompt += "Rule 7: for kinematics such as locations, speed and acceleration, calculate the mean across n_kpts axis if no bodypart is specified \n"
-    system_prompt += "Rule 8: Spell out the unit of the return value if the api docs mentions the unit"
-    system_prompt += """
-    Clarification Rule: Don't make assumptions that you can give object names like closed arm exist or the definition of a animal behavior such as rearing or grooming. Ask for clarification if a user request is ambiguous. Following are examples:
-    Example 1:
-    Query: Give me the duration of time the mouse spends on closed arm
-    You need to ask for clarification: Can you use the valid object name? The valid object names are 'ROI0', 'ROI1' .. Or '1', '2' ..
-    Example 2:
-    Query: Give me the duration of time the mouse spends on treadmill
-    You need to ask for clarification: Can you use the valid object name? The valid object names are 'ROI0', 'ROI1' .. Or '1', '2' ..
-    Example 3:
-    Query: How often does the animal rear?
-    You need to ask for clarification for the behavior: Can you describe what is rearing?
-    Example 4:
-    Query: When does the mouse groom?
-    You need to ask for clarification for the behavior: Can you describe what is groomming
-    """
+def code_related_prompt(sandbox):
+    query = sandbox.query
+    core_api_docs = sandbox.get_core_api_docs()   
+    task_program_docs = sandbox.get_task_program_docs()
+    behavior_analysis = sandbox.get_analysis()
+    keypoint_names = behavior_analysis.get_keypoint_names()
+    object_names = behavior_analysis.object_manager.get_object_names()
+    scene_image = behavior_analysis.visual_manager.get_scene_image()
+    image_h, image_w = scene_image.shape[:2]
+    animal_names = behavior_analysis.get_animal_names()
+    prompt = f"""
+You could use apis from core_api_docs (they do not implementation details) and 
+task_program_docs (existing functions that capture behaviors). You can choose
+to reuse task programs or variables from previous steps. At the end, you need to write the main code.
+You will be provided with information that are organized in following blocks:
+coreapidocs: this block contains information about the core apis for class AnimalBehaviorAnalysis. They do not contain implementation details but you can use them to write code
+taskprograms: this block contains existing functions that capture behaviors. You can choose to reuse them in the main function.
+query: this block contains the user query that you need to answer using code
 
-    system_prompt += "Confirm and explain whether you met clarifaction rule. Finally, take a deep breath and think step by step. \n"
+
+Here is an example of how you can write the main function:
+
+```coreapidocs
+
+All following functions are part of class AnimalBehaviorAnalysis:
+The usage and the parameters of the functions are provided.
+
+get_animals_animals_events(cross_animal_query_list:Optional[List[str]],
+cross_animal_comparison_list:Optional[List[str]],
+bodypart_names:Optional[List[str]],
+otheranimal_bodypart_names:Optional[List[str]],
+min_window:int,
+max_window:int) -> List[BaseEvent]: function that captures events that involve multiple animals
+)
+```    
+
+```taskprograms
+get_relative_speed_less_than_neg_2_events(config):
+captures behavior of animals that have relative speed less than -2
+```
+
+```query
+If the animal's relative head angle between the other animals is less than 30 degrees and the relative speed is less than -2,
+then the behavior is watching. Give me events where the animal is watching other animals.
+```
+
+```python
+# the code below captures the behavior of animals that are watching other animals while speeding
+# it reuses an existing task program get_relative_speed_less_than_neg_2_events
+# it uses a function defined in api docs get_animals_animals_events
+# Note it only take one parameter config. You cannot add any other parameters
+def get_watching_events(config: Config):
+    '''
+    Parameters:
+    ----------
+    config: Config
+    '''
+    # create_analysis returns an instance of AnimalBehaviorAnalysis
+    analysis = create_analysis(config)
+    speed_events = get_relative_speed_less_than_neg_2_events(config)
+    relative_head_angle_events = analysis.get_animals_animals_events(['relative_head_angle'], ['<=30'])
+    watching_events = analysis.get_composite_events(relative_head_angle_events,
+                                            speed_events,
+                                            composition_type="logical_and")
+    return watching_events
+```
+Now that you have seen the examples, following is the information you need to write the code:
+{query}\n{core_api_docs}\n{task_program_docs}\n
+
+The keypoint names for the animals are: {keypoint_names}. Don't assume there are other keypoints.
+Available objects are: {object_names}. Don't assume there exist other objects.
+Present animals are: {animal_names}. Don't assume there exist other animals.
+
+FORMATTING:
+1) If you are asked to provide plotting code, make sure you don't call plt.show() but return a tuple figure, axs
+2) Make sure you must write a clear docstring for your code.
+3) Make sure your function signature looks like func_name(config: Config) 
+4) Make sure you do not import any libraries in your code. All needed libraries are imported already.
+5) Make sure you disintuigh positional and keyword arguments when you call functions in api docs
+6) If you are writing code that uses matplotlib to plot, make sure you comment shape of the data to be plotted to double-check
+7) if your plotting code plots coordinates of keypoints, make sure you invert y axis so that the plot is consistent with the image
+8) make sure the xlim and ylim covers the whole image. The image (h,w) is ({image_h},{image_w})    
+"""
+    return prompt
+
+
+def _get_system_prompt(
+    sandbox
+):   
+    system_prompt = f""" 
+You are helpful AI assistant. Your job is to answer user queries. 
+Importantly, before you write the code, you need to explain whether the question can be answered accurately by code. If not,  ask users to give more information.
+
+{code_related_prompt(sandbox)}
+
+If the question can be answered by code:
+- YOU MUST only write one function and no other classes or functions when you write code.
+The function you write MUST only take config:Config as the ONLY input and nothing else. It WILL cause errors if you add any other parameters.
+
+If you are not sure the question can be answered by code:
+If you are asked a question that cannot be accurately answered with the core apis or task programs,  ask for more information instead of writing code that may not be accurate.
+"""
 
     return system_prompt
