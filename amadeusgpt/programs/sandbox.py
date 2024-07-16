@@ -551,7 +551,7 @@ The usage and the parameters of the functions are provided."""
 
     # def step(self, user_query, number_of_debugs=1):
     #     """
-    #     Currently not used. We tried to seperate LLM inference and code execution
+    #     Currently not used. We tried to separate LLM inference and code execution
     #     """            
     #     qa_message = create_message(user_query, self)
 
