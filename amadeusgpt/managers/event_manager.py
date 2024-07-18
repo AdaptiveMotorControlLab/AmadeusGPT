@@ -1,10 +1,10 @@
 import re
-from typing import Any, Dict, List, Literal, Optional, Set, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 import numpy as np
 
-from amadeusgpt.analysis_objects.event import BaseEvent, Event, EventGraph
-from amadeusgpt.analysis_objects.relationship import Orientation, Relationship
+from amadeusgpt.analysis_objects.event import Event, EventGraph
+from amadeusgpt.analysis_objects.relationship import Relationship
 from amadeusgpt.programs.api_registry import (register_class_methods,
                                               register_core_api)
 
@@ -12,7 +12,7 @@ from .animal_manager import AnimalManager
 from .base import Manager, cache_decorator
 from .object_manager import ObjectManager
 from .relationship_manager import RelationshipManager
-
+import os
 
 def find_complement_number(string):
     digits = ""
@@ -55,7 +55,8 @@ def process_animal_object_relation(
 class EventManager(Manager):
     def __init__(
         self,
-        config: Dict[str, any],
+        config: Dict[str, Any],
+        video_file_path: str,
         object_manager: ObjectManager,
         animal_manager: AnimalManager,
         relationship_manager: RelationshipManager,
@@ -66,11 +67,11 @@ class EventManager(Manager):
         self.object_manager = object_manager
         self.animal_manager = animal_manager
         self.relationship_manager = relationship_manager
-        video_info = self.config["video_info"]
-        if video_info["video_file_path"] is None:
+        self.video_file_path = video_file_path
+        if not os.path.exists(self.video_file_path):
             # no need to initialize
             return
-        self.video_file_path = video_info["video_file_path"]
+
         self.animals_object_events = []
         self.animals_animals_events = []
         self.animals_state_events = []
@@ -85,7 +86,7 @@ class EventManager(Manager):
         min_window: int = 0,
         max_window: int = 1000000,
         smooth_window_size: int = 3,
-    ) -> List[BaseEvent]:
+    ) -> List[Event]:
         """
         This function is used to retrieve events that involve the interactions between animals and objects.
         object_name : str
@@ -125,7 +126,7 @@ class EventManager(Manager):
             mask = eval(relation_string)
             mask = process_animal_object_relation(_query, _comparison, mask)
 
-            events: List[BaseEvent] = Event.mask2events(
+            events: List[Event] = Event.mask2events(
                 mask,
                 self.video_file_path,
                 sender_animal_name,
@@ -155,7 +156,7 @@ class EventManager(Manager):
         min_window: Optional[int] = 0,
         max_window: Optional[int] = 1000000,
         smooth_window_size: Optional[int] = 3,
-    ) -> List[BaseEvent]:
+    ) -> List[Event]:
         """
         Parameters
         ----------
@@ -166,7 +167,7 @@ class EventManager(Manager):
             There can only be one compasion operator in the query.
         Returns
         -------
-        List[BaseEvent]
+        List[Event]
         --------
 
         """
@@ -228,7 +229,7 @@ class EventManager(Manager):
         relation_query: str,
         comparison: str,
         smooth_window_size: int,
-    ) -> List[BaseEvent]:
+    ) -> List[Event]:
 
         mask = relationship.query_relationship(relation_query)
 
@@ -267,7 +268,7 @@ class EventManager(Manager):
         min_window: int = 11,
         max_window: int = 1000000,
         smooth_window_size: int = 3,
-    ) -> List[BaseEvent]:
+    ) -> List[Event]:
         """
         The function is for capturing behaviors that involve multiple animals. Don't fill the bodypart_names and otheranimal_bodypart_names unless you know the names of the bodyparts.
         When multiple queries are passed, they are combined as logical_and, not logical_or or sequential.
@@ -292,7 +293,7 @@ class EventManager(Manager):
         smooth window size for smoothing the events.
         Returns
         -------
-        List[BaseEvent]
+        List[Event]
         Note
         ----
         To capture a range for a numerical query  (e.g., relative_speed) between 3 and 10, one can do:
@@ -356,7 +357,7 @@ class EventManager(Manager):
         return ret_events
 
     @register_core_api
-    def get_duration(self, events: List[BaseEvent]) -> int:
+    def get_duration(self, events: List[Event]) -> int:
         """
         This function is for calculating the total duration of a list events.
         The return value is in seconds.
@@ -366,15 +367,15 @@ class EventManager(Manager):
     @register_core_api
     def get_composite_events(
         self,
-        events_A: List[BaseEvent],
-        events_B: List[BaseEvent],
+        events_A: List[Event],
+        events_B: List[Event],
         composition_type: Literal[
             "sequential", "logical_and", "logical_or"
         ] = "logical_and",
         max_interval_between_sequential_events: int = 15,
         min_window: int = 15,
         max_window: int = 100000,
-    ) -> List[BaseEvent]:
+    ) -> List[Event]:
         """
         This function is for combining two sets of events.
         Parameters
@@ -389,7 +390,7 @@ class EventManager(Manager):
 
         Returns
         -------
-        List[BaseEvent]
+        List[Event]
         """
         assert composition_type in [
             "sequential",
@@ -481,7 +482,7 @@ class EventManager(Manager):
     def from_mask(
         self,
         mask_tensor: np.ndarray,
-    ) -> List[BaseEvent]:
+    ) -> List[Event]:
         """
 
         This function expects to take a binary mask to describe a condition for the behavior and returns a list of events.
@@ -489,14 +490,13 @@ class EventManager(Manager):
         For condition about animals' own states, it expects shape of (n_frames, n_individuals)
         Returns
         -------
-        List[BaseEvent]
+        List[Event]
         """
         assert (
             len(mask_tensor.shape) == 2 or len(mask_tensor.shape) == 3
         ), "mask_tensor must be of shape (n_frames, n_individuals) or (n_frames, n_individuals, n_individuals)"
         # mask is of shape (n_frames, n_individuals)
         ret = []
-        assert self.config["video_info"]["video_file_path"] == self.video_file_path
         if len(mask_tensor.shape) == 2:
             for animal_id, animal_name in enumerate(
                 self.animal_manager.get_animal_names()

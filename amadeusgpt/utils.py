@@ -3,86 +3,9 @@ import inspect
 import sys
 import time
 import traceback
-from itertools import groupby
-from operator import itemgetter
-from typing import Any, Dict, Sequence
-import cv2
 import numpy as np
-from scipy.ndimage.filters import uniform_filter1d
 from amadeusgpt.logger import AmadeusLogger
-
-
-def moving_average(x: Sequence, window_size: int, pos: str = "centered"):
-    """
-    Compute the moving average of a time series.
-    :param x: array_like, 1D input array
-    :param window_size: int
-        Must be odd positive, and less than or equal to the size of *x*.
-    :param pos: str, optional (default="centered")
-        Averaging window position.
-        By default, the window is centered on the current data point,
-        thus averaging over *window_size* // 2 past and future observations;
-        no delay is introduced in the averaging process.
-        Other options are "backward", where the average is taken
-        from the past *window_size* observations; and "forward",
-        where the average is taken from the future *window_size* observations.
-    :return: ndarray
-        Filtered time series with same length as input
-    """
-    # This function is not only very fast (unlike convolution),
-    # but also numerically stable (unlike the one based on cumulative sum).
-    # https://stackoverflow.com/questions/13728392/moving-average-or-running-mean/27681394#27681394
-    x = np.asarray(x, dtype=float)
-    x = np.squeeze(x)
-
-    window_size = int(window_size)
-
-    if window_size > x.size:
-        raise ValueError("Window size must be less than or equal to the size of x.")
-
-    if window_size < 1 or not window_size % 2:
-        raise ValueError("Window size must be a positive odd integer.")
-
-    middle = window_size // 2
-    if pos == "centered":
-        origin = 0
-    elif pos == "backward":
-        origin = middle
-    elif pos == "forward":
-        origin = -middle
-    else:
-        raise ValueError(f"Unrecognized window position '{pos}'.")
-
-    return uniform_filter1d(x, window_size, mode="constant", origin=origin)
-
-
-def smooth_boolean_mask(x: Sequence, window_size: int):
-    # `window_size` should be at least twice as large as the
-    # minimal number of consecutive frames to be smoothed out.
-    if window_size % 2 == 0:
-        window_size += 1
-    return moving_average(x, window_size) > 0.5
-
-
-def group_consecutive(x: Sequence):
-    for _, g in groupby(enumerate(x), key=lambda t: t[0] - t[1]):
-        yield list(map(itemgetter(1), g))
-
-
-def get_fps(video_path):
-    # Load the video
-    video = cv2.VideoCapture(video_path)
-    # Get the FPS
-    fps = video.get(cv2.CAP_PROP_FPS)
-    video.release()
-    return fps
-
-
-def get_video_length(video_path):
-    video = cv2.VideoCapture(video_path)
-    fps = video.get(cv2.CAP_PROP_FPS)
-    n_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
-    return int(n_frames)
+from amadeusgpt.analysis_objects.event import Event
 
 
 def filter_kwargs_for_function(func, kwargs):
@@ -232,19 +155,32 @@ def func2json(func):
         return json_obj
 
 
-class QA_Message(dict):
-    def __init__(self, *args, **kwargs):
+class QA_Message:
+    def __init__(self,
+                  query: str, 
+                  video_file_paths : list[str]):                
+        # user question
+        self.query = query
+        self.video_file_paths = video_file_paths
+        # llm generated code
+        self.code = None        
+        self.chain_of_thought = None
+        ### following fields change per video
+        # a reference to the sandbox
+        self.error_message = {}
+        self.plots = {}
+        self.out_videos = {}
+        self.pose_video = {}
+        self.function_rets = {}
+        self.meta_info = {}    
 
-        super(QA_Message, self).__init__(*args, **kwargs)
-
-
-    def get_masks(self):
-        function_rets = self["function_rets"]
+    def get_masks(self, video_file_path: str) -> np.ndarray:
+        function_rets = self.function_rets[video_file_path]
         # if function_ret is a list of events
         if (
             isinstance(function_rets, list)
             and len(function_rets) > 0
-            and isinstance(function_rets[0], BaseEvent)
+            and isinstance(function_rets[0], Event)
         ):
             events = function_rets
             masks = []
@@ -261,20 +197,13 @@ class QA_Message(dict):
         selected_keys = ['query', 'code', 'chain_of_thought', 'function_rets', 'meta_info']
         ret = {}
         for key in selected_keys:
-            ret[key] = self[key]
+            ret[key] = getattr(self, key)
         return ret
 
-def create_message(query,
-                sandbox):
-    return QA_Message({
-        "query": query,
-        "code": None,
-        "chain_of_thought": None,
-        "plots": [],
-        "error_message": None,
-        "function_rets": None,
-        "sandbox": sandbox,
-        "out_videos": None,
-        "pose_video": None,
-        "meta_info": None,
-    })
+def create_qa_message(query:str,
+                video_file_paths:list[str]) -> QA_Message:
+
+    return QA_Message(
+        query,
+        video_file_paths)
+

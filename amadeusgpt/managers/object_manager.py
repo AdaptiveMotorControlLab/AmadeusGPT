@@ -1,14 +1,11 @@
 import pickle
 from typing import Any, Dict, List
-
 import cv2
 import numpy as np
-
 from amadeusgpt.analysis_objects.object import GridObject, Object, ROIObject
 from amadeusgpt.config import Config
 from amadeusgpt.managers.animal_manager import AnimalManager
 from amadeusgpt.managers.base import Manager
-from amadeusgpt.managers.model_manager import ModelManager
 from amadeusgpt.programs.api_registry import register_class_methods
 import os
 np.set_printoptions(suppress=True)
@@ -19,11 +16,11 @@ class ObjectManager(Manager):
     def __init__(
         self,
         config: Dict[str, Any],
-        model_manager: ModelManager,
+        video_file_path: str,
         animal_manager: AnimalManager,
     ):
         self.config = config
-        self.model_manager = model_manager
+        self.video_file_path = video_file_path
         self.animal_manager = animal_manager
         self.roi_objects = []
         self.seg_objects = []
@@ -44,7 +41,7 @@ class ObjectManager(Manager):
         self.occupation_heatmap = {}
         #####
         # let's not use grid objects for now
-        if os.path.exists(config['video_info']['video_file_path']):
+        if os.path.exists(self.video_file_path):
             self.create_grids()
             self.create_grid_objects()
         #     self.create_grid_labels()
@@ -106,9 +103,8 @@ class ObjectManager(Manager):
         ckpt_path = sam_info["ckpt_path"]
         model_type = sam_info["model_type"]
         pickle_path = sam_info["pickle_path"]
-        video_file_path = sam_info["video_info"]["video_file_path"]
         sam = SAM(ckpt_path, model_type, filename=pickle_path)
-        sam.save_to_pickle(sam.get_objects(video_file_path), pickle_path)
+        sam.save_to_pickle(sam.get_objects(self.video_file_path), pickle_path)
 
     def get_objects(self) -> List[Object]:
         return self.roi_objects + self.seg_objects + self.grid_objects
@@ -128,9 +124,8 @@ class ObjectManager(Manager):
         Returns:
         - A dictionary representing the grids with unique names for each square.
         """
-        video_file_path = self.config["video_info"]["video_file_path"]
 
-        cap = cv2.VideoCapture(video_file_path)
+        cap = cv2.VideoCapture(self.video_file_path)
         ret, frame = cap.read()
         self.image_height, self.image_width = frame.shape[:2]
         cap.release()

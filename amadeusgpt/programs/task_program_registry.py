@@ -182,6 +182,14 @@ class TaskProgramLibrary:
 
         return decorator
 
+    @classmethod 
+    def __getitem__(cls, key):
+        return cls.LIBRARY[key]
+    
+    @classmethod
+    def __setitem__(cls, key, value):
+        cls.LIBRARY[key] = value
+
     @classmethod
     def get_task_programs(cls):
         """

@@ -1,10 +1,11 @@
-from amadeusgpt.implementation import AnimalBehaviorAnalysis
-
+from amadeusgpt.behavior_analysis import AnimalBehaviorAnalysis
 
 analysis_fac = {}
 
-def create_analysis(config):
-    if str(config) not in analysis_fac:
-        analysis_fac[str(config)] = AnimalBehaviorAnalysis(config)
+def create_analysis(config, video_file_path, keypoint_file_path):
 
-    return analysis_fac[str(config)]
+    identifier = video_file_path
+    if str(identifier) not in analysis_fac:
+        analysis_fac[identifier] = AnimalBehaviorAnalysis(config, video_file_path, keypoint_file_path)
+
+    return analysis_fac[identifier]

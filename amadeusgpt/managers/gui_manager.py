@@ -3,13 +3,12 @@ from typing import Any, Dict, List
 import cv2
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.path import Path
-from matplotlib.widgets import Button, PolygonSelector
+from matplotlib.widgets import PolygonSelector
 
 from amadeusgpt.analysis_objects.object import ROIObject
-from amadeusgpt.programs.api_registry import (register_class_methods,
-                                              register_core_api)
+from amadeusgpt.programs.api_registry import register_class_methods
+                                              
 
 from .base import Manager
 from .object_manager import ObjectManager
@@ -59,15 +58,18 @@ class ROISelector:
 
 @register_class_methods
 class GUIManager(Manager):
-    def __init__(self, config: Dict[str, Any], object_manager: ObjectManager):
+    def __init__(self, 
+                 config: Dict[str, Any], 
+                 video_file_path: str,
+                 object_manager: ObjectManager):
         self.config = config
+        self.video_file_path = video_file_path
         self.object_manager = object_manager
-        self.video_file_path = config["video_info"]["video_file_path"]
         if self.video_file_path is None:
             return
         self.videos = {}
 
-    def add_roi_from_video_selection(self) -> None:
+    def add_roi_from_video_selection(self):
         cap = cv2.VideoCapture(self.video_file_path)
         if not cap.isOpened():
             print("Error opening video file.")

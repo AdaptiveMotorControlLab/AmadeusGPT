@@ -8,17 +8,17 @@ import typing
 from functools import wraps
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.figure import Figure
 from amadeusgpt.analysis_objects.analysis_factory import create_analysis
-from amadeusgpt.analysis_objects.event import BaseEvent
+from amadeusgpt.analysis_objects.event import Event
 from amadeusgpt.analysis_objects.relationship import Orientation
 from amadeusgpt.config import Config
 from amadeusgpt.programs.api_registry import (CORE_API_REGISTRY,
                                               INTEGRATION_API_REGISTRY)
-from amadeusgpt.programs.task_program_registry import (TaskProgram,
-                                                       TaskProgramLibrary)
+from amadeusgpt.programs.task_program_registry import (TaskProgramLibrary)
 from pathlib import Path
 from collections import defaultdict
-from amadeusgpt.utils import create_message
+from amadeusgpt.utils import create_qa_message, QA_Message
 class SandboxBase:
     """
     This class takes task program library, api registry.
@@ -27,31 +27,18 @@ class SandboxBase:
     It's also responsible for formatting apis, task programs to a format that
     GPT can understand better.
 
-    Following are examples
+    Following are template for code generation prompt
 
     '''coreapidocs
     # this function gives the speed of the animal
     BaseEvent: A class that represents an event
     get_speed() -> np.ndarray
     get_animal_state_events() -> List[BaseEvent]
-    '''
-
-    '''optionalapidocs
-    # these functions are loaded dynamically for the current query
-    '''
+    '''   
 
     '''taskprograms
     # available task programs
-    '''
-
-    '''variables
-    # variables from previous runs
-    '''
-
-    '''helperfunction
-    def helper_function():
-        do something else
-    '''
+    '''       
 
     '''maincode
     def main()
@@ -171,16 +158,31 @@ def wrap_instance_method(instance, method_name):
 
 
 class Sandbox(SandboxBase):
-    def __init__(self, config):
+    def __init__(self, 
+                 config: Config,
+                 video_file_paths: list[str],
+                 keypoint_file_paths: list[str],
+                   ):
         super().__init__()
         self.config = config
-        self.messages = []
-        # initialize the code execution namespace with builtins
-        self.exec_namespace = {"__builtins__": __builtins__}
+        self.video_file_paths = video_file_paths
+        self.keypoint_file_paths = keypoint_file_paths
+        self.namespace_dict = {}
+        self.analysis_dict = {}
+
+        for video_file_path, keypoint_file_path in zip(self.video_file_paths, self.keypoint_file_paths):
+            self.analysis_dict[video_file_path] = create_analysis(self.config, video_file_path, keypoint_file_path)
+
+        for video_file_path in self.video_file_paths:
+            self.namespace_dict[video_file_path] = {"__builtins__": __builtins__}
+
         # update_namespace initializes behavior analysis
+        
+
         self.update_namespace()
+
         # then we can configure behavior analysis using vlm
-        self.meta_info = None
+        self.meta_info = {}
         # where llms are stored
         self.llms = {}
         # just easier to pass this around
@@ -195,7 +197,7 @@ class Sandbox(SandboxBase):
             }
         }         
         """
-
+        
         self.result_cache = defaultdict(dict)
         # configure how to save the results to a result folder
         self.result_folder = Path(self.config["result_info"].get("result_folder", "./results"))
@@ -210,16 +212,15 @@ class Sandbox(SandboxBase):
         "background_objects": ["laboratory equipment", "white surface", "colored dots"]
         }
         """
-        analysis = self.exec_namespace["behavior_analysis"]
-        scene_image = analysis.visual_manager.get_scene_image()
-        json_obj = self.llms["visual_llm"].speak(self, scene_image)
+        for video_file_path, analysis in self.analysis_dict.items():
+            scene_image = analysis.visual_manager.get_scene_image()
+            json_obj = self.llms["visual_llm"].speak(self, scene_image)
 
-        self.meta_info = json_obj
-        # configure meta info on the analysis managers
-       
-        analysis.animal_manager.configure_animal_from_meta(json_obj)
+            self.meta_info[video_file_path] = json_obj
+            # configure meta info on the analysis managers    
+            analysis.animal_manager.configure_animal_from_meta(json_obj)
 
-    def get_core_api_docs(self):
+    def get_core_api_docs(self) -> str:
         """
         Turn the core api docs into a format that GPT can understand
 
@@ -248,7 +249,7 @@ The usage and the parameters of the functions are provided."""
         ret += "\n```"
         return ret
 
-    def get_task_program_docs(self):
+    def get_task_program_docs(self) -> str:
         ret = "```taskprograms\n"
         for name, task_program in TaskProgramLibrary.get_task_programs().items():
             description = task_program.json_obj["docstring"]
@@ -257,104 +258,100 @@ The usage and the parameters of the functions are provided."""
 
         return ret
 
-    def get_query_block(self):
+    def get_query_block(self) -> str:
         query = self.query
         ret = f"```query\n {query}\n```"
         return ret
-
-    def update_config(self, config):
-        self.config = config
-        self.update_namespace()
     
-    def get_analysis(self):
+    def get_analysis(self, video_file_path):
         """
         Every sandbox stores a unique "behavior analysis" instance in its namespace
         Therefore, get analysis gets the current sandbox's analysis.
         """
-        analysis = self.exec_namespace["behavior_analysis"]
+        analysis = self.analysis_dict[video_file_path]
         return analysis
-
-    def copy(self):
-        return Sandbox(self.config, self.api_registry)
 
     def update_matched_integration_modules(self, matched_modules):
         self.matched_modules = matched_modules
 
-    def update_namespace(self):
+    def update_namespace(self):                              
         # we need to manage the scope of the session
         # there are potentially new variables, new task programs, new apis
-        analysis = create_analysis(self.config)
-        for api in self.api_registry.values():
-            f = wrap_instance_method(analysis, api["name"])
-            self.exec_namespace[api["name"]] = f
+        for video_file_path, analysis in self.analysis_dict.items():
+        
+            namespace = self.namespace_dict[video_file_path]
 
-        for name, task_program in TaskProgramLibrary.get_task_programs().items():
-            self.exec_namespace[name] = task_program
+            for api in self.api_registry.values():
+                f = wrap_instance_method(analysis, api["name"])
+                namespace[api["name"]] = f
 
-        current_scope = globals()
-        for name, value in current_scope.items():
-            if callable(value) or isinstance(
-                value, (int, float, str, list, dict, tuple)
-            ):
-                self.exec_namespace[name] = value
+            for name, task_program in TaskProgramLibrary.get_task_programs().items():
+                namespace[name] = task_program
 
-        # the namespace needs to access the config
-        from amadeusgpt.config import Config
+            current_scope = globals()
+            for name, value in current_scope.items():
+                if callable(value) or isinstance(
+                    value, (int, float, str, list, dict, tuple)
+                ):
+                    namespace[name] = value
 
-        self.exec_namespace["config"] = self.config
-        self.exec_namespace["Config"] = Config
-        # the namespace needs to access AnimalBehaviorAnalysis for API
+            # the namespace needs to access the config
+            from amadeusgpt.config import Config
 
-        self.exec_namespace["plt"] = plt
-        # instance linked to class?
-        self.exec_namespace["create_analysis"] = create_analysis
-        self.exec_namespace["behavior_analysis"] = analysis
+            namespace["config"] = self.config
+            namespace["Config"] = Config
+            # the namespace needs to access AnimalBehaviorAnalysis for API
 
-        # useful classes needed the APIs
+            namespace["plt"] = plt
+            # instance linked to class?
+            namespace["create_analysis"] = create_analysis
+            namespace["behavior_analysis"] = analysis
 
-        self.exec_namespace["Orientation"] = Orientation
-        self.exec_namespace["List"] = typing.List
-        self.exec_namespace["BaseEvent"] = BaseEvent
-        # numpy might be needed for raw kinematics
-        self.exec_namespace["np"] = np
-        # to allow the program to access existing task programs
-        self.exec_namespace["task_programs"] = TaskProgramLibrary.get_task_programs()
+            # useful classes needed the APIs
 
-    def code_execution(self, qa_message):
+            namespace["Orientation"] = Orientation
+            namespace["List"] = typing.List
+            namespace["Event"] = Event
+            # numpy might be needed for raw kinematics
+            namespace["np"] = np
+            # to allow the program to access existing task programs
+            namespace["task_programs"] = TaskProgramLibrary.get_task_programs()
+
+    def code_execution(self, qa_message: QA_Message) -> QA_Message:
         # update the namespace in the beginning of code execution makes sure that 
         # if there is a change in the config, we always use the newest config
         self.update_namespace()
-        code = qa_message["code"]
-       
-        # not need to do further if there was no code found
-        if code is None:
-            return qa_message
-        exec(code, self.exec_namespace)
-        # call the main function
-        function_name = self.get_function_name_from_string(code)
-        call_str = f"{function_name}(config)"
-        try:
-            exec(f"result = {call_str}", self.exec_namespace)
-            qa_message["error_message"] = None
-        except Exception as e:
-            print ("error occurs in code execution")
-            # use traceback to get full error
-            full_traceback = traceback.format_exc()
-            print(full_traceback)
-            qa_message["error_message"] = str(full_traceback)
-            return qa_message
-        result = self.exec_namespace["result"]
-        qa_message["function_rets"] = result
 
-        
+        for video_file_path in self.video_file_paths:
+            namespace = self.namespace_dict[video_file_path]
+            code = qa_message.code
+            # not need to do further if there was no code found
+            if code is None:
+                continue
+            exec(code, namespace)
+            # call the main function
+            function_name = self.get_function_name_from_string(code)
+            call_str = f"{function_name}(config)"
+            try:
+                exec(f"result = {call_str}", namespace)
+                qa_message.error_message[video_file_path] = None
+            except Exception as e:
+                print ("error occurs in code execution")
+                # use traceback to get full error
+                full_traceback = traceback.format_exc()
+                print(full_traceback)
+                qa_message.error_message[video_file_path] = str(full_traceback)
+                return qa_message
+            result = namespace["result"]
+            qa_message.function_rets[video_file_path] = result        
 
         return qa_message
 
-    def get_function_name_from_string(self, code):
+    def get_function_name_from_string(self, code) -> str:
         # Parse the string into an AST
         parsed_ast = ast.parse(code)
         # Initialize a variable to hold the function name
-        function_name = None
+        function_name = ""
 
         # Traverse the AST
         for node in ast.walk(parsed_ast):
@@ -377,9 +374,14 @@ The usage and the parameters of the functions are provided."""
     def register_llm(self, name, llm):
         self.llms[name] = llm
 
-    def events_to_videos(self, events, function_name):
-        behavior_analysis = self.exec_namespace["behavior_analysis"]
-        visual_manager = behavior_analysis.visual_manager
+    def events_to_videos(self, 
+                         video_file_path: str,
+                         events: list[Event], 
+                         function_name: str):
+
+        analysis = self.analysis_dict[video_file_path]
+
+        visual_manager = analysis.visual_manager
         # save video clips to the result folder
         out_folder = str(self.result_folder)
         os.makedirs(out_folder, exist_ok=True)
@@ -388,91 +390,94 @@ The usage and the parameters of the functions are provided."""
             out_folder, events, behavior_name
         )
 
-    def render_qa_message(self, qa_message):
+    def render_qa_message(self, qa_message:QA_Message)-> QA_Message:
         """
         To be called after code execution.
         If the function returns a list of events, we visualize those events to keypoint plot, ethogram plot and videos
         if the function returns is a tuple of axe and figure, we put them into the plots filed 
         """
-        function_rets = qa_message["function_rets"]
-        behavior_analysis = self.exec_namespace["behavior_analysis"]
-        bodypart_names = behavior_analysis.animal_manager.get_keypoint_names()
-        qa_message["pose_video"] = (
-            behavior_analysis.animal_manager.superanimal_predicted_video
-        )
-        visual_manager = behavior_analysis.visual_manager
-        plots = []
-        if isinstance(function_rets, tuple):
-            # could be plotting tuple
-            if isinstance(function_rets[0], plt.Figure):
-                # this is for "return fig, ax"
-                plots.append(function_rets)
 
-            else:
-                for e in function_rets:
-                    if (
-                        isinstance(e, list)
-                        and len(e) > 0
-                        and isinstance(e[0], BaseEvent)
-                    ):
-                        # here we need to understand what we do with the events
-                        # we have ethogram plot, keypoint plot, head orientation plot, scene plot
-                        # and animal interaction plot
-                        # of course we can show all of them at the same time except for animal interaction if there are multi animals
-                        # keypoint visualization
-                        plots.append(
-                            visual_manager.get_keypoint_visualization(
-                                bodypart_names=bodypart_names, events=e
+        for video_file_path in self.video_file_paths:
+            namespace = self.namespace_dict[video_file_path]
+            function_rets = qa_message.function_rets[video_file_path]
+            behavior_analysis = namespace["behavior_analysis"]
+            bodypart_names = behavior_analysis.animal_manager.get_keypoint_names()
+            qa_message.pose_video[video_file_path] = (
+                behavior_analysis.animal_manager.superanimal_predicted_video
+            )
+            visual_manager = behavior_analysis.visual_manager
+            plots = []
+            if isinstance(function_rets, tuple):
+                # could be plotting tuple
+                if isinstance(function_rets[0], Figure):
+                    # this is for "return fig, ax"
+                    plots.append(function_rets)
+
+                else:
+                    for e in function_rets:
+                        if (
+                            isinstance(e, list)
+                            and len(e) > 0
+                            and isinstance(e[0], Event)
+                        ):
+                            # here we need to understand what we do with the events
+                            # we have ethogram plot, keypoint plot, head orientation plot, scene plot
+                            # and animal interaction plot
+                            # of course we can show all of them at the same time except for animal interaction if there are multi animals
+                            # keypoint visualization
+                            plots.append(
+                                visual_manager.get_keypoint_visualization(
+                                    bodypart_names=bodypart_names, events=e
+                                )
                             )
-                        )
-                        qa_message["out_videos"] = self.events_to_videos(
-                            e, self.get_function_name_from_string(qa_message["code"])
-                        )
+                            qa_message.out_videos[video_file_path] = self.events_to_videos(
+                                video_file_path,
+                                e, 
+                                self.get_function_name_from_string(qa_message.code)
+                            )
 
-        elif (
-            isinstance(function_rets, list)
-            and len(function_rets) > 0
-            and isinstance(function_rets[0], BaseEvent)
-        ):
-            # this is for "return events"
-            plots.append(
-                visual_manager.get_keypoint_visualization(
-                    bodypart_names=bodypart_names, events=function_rets
+            elif (
+                isinstance(function_rets, list)
+                and len(function_rets) > 0
+                and isinstance(function_rets[0], Event)
+            ):
+                # this is for "return events"
+                plots.append(
+                    visual_manager.get_keypoint_visualization(
+                        bodypart_names=bodypart_names, events=function_rets
+                    )
                 )
-            )
-            plots.append(
-                visual_manager.get_ethogram_visualization(events=function_rets)
-            )
-            qa_message["out_videos"] = self.events_to_videos(
-                function_rets, self.get_function_name_from_string(qa_message["code"])
-            )
-     
-        qa_message["plots"].extend(plots)
+                plots.append(
+                    visual_manager.get_ethogram_visualization(events=function_rets)
+                )
+                qa_message.out_videos[video_file_path] = self.events_to_videos(
+                    video_file_path,
+                    function_rets, 
+                    self.get_function_name_from_string(qa_message.code)
+                )
+        
+            qa_message.plots[video_file_path].extend(plots)
         return qa_message
 
-    def llm_step(self, user_query):
+    def llm_step(self, user_query: str):
         """
         1) We first use gpt-4o to create meta_info describing the scene
         2) We then ask LLM to generate code based on the query
         3) We also cache the qa_message for future reference
         """
-        qa_message = create_message(user_query, self)
+        qa_message = create_qa_message(user_query, self.video_file_paths)
 
-        # so that the frontend can display it too
-        if self.meta_info is not None:
-            qa_message["meta_info"] = self.meta_info
+        if len(self.meta_info) > 0:
+            qa_message.meta_info = self.meta_info
 
-        self.messages.append(qa_message)
-        # there might be better way to set this
-        self.query = user_query
-        self.llms["code_generator"].speak(self)
-        # cache the resulted qa message for future use
-        self.result_cache[user_query][self.config['video_info']['video_file_path']] = qa_message
+        qa_message = self.llms["code_generator"].speak(self, qa_message)
+        # cache the resulted qa message for future use        
 
-        # task program that is written by llm is automatically registered to be used in the future
-        
-        if qa_message['code'] is not None and qa_message['error_message'] is None:
-            TaskProgramLibrary.register_task_program(creator="llm")(qa_message['code'])
+        self.result_cache = qa_message
+
+        # TO FIX
+        # if qa_message['code'] is not None and qa_message['error_message'] is None:
+        #     TaskProgramLibrary.register_task_program(creator="llm")(qa_message['code'])
 
         return qa_message
 
@@ -484,18 +489,20 @@ The usage and the parameters of the functions are provided."""
         # update the config 
         self.config = config
 
-        task_program = TaskProgramLibrary.get_task_programs()[task_program_name]
+        task_program = TaskProgramLibrary[task_program_name]
         # there might be better way to set this
         self.query = task_program_name
-        qa_message = create_message(self.query, self)
-        qa_message["code"] = task_program["source_code"]
-        self.messages.append(qa_message)
-
+        qa_message = create_qa_message(self.query, self.video_file_paths)
+        
+        qa_message.code = task_program["source_code"]
+        
         # code execution will use the latest config, if updated
         self.code_execution(qa_message)
 
         qa_message = self.render_qa_message(qa_message)
-        self.result_cache[task_program_name][config['video_info']['video_file_path']] = qa_message
+
+        self.result_cache = qa_message
+
         return qa_message
     
 
@@ -532,7 +539,7 @@ def render_temp_message(query, sandbox):
     """
     import streamlit as st
 
-    qa_message = create_message("random query", sandbox)
+    qa_message = create_messages("random query", sandbox)
 
     with open("temp_answer.json", "r") as f:
         data = json.load(f)
@@ -585,17 +592,10 @@ if __name__ == "__main__":
     import pickle
 
     from amadeusgpt.analysis_objects.object import ROIObject
-    from amadeusgpt.main import create_amadeus
+    from amadeusgpt import AMADEUS
 
     config = Config("amadeusgpt/configs/EPM_template.yaml")
 
-    amadeus = create_amadeus(config)
+    amadeus = AMADEUS(config)
     sandbox = amadeus.sandbox
-    analysis = sandbox.exec_namespace["behavior_analysis"]
-    with open("temp_roi_objects.pickle", "rb") as f:
-        roi_objects = pickle.load(f)
-
-    for name, roi_object in roi_objects.items():
-        analysis.object_manager.add_roi_object(ROIObject(name, roi_object["Path"]))
-
-    render_temp_message("random query", sandbox)   
+   

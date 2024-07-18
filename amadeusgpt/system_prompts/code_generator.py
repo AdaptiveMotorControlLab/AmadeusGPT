@@ -1,8 +1,7 @@
-def code_related_prompt(sandbox):
-    query = sandbox.query
-    core_api_docs = sandbox.get_core_api_docs()   
-    task_program_docs = sandbox.get_task_program_docs()     
-    behavior_analysis = sandbox.get_analysis()
+def code_related_prompt(core_api_docs,
+                        task_program_docs, 
+                        behavior_analysis):
+                         
     keypoint_names = behavior_analysis.get_keypoint_names()
     object_names = behavior_analysis.object_manager.get_object_names()
     scene_image = behavior_analysis.visual_manager.get_scene_image()
@@ -63,7 +62,7 @@ def get_watching_events(config: Config):
     return watching_events
 ```
 Now that you have seen the examples, following is the information you need to write the code:
-{query}\n{core_api_docs}\n{task_program_docs}\n
+{core_api_docs}\n{task_program_docs}\n
 
 The keypoint names for the animals are: {keypoint_names}. Don't assume there are other keypoints.
 Available objects are: {object_names}. Don't assume there exist other objects. DO NOT define new objects.
@@ -84,13 +83,18 @@ RULES:
 
 
 def _get_system_prompt(
-    sandbox
+    core_api_docs,
+    task_program_docs,
+    behavior_analysis,
 ):   
     system_prompt = f""" 
 You are helpful AI assistant. Your job is to answer user queries. 
 Importantly, before you write the code, you need to explain whether the question can be answered accurately by code. If not,  ask users to give more information.
 
-{code_related_prompt(sandbox)}
+{code_related_prompt(core_api_docs, 
+                     task_program_docs,
+                     behavior_analysis
+                     )}
 
 If the question can be answered by code:
 - YOU MUST only write one function and no other classes or functions when you write code.
