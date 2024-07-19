@@ -16,7 +16,7 @@ from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 
 import amadeusgpt
-from amadeusgpt.analysis_objects.analysis_factory import create_analysis
+from amadeusgpt.behavior_analysis.analysis_factory import create_analysis
 from amadeusgpt.analysis_objects.object import Object, ROIObject
 from amadeusgpt.config import Config
 from amadeusgpt.main import create_amadeus

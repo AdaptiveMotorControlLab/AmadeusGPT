@@ -1,4 +1,3 @@
-import glob
 import os
 from typing import Any, Dict, List, Optional
 
@@ -20,7 +19,7 @@ from amadeusgpt.programs.api_registry import (register_class_methods,
 from .animal_manager import AnimalManager
 from .base import Manager
 from .object_manager import ObjectManager
-
+from amadeusgpt.behavior_analysis.identifier import Identifier
 
 def mask2distance(locations):
     assert len(locations.shape) == 2
@@ -35,16 +34,14 @@ def mask2distance(locations):
 class VisualManager(Manager):
     def __init__(
         self,
-        config: Dict[str, Any],
-        video_file_path: str,
-        keypoint_file_path: str,
+        identifier: Identifier,
         animal_manager: AnimalManager,
         object_manager: ObjectManager,
     ):
-        super().__init__(config)
-        self.config = config
-        self.video_file_path = video_file_path
-        self.keypoint_file_path = keypoint_file_path
+        super().__init__(identifier.config)
+        self.config = identifier.config
+        self.video_file_path = identifier.video_file_path
+        self.keypoint_file_path = identifier.keypoint_file_path
 
 
         if not os.path.exists(self.video_file_path):

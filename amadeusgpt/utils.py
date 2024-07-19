@@ -6,7 +6,7 @@ import traceback
 import numpy as np
 from amadeusgpt.logger import AmadeusLogger
 from amadeusgpt.analysis_objects.event import Event
-
+from collections import defaultdict
 
 def filter_kwargs_for_function(func, kwargs):
     sig = inspect.signature(func)
@@ -167,11 +167,11 @@ class QA_Message:
         self.chain_of_thought = None
         ### following fields change per video
         # a reference to the sandbox
-        self.error_message = {}
-        self.plots = {}
-        self.out_videos = {}
-        self.pose_video = {}
-        self.function_rets = {}
+        self.error_message = defaultdict(list)
+        self.plots = defaultdict(list)
+        self.out_videos = defaultdict(list)
+        self.pose_video = defaultdict(list)
+        self.function_rets = defaultdict(list)
         self.meta_info = {}    
 
     def get_masks(self, video_file_path: str) -> np.ndarray:
@@ -207,3 +207,23 @@ def create_qa_message(query:str,
         query,
         video_file_paths)
 
+
+
+from IPython.display import Markdown, display
+from IPython.display import Video
+def parse_result(amadeus, qa_message):
+    display(Markdown(qa_message['chain_of_thought']))
+    sandbox = amadeus.sandbox
+    qa_message = sandbox.code_execution(qa_message)
+    sandbox.render_qa_message(qa_message)
+    print ('after executing the function')
+    display(qa_message['meta_info'])
+    print (f'videos generated to {qa_message["out_videos"]}')
+    print ('Open it with media player if it does not properly display in the notebook')
+    if qa_message['out_videos'] is not None:
+        for video_path in qa_message['out_videos']:
+
+            display(Video(video_path, embed=True))
+
+    display(Markdown(str(qa_message['function_rets'])))
+    

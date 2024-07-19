@@ -8,19 +8,19 @@ from amadeusgpt.programs.api_registry import register_class_methods
 from .animal_manager import AnimalManager
 from .base import Manager, cache_decorator
 from .object_manager import ObjectManager
-
+from amadeusgpt.behavior_analysis.identifier import Identifier
 
 @register_class_methods
 class RelationshipManager(Manager):
     def __init__(
         self,
-        config: Dict[str, Any],
+        identifeir: Identifier,
         animal_manager: AnimalManager,
         object_manager: ObjectManager,
         use_cache: bool = False,
     ):
-        super().__init__(config, use_cache=use_cache)
-        self.config = config
+        super().__init__(identifeir.config, use_cache=use_cache)
+        self.config = identifeir.config
         self.animal_manager = animal_manager
         self.object_manager = object_manager
         self.animals_objects_relationships = {}

@@ -16,13 +16,15 @@ from amadeusgpt.programs.sandbox import Sandbox
 
 class LLM(AnalysisObject):
     total_tokens = 0
-    prices = {"gpt-4o": {"input": 5 / 10**6, "output": 15 / 10**6}}
+    prices = {"gpt-4o": {"input": 5 / 10**6, "output": 15 / 10**6},
+              "gpt-4o-mini": {"input": 0.15 / 10**6, "output": 0.6 / 10**6}
+    }
     total_cost = 0
 
     def __init__(self, config):
         self.config = config
         self.max_tokens = config.get("max_tokens", 4096)
-        self.gpt_model = config.get("gpt_model", "gpt-4o")
+        self.gpt_model = config.get("gpt_model", "gpt-4o-mini")
         self.keep_last_n_messages = config.get("keep_last_n_messages", 2)
 
         # the list that is actually sent to gpt
@@ -104,7 +106,7 @@ class LLM(AnalysisObject):
                     * response.usage.completion_tokens
                 )
                 
-                print("current total cost", round(LLM.total_cost, 2), "$")
+                print("current total cost", round(LLM.total_cost, 4), "$")
                 print ("current input tokens", response.usage.prompt_tokens)
                 print("current accumulated tokens", LLM.total_tokens)
                 # TODO we need to calculate the actual dollar cost
@@ -225,11 +227,12 @@ class LLM(AnalysisObject):
        
 
 class VisualLLM(LLM):
-    def __init__(self, config, sandbox: Sandbox):
+    def __init__(self, config):
         super().__init__(config)
-        self.sandbox = sandbox
 
-    def speak(self, image: np.ndarray):
+    def speak(self, 
+              sandbox: Sandbox, 
+              image: np.ndarray):
         """
         Only to comment about one image
         #1) What animal is there, how many and what superanimal model we should use
@@ -262,30 +265,32 @@ class CodeGenerationLLM(LLM):
     Resource management for the behavior analysis part of the system
     """
 
-    def __init__(self, config, sandbox: Sandbox):
+    def __init__(self, config):
         super().__init__(config)
-        self.sandbox = sandbox
 
-    def speak(self, qa_message: QA_Message, share_video_file = True)-> QA_Message:
+    def speak(self, 
+              sandbox: Sandbox, 
+              qa_message: QA_Message, 
+              share_video_file = True)-> QA_Message:
         """
-        Speak to the chat channel
+
         """ 
         query = qa_message.query
 
         from amadeusgpt.system_prompts.code_generator import _get_system_prompt
 
-        core_api_docs = self.sandbox.get_core_api_docs()
-        task_program_docs = self.sandbox.get_task_program_docs()
+        core_api_docs = sandbox.get_core_api_docs()
+        task_program_docs = sandbox.get_task_program_docs()
 
         if share_video_file:
-            video_file_path = self.sandbox.video_file_paths[0]
+            video_file_path = sandbox.video_file_paths[0]
         else:
             raise NotImplementedError("This is not implemented yet")
         
-        behavior_analysis = self.sandbox.get_analysis(video_file_path)
+        behavior_analysis = sandbox.get_analysis(video_file_path)
 
         self.system_prompt = _get_system_prompt(core_api_docs, task_program_docs, behavior_analysis)
-
+    
         self.update_history("system", self.system_prompt) 
 
         self.update_history("user", query)
@@ -304,7 +309,8 @@ class CodeGenerationLLM(LLM):
             function_code = re.findall(pattern, text, re.DOTALL)[0]
 
         # it's a bit meaningless to copy this to every qa_message
-      
+        print ('text')
+        print(text)
         qa_message.code = function_code
         qa_message.chain_of_thought = text
 
@@ -319,9 +325,8 @@ class CodeGenerationLLM(LLM):
 
 class SelfDebugLLM(LLM):
 
-    def __init__(self, config, sandbox: Sandbox):
-        super().__init__(config)        
-        self.sandbox = sandbox
+    def __init__(self, config):
+        super().__init__(config)
 
     def speak(self,  qa_message):
 

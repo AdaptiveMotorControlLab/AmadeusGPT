@@ -11,6 +11,8 @@ from amadeusgpt.programs.api_registry import (register_class_methods,
 
 from .base import Manager
 from amadeusgpt.analysis_objects.event import Event
+from amadeusgpt.behavior_analysis.identifier import Identifier
+
 
 def get_orientation_vector(cls, b1_name, b2_name):
     b1 = cls.get_keypoints()[:, :, cls.get_bodypart_index(b1_name), :]
@@ -73,13 +75,11 @@ def reject_outlier_keypoints(keypoints: ndarray, threshold_in_stds: int = 2):
 @register_class_methods
 class AnimalManager(Manager):
     def __init__(self, 
-                 config: Dict[str, str], 
-                 video_file_path: str, 
-                 keypoint_file_path: str):
+                 identifier: Identifier):
         """ """
-        self.config = config
-        self.video_file_path = video_file_path
-        self.keypoint_file_path = keypoint_file_path
+        self.config = identifier.config
+        self.video_file_path = identifier.video_file_path
+        self.keypoint_file_path = identifier.keypoint_file_path
         self.animals: List[AnimalSeq] = []
         self.full_keypoint_names = []
         self.superanimal_predicted_video = None

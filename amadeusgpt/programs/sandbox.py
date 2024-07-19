@@ -9,7 +9,8 @@ from functools import wraps
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
-from amadeusgpt.analysis_objects.analysis_factory import create_analysis
+from amadeusgpt.behavior_analysis.analysis_factory import create_analysis
+from amadeusgpt.behavior_analysis.identifier import Identifier
 from amadeusgpt.analysis_objects.event import Event
 from amadeusgpt.analysis_objects.relationship import Orientation
 from amadeusgpt.config import Config
@@ -19,6 +20,8 @@ from amadeusgpt.programs.task_program_registry import (TaskProgramLibrary)
 from pathlib import Path
 from collections import defaultdict
 from amadeusgpt.utils import create_qa_message, QA_Message
+
+
 class SandboxBase:
     """
     This class takes task program library, api registry.
@@ -171,7 +174,7 @@ class Sandbox(SandboxBase):
         self.analysis_dict = {}
 
         for video_file_path, keypoint_file_path in zip(self.video_file_paths, self.keypoint_file_paths):
-            self.analysis_dict[video_file_path] = create_analysis(self.config, video_file_path, keypoint_file_path)
+            self.analysis_dict[video_file_path] = create_analysis(Identifier(self.config, video_file_path, keypoint_file_path))
 
         for video_file_path in self.video_file_paths:
             self.namespace_dict[video_file_path] = {"__builtins__": __builtins__}
@@ -253,7 +256,7 @@ The usage and the parameters of the functions are provided."""
         ret = "```taskprograms\n"
         for name, task_program in TaskProgramLibrary.get_task_programs().items():
             description = task_program.json_obj["docstring"]
-            ret += f"{name}(config: Config): \n{description}\n"
+            ret += f"{name}(identifier: Identifier): \n{description}\n"
         ret += "\n```"
 
         return ret
@@ -294,12 +297,8 @@ The usage and the parameters of the functions are provided."""
                     value, (int, float, str, list, dict, tuple)
                 ):
                     namespace[name] = value
-
-            # the namespace needs to access the config
-            from amadeusgpt.config import Config
-
-            namespace["config"] = self.config
-            namespace["Config"] = Config
+            
+            namespace["Identifier"] = Identifier
             # the namespace needs to access AnimalBehaviorAnalysis for API
 
             namespace["plt"] = plt
@@ -308,7 +307,6 @@ The usage and the parameters of the functions are provided."""
             namespace["behavior_analysis"] = analysis
 
             # useful classes needed the APIs
-
             namespace["Orientation"] = Orientation
             namespace["List"] = typing.List
             namespace["Event"] = Event
@@ -322,16 +320,22 @@ The usage and the parameters of the functions are provided."""
         # if there is a change in the config, we always use the newest config
         self.update_namespace()
 
-        for video_file_path in self.video_file_paths:
+        for video_file_path, keypoint_file_path in zip(self.video_file_paths, self.keypoint_file_paths):
             namespace = self.namespace_dict[video_file_path]
             code = qa_message.code
-            # not need to do further if there was no code found
+            # not need to do further if´ there was no code found
+            print ('code?')
+            print (code)
             if code is None:
                 continue
             exec(code, namespace)
+
+            identifier = Identifier(self.config, video_file_path, keypoint_file_path)
+            namespace['identifier'] = identifier
+
             # call the main function
             function_name = self.get_function_name_from_string(code)
-            call_str = f"{function_name}(config)"
+            call_str = f"{function_name}(identifier)"
             try:
                 exec(f"result = {call_str}", namespace)
                 qa_message.error_message[video_file_path] = None
@@ -344,7 +348,7 @@ The usage and the parameters of the functions are provided."""
                 return qa_message
             result = namespace["result"]
             qa_message.function_rets[video_file_path] = result        
-
+        print (qa_message.function_rets)
         return qa_message
 
     def get_function_name_from_string(self, code) -> str:
@@ -481,17 +485,16 @@ The usage and the parameters of the functions are provided."""
 
         return qa_message
 
-    def run_task_program(self, config: Config, task_program_name :str):
+    def run_task_program(self, task_program_name :str):
         """
         1) sandbox is also responsible for running task program
         2) self.task_program_library references to a singleton so a different sandbox still has reference to the task program
         """
-        # update the config 
-        self.config = config
 
         task_program = TaskProgramLibrary[task_program_name]
         # there might be better way to set this
         self.query = task_program_name
+
         qa_message = create_qa_message(self.query, self.video_file_paths)
         
         qa_message.code = task_program["source_code"]
@@ -589,9 +592,7 @@ def render_temp_message(query, sandbox):
 
 if __name__ == "__main__":
     # testing qa message
-    import pickle
 
-    from amadeusgpt.analysis_objects.object import ROIObject
     from amadeusgpt import AMADEUS
 
     config = Config("amadeusgpt/configs/EPM_template.yaml")

@@ -11,8 +11,6 @@ from amadeusgpt.analysis_objects.llm import (CodeGenerationLLM,
 from amadeusgpt.integration_module_hub import IntegrationModuleHub
 
 from amadeusgpt.integration_module_hub import IntegrationModuleHub
-from collections import defaultdict
-import pickle 
 from amadeusgpt.programs.task_program_registry import TaskProgramLibrary
 from pathlib import Path
 import glob 
@@ -51,9 +49,9 @@ class AMADEUS:
                                video_file_paths, 
                                keypoint_file_paths)
         
-        self.code_generator_llm = CodeGenerationLLM(config.get("llm_info", {}),  self.sandbox)
-        self.self_debug_llm = SelfDebugLLM(config.get("llm_info", {}), self.sandbox)
-        self.visual_llm = VisualLLM(config.get("llm_info", {}), self.sandbox)
+        self.code_generator_llm = CodeGenerationLLM(config.get("llm_info", {}))
+        self.self_debug_llm = SelfDebugLLM(config.get("llm_info", {}))
+        self.visual_llm = VisualLLM(config.get("llm_info", {}))
 
         ####
 
@@ -97,13 +95,13 @@ class AMADEUS:
         return modules  
        
 
-    def step(self, user_query:str):
+    def step(self, user_query:str)-> QA_Message:
         integration_module_names = self.match_integration_module(user_query)
 
         self.sandbox.update_matched_integration_modules(integration_module_names)
-        qa_message_dict = self.sandbox.llm_step(user_query)
-        print (qa_message_dict)
-        return qa_message_dict
+        qa_message = self.sandbox.llm_step(user_query)
+
+        return qa_message
 
     def get_analysis(self, video_file_path: str):
         """
@@ -114,7 +112,8 @@ class AMADEUS:
 
         return analysis
 
-    def run_task_program(self, config: Config, 
+    def run_task_program(self, 
+                         config: Config, 
                          task_program_name: str):
         """
         Execute the task program on the currently holding sandbox
@@ -124,7 +123,7 @@ class AMADEUS:
         task_program_name: the name of the task program to run
 
         """
-        return self.sandbox.run_task_program(config, task_program_name)
+        return self.sandbox.run_task_program(task_program_name)
     
     # def save_results(self, out_folder: str| None = None):
     #     """
@@ -170,9 +169,9 @@ class AMADEUS:
     def register_task_program(self, task_program, creator = "human"):
         TaskProgramLibrary.register_task_program(creator = creator)(task_program)
 
-    def get_results(self, video_file_path: str):
+    # def get_results(self, video_file_path: str):
         
-        return self.sandboxes[video_file_path].result_cache
+    #     return self.sandboxes[video_file_path].result_cache
     
     def get_task_programs(self):
         return TaskProgramLibrary.get_task_programs()

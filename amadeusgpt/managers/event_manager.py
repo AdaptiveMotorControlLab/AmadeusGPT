@@ -12,6 +12,8 @@ from .animal_manager import AnimalManager
 from .base import Manager, cache_decorator
 from .object_manager import ObjectManager
 from .relationship_manager import RelationshipManager
+from amadeusgpt.behavior_analysis.identifier import Identifier
+
 import os
 
 def find_complement_number(string):
@@ -55,19 +57,19 @@ def process_animal_object_relation(
 class EventManager(Manager):
     def __init__(
         self,
-        config: Dict[str, Any],
-        video_file_path: str,
+        identifier: Identifier,
         object_manager: ObjectManager,
         animal_manager: AnimalManager,
         relationship_manager: RelationshipManager,
         use_cache: bool = False,
     ):
-        super().__init__(config, use_cache=use_cache)
-        self.config = config
+        self.config = identifier.config
+        super().__init__(self.config, use_cache=use_cache)
+        
         self.object_manager = object_manager
         self.animal_manager = animal_manager
         self.relationship_manager = relationship_manager
-        self.video_file_path = video_file_path
+        self.video_file_path = identifier.video_file_path
         if not os.path.exists(self.video_file_path):
             # no need to initialize
             return

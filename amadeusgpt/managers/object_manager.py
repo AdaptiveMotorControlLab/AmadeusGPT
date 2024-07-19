@@ -8,6 +8,7 @@ from amadeusgpt.managers.animal_manager import AnimalManager
 from amadeusgpt.managers.base import Manager
 from amadeusgpt.programs.api_registry import register_class_methods
 import os
+from amadeusgpt.behavior_analysis.identifier import Identifier
 np.set_printoptions(suppress=True)
 
 
@@ -15,16 +16,15 @@ np.set_printoptions(suppress=True)
 class ObjectManager(Manager):
     def __init__(
         self,
-        config: Dict[str, Any],
-        video_file_path: str,
+        identifier: Identifier,
         animal_manager: AnimalManager,
     ):
-        self.config = config
-        self.video_file_path = video_file_path
+        self.config = identifier.config
+        self.video_file_path = identifier.video_file_path
         self.animal_manager = animal_manager
         self.roi_objects = []
         self.seg_objects = []
-        self.load_from_disk = config["object_info"]["load_objects_from_disk"]
+        self.load_from_disk = self.config["object_info"]["load_objects_from_disk"]
         if self.load_from_disk:
             self.load_objects_from_disk()
         else:
