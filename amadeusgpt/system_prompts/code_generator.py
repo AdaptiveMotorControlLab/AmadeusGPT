@@ -27,7 +27,6 @@ All following functions are part of class AnimalBehaviorAnalysis:
 The usage and the parameters of the functions are provided.
 
 get_animals_animals_events(cross_animal_query_list:Optional[List[str]],
-cross_animal_comparison_list:Optional[List[str]],
 bodypart_names:Optional[List[str]],
 otheranimal_bodypart_names:Optional[List[str]],
 min_window:int,
@@ -103,8 +102,6 @@ Importantly, before you write the code, you need to explain whether the question
 If the question can be answered by code:
 - YOU MUST only write one function and no other classes or functions when you write code.
 
-If you are not sure the question can be answered by code:
-If you are asked a question that cannot be accurately answered with the core apis or task programs,  ask for more information instead of writing code that may not be accurate.
 """
 
     return system_prompt

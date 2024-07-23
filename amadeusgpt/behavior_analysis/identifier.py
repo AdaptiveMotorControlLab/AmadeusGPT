@@ -1,5 +1,5 @@
 from amadeusgpt.config import Config
-
+import os
 class Identifier:
     """
     config contains project level meta
@@ -17,7 +17,7 @@ class Identifier:
         self.keypoint_file_path = keypoint_file_path
 
     def __str__(self):
-        return self.video_file_path
+        return os.path.abspath(self.video_file_path)
 
     def __eq__(self, other):
         return self.video_file_path == other.video_file_path

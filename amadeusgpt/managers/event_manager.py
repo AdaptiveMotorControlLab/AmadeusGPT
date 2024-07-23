@@ -299,7 +299,7 @@ class EventManager(Manager):
         Note
         ----
         To capture a range for a numerical query  (e.g., relative_speed) between 3 and 10, one can do:
-        get_animals_animals_events(cross_animal_query_list = ['relative_speed', 'relative_speed'], cross_animal_comparison_list = ['>3', '<10'])
+        get_animals_animals_events(cross_animal_query_list = ['relative_speed<10', 'relative_speed>3'], 
 
         """
 

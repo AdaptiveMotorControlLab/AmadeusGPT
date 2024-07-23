@@ -16,10 +16,15 @@ from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 
 import amadeusgpt
+from amadeusgpt.behavior_analysis.identifier import Identifier
 from amadeusgpt.behavior_analysis.analysis_factory import create_analysis
 from amadeusgpt.analysis_objects.object import Object, ROIObject
 from amadeusgpt.config import Config
-from amadeusgpt.main import create_amadeus
+from amadeusgpt import AMADEUS
+import glob
+from pathlib import Path
+from amadeusgpt.utils import QA_Message
+
 
 LOG_DIR = os.path.join(os.path.expanduser("~"), "Amadeus_logs")
 VIDEO_EXTS = "mp4", "avi", "mov"
@@ -30,7 +35,6 @@ user_profile_path = os.path.join(
 bot_profile_path = os.path.join(
     current_script_directory, "static", "images", "chatbot.png"
 )
-
 
 def load_profile_image(image_path):
     if image_path.startswith("http"):
@@ -56,20 +60,17 @@ BOT_PROFILE = load_profile_image(bot_profile_path)
 
 class BaseMessage:
     def __init__(self, json_entry=None):
-        if json_entry:
-            self.data = self.parse_from_json_entry(json_entry)
-        else:
-            self.data = {}
 
-    def __getitem__(self, key):
-        return self.data[key]
+        self.role = ""
+        self.query = ""
+        if json_entry:
+            json_entry = self.parse_from_json_entry(json_entry)
+            self.role = json_entry["role"]
+            self.query = json_entry["query"]        
 
     def parse_from_json_entry(self, json_entry):
         return json_entry
-
-    def __str__(self):
-        return str(self.data)
-
+   
     def format_caption(self, caption):
         temp = caption.split("\n")
         temp = [f"<li>{content}</li>" for content in temp]
@@ -83,34 +84,34 @@ class BaseMessage:
 class HumanMessage(BaseMessage):
     def __init__(self, query=None, json_entry=None):
         if json_entry:
-            super().__init__(json_entry=json_entry)
-        else:
-            self.data = {}
-        self.data["role"] = "human"
+            super().__init__(json_entry=json_entry)       
+        self.role = "human"
         if query:
-            self.data["query"] = query
+            self.query = query
 
     def render(self):
-        if len(self.data) > 0:
-            for render_key, render_value in self.data.items():
-                if render_key == "query":
-                    st.markdown(
-                        f'<div class="panel">{render_value}</div>',
-                        unsafe_allow_html=True,
-                    )
-
+        st.markdown(
+            f'<div class="panel">{self.query}</div>',
+            unsafe_allow_html=True,
+        )
 
 class AIMessage(BaseMessage):
-    def __init__(self, amadeus_answer=None, json_entry=None):
+    def __init__(self, qa_message: QA_Message | None, json_entry=None):
         self.rendered = False
         if json_entry:
             super().__init__(json_entry=json_entry)
-        else:
-            self.data = {}
-        self.data["role"] = "ai"
-        if not isinstance(amadeus_answer, dict):
-            amadeus_answer = amadeus_answer.to_dict()
-        self.data.update(amadeus_answer)
+        
+        self.role =  "ai"
+        
+        self.query  = qa_message.query
+        self.chain_of_thought = qa_message.chain_of_thought
+        self.error_message = qa_message.error_message
+        self.function_rets = qa_message.function_rets
+        self.plots = qa_message.plots
+        self.out_videos = qa_message.out_videos
+        self.code = qa_message.code
+        self.pose_video = qa_message.pose_video
+
 
     def render(self, debug=False):
         """
@@ -139,88 +140,75 @@ class AIMessage(BaseMessage):
             "out_videos",
         ]
         # for render_key, render_value in self.data.items():
-        if len(self.data) > 0:
-            for render_key in render_keys:
-                if render_key not in self.data:
-                    continue
-                render_value = self.data[render_key]
-                if render_value is None:
-                    # skip empty field
-                    continue
-                if render_key == "function_rets":
-                    if isinstance(render_key, (list, tuple)):
-                        for ret in render_value:
-                            for key, value in ret.items():
-                                st.code(f"Result\n {value}\n ", language="python")
+        
+        for render_key in render_keys:
+            if getattr(self, render_key, None) is None:
+                continue
+            render_value = getattr(self, render_key)
+            if render_value is None:
+                # skip empty field
+                continue
+            if render_key == "function_rets":
+                if isinstance(render_key, (list, tuple)):
+                    for ret in render_value:
+                        for key, value in ret.items():
+                            st.code(f"Result\n {value}\n ", language="python")
+                else:
+                    st.code(f"Result\n {render_value}\n ", language="python")
+            elif render_key == "error_message":
+                error_message = render_value
+                for video_file_path, error in error_message.items():
+                    if error is not None:
+                        st.markdown(f"The error says: {error}\n ")
+            elif render_key == "chain_of_thought":
+                # there should be a better matching than this
+                text = render_value
+                lines = text.split("\n")
+                inside_code_block = False
+                code_block = []
+                for line in lines:
+                    if line.strip().startswith("```python"):
+                        inside_code_block = True
+                        code_block = []
+                    elif line.strip().startswith("```") and inside_code_block:
+                        inside_code_block = False
+                        st.code("\n".join(code_block), language="python")
+                    elif inside_code_block:
+                        code_block.append(line)
                     else:
-                        st.code(f"Result\n {render_value}\n ", language="python")
-                elif render_key == "error_message":
-                    st.markdown(f"The error says: {render_value}\n ")
-                elif render_key == "chain_of_thought":
-                    # there should be a better matching than this
-                    text = render_value
-                    lines = text.split("\n")
-                    inside_code_block = False
-                    code_block = []
-                    for line in lines:
-                        if line.strip().startswith("```python"):
-                            inside_code_block = True
-                            code_block = []
-                        elif line.strip().startswith("```") and inside_code_block:
-                            inside_code_block = False
-                            st.code("\n".join(code_block), language="python")
-                        elif inside_code_block:
-                            code_block.append(line)
-                        else:
-                            st.markdown(line)
-                    sandbox = self.data["sandbox"]
-                    qa_message = sandbox.code_execution(self.data)
-                    if qa_message["error_message"] is not None:
+                        st.markdown(line)
+                if 'sandbox' in st.session_state:
+                    qa_message = st.session_state['sandbox'].code_execution(self)
+                    #FIX ME THIS IS UGLY
+                    errors = list(qa_message.error_message.values())
+                    errors = [error for error in errors if error is not None]
+                    if len(errors) > 0:
                         # make the error message more visible with different color
-                        st.markdown(f"Error: {qa_message['error_message']}\n ")
+                        st.markdown(f"Error: {qa_message.error_message}\n ")
                         # Remind users we are fixing the error by self debugging
                         st.markdown(f"Let me try to fix the error by self-debugging\n ")
                         if not debug:
-                            sandbox.llms["self_debug"].speak(sandbox)
-                            qa_message = sandbox.code_execution(qa_message)
+                            st.session_state['sandbox'].llms["self_debug"].speak(qa_message)
+                            qa_message = st.session_state['sandbox'].code_execution(qa_message)
                             self.render(debug=True)
-                    # do not need to execute the block one more time
+                # do not need to execute the block one more time
                     if not self.rendered:
                         self.rendered = True
-                        sandbox.render_qa_message(qa_message)
-
-                elif render_key == "ndarray":
-                    for content_array in render_value:
-                        content_array = content_array.squeeze()
-                        # no point of showing array that's large
-
-                        hint_message = "Here is the output:"
-                        st.markdown(
-                            f'<div class="panel">{hint_message}</div>',
-                            unsafe_allow_html=True,
-                        )
-                        if isinstance(content_array, str):
-                            st.markdown(
-                                f'<div class="panel">{content_array}</div>',
-                                unsafe_allow_html=True,
-                            )
-                        else:
-                            if len(content_array.shape) == 2:
-                                df = pd.DataFrame(content_array)
-                                st.dataframe(df, use_container_width=True)
-                            else:
-                                raise ValueError(
-                                    "returned array cannot be non 2D array."
-                                )
-                elif render_key == "plots":
-                    # are there better ways in streamlit now to support plot display?
-                    for fig, axe in render_value:
+                        st.session_state['sandbox'].render_qa_message(qa_message)
+            
+            elif render_key == "plots":
+                # are there better ways in streamlit now to support plot display?
+                plots = render_value
+                for video_file_path, plot_list in plots.items():
+                    for fig, axe in plot_list:
                         filename = save_figure_to_tempfile(fig)
                         st.image(filename, width=600)
-                elif render_key == "out_videos":
-                    for video_path in render_value:
-                        if os.path.exists(video_path):
-                            st.video(video_path)
+            elif render_key == "out_videos":
+                out_videos = render_value
+                for video_path, videos in out_videos.items():
+                    for video in videos:
+                        if os.path.exists(video):
+                            st.video(video)
 
 
 class Messages:
@@ -277,7 +265,10 @@ class Messages:
         make sure those media types match what is in amadeus answer class
         """
         for message in self.messages:
-            message.render()
+            if isinstance(message, AIMessage):
+                message.render()
+            else:
+                message.render()
 
     def append(self, e):
         self.messages.append(e)
@@ -301,22 +292,22 @@ class Messages:
 def get_amadeus_instance(example):
     # construct the config from the current example
     # get the root directory of the the module amadeusgpt
-    config = get_config(example)
-    amadeus_instance = create_amadeus(config)
+    identifier = get_identifier(example)
+    amadeus_instance = AMADEUS(identifier.config)
     return amadeus_instance
 
 
 def ask_amadeus(question):
     amadeus = get_amadeus_instance(st.session_state["example"])
     qa_message = amadeus.step(question)
-
+    st.session_state["sandbox"] = amadeus.sandbox
     return qa_message
 
 
 # caching display roi will make the roi stick to
 # the display of initial state
 def display_roi(analysis, example):
-    analysis = create_analysis(get_config(example))
+    analysis = create_analysis(get_identifier(example))
     roi_objects = analysis.get_roi_objects()
 
     frame = analysis.visual_manager.get_scene_image()
@@ -407,8 +398,8 @@ def chat_box_submit():
         query = st.session_state["user_input"]
         qa_message = ask_amadeus(query)
 
-        user_message = HumanMessage(query=qa_message["query"])
-        amadeus_message = AIMessage(amadeus_answer=qa_message)
+        user_message = HumanMessage(query=qa_message.query)
+        amadeus_message = AIMessage(qa_message)
 
         st.session_state["messages"].append(user_message)
         st.session_state["messages"].append(amadeus_message)
@@ -416,10 +407,10 @@ def chat_box_submit():
 
 def rerun_prompt(query, ind):
     messages = st.session_state["messages"]
-    amadeus_answer = ask_amadeus(query)
-    amadeus_message = AIMessage(amadeus_answer=amadeus_answer)
+    qa_message = ask_amadeus(query)
+    amadeus_message = AIMessage(qa_message=qa_message)
 
-    if ind != len(messages) - 1 and messages[ind + 1]["role"] == "ai":
+    if ind != len(messages) - 1 and messages[ind + 1].role == "ai":
         messages[ind + 1] = amadeus_message
     else:
         messages.insert(ind + 1, amadeus_message)
@@ -434,7 +425,7 @@ def render_messages():
         messages.parse_from_json(example_history_json)
 
     for ind, msg in enumerate(messages):
-        _role = msg["role"]
+        _role = msg.role
         with st.chat_message(
             _role, avatar=USER_PROFILE if _role == "human" else BOT_PROFILE
         ):
@@ -447,7 +438,7 @@ def render_messages():
                     button_name,
                     key=f"{example}_user_{ind}",
                     on_click=rerun_prompt,
-                    kwargs={"query": msg["query"], "ind": ind},
+                    kwargs={"query": msg.query, "ind": ind},
                     disabled=disabled,
                 )
             else:
@@ -480,8 +471,8 @@ def update_df_data(new_item, index_to_update, df, csv_file):
     return csv_file, df
 
 
-def get_scene_image(config):
-    analysis = create_analysis(config)
+def get_scene_image(identifier: Identifier):
+    analysis = create_analysis(identifier)
 
     scene_image = analysis.visual_manager.get_scene_image()
     if scene_image is not None:
@@ -492,7 +483,7 @@ def get_scene_image(config):
         return img_str
 
 
-def get_config(example):
+def get_identifier(example: str) -> Identifier:
 
     root_dir = os.path.dirname(amadeusgpt.__file__)
     if example == "Horse":
@@ -509,8 +500,14 @@ def get_config(example):
         template_config_path = os.path.join(root_dir, "configs", "Custom_template.yaml")
 
     config = Config(template_config_path)
+ 
+    data_folder = os.path.join(Path(root_dir).parent, 'examples', example)
 
-    return config
+    video_file_path = glob.glob(os.path.join(data_folder, "*.mp4"))[0]
+    keypoint_file_path = glob.glob(os.path.join(data_folder, "*.h5"))[0]
+    identifier = Identifier(config, video_file_path, keypoint_file_path)
+
+    return identifier
 
 
 def save_uploaded_file(uploaded_file, save_dir):
@@ -529,8 +526,8 @@ def render_page_by_example(example):
     if example not in st.session_state:
         st.session_state[example] = {}
     # needs different logic for custom page
-    config = get_config(example)
-
+    identifier = get_identifier(example)
+    config = identifier.config
     current_script_directory = os.path.dirname(os.path.abspath(__file__))
     logo_path = os.path.join(
         current_script_directory, "static", "images", "amadeusgpt_logo.png"
@@ -545,6 +542,8 @@ def render_page_by_example(example):
         output_format="auto",
     )
     # st.markdown("# Welcome to AmadeusGPT🎻")
+    amadeus_root = Path(amadeusgpt.__file__).parent.parent
+    
 
     if example == "Custom":
         st.markdown("Provide your own video and keypoint file (in pairs)")
@@ -558,9 +557,8 @@ def render_page_by_example(example):
             if uploaded_keypoint_file is not None:
                 path = save_uploaded_file(uploaded_keypoint_file, save_dir)
                 st.session_state["uploaded_keypoint_file"] = path
-                config["keypoint_info"]["keypoint_file_path"] = st.session_state[
-                    "uploaded_keypoint_file"
-                ]
+                config["data_info"]["data_folder"] = os.path.join("examples", example)
+                config['data_info']['data_folder'] = amadeus_root / config['data_info']['data_folder']
 
         if "uploaded_video_file" not in st.session_state:
             uploaded_video_file = st.file_uploader(
@@ -571,9 +569,8 @@ def render_page_by_example(example):
             if uploaded_video_file is not None:
                 path = save_uploaded_file(uploaded_video_file, save_dir)
                 st.session_state["uploaded_video_file"] = uploaded_video_file
-                config["video_info"]["video_file_path"] = st.session_state[
-                    "uploaded_video_file"
-                ]
+                config["data_info"]["data_folder"] = os.path.join("examples", example)
+                config['data_info']['data_folder'] = amadeus_root / config['data_info']['data_folder']
 
         ###### USER INPUT PANEL ######
         # get user input once getting the uploaded files
@@ -622,7 +619,7 @@ def render_page_by_example(example):
         st.markdown(
             "- Ask additional questions in the chatbox at the bottom of the page."
         )
-        analysis = create_analysis(config)
+        analysis = create_analysis(identifier)
 
     elif example == "MausHaus":
         st.markdown(
@@ -640,21 +637,22 @@ def render_page_by_example(example):
         st.markdown(
             "- Here are some example queries you might consider: 'Give me events where the animal overlaps with the treadmill, which is object 5' | 'Define <|drinking|> as a behavior where the animal's nose is over object 28, which is a waterbasin. The minimum time window for this behavior should be 20 frames. When is the animal drinking?'"
         )
-        config = get_config(example)
+
 
     elif example == "Horse":
         st.markdown(
             "This horse video is part of a benchmark by Mathis et al 2021 https://arxiv.org/abs/1909.11229."
         )
 
-    config = get_config(example)
-    analysis = create_analysis(config)
+    identifier = get_identifier(example)
+
+    analysis = create_analysis(identifier)
 
     if st.session_state["example"] != example:
         st.session_state["messages"] = Messages()
     st.session_state["example"] = example
 
-    scene_image_path = get_scene_image(config)
+    scene_image_path = get_scene_image(identifier)
 
     if scene_image_path is not None:
         img_data = base64.b64decode(scene_image_path)
@@ -665,12 +663,7 @@ def render_page_by_example(example):
         scene_image = None
 
     col1, col2, col3 = st.columns([2, 1, 1])
-
-    # if example == "MausHaus" or st.session_state['enable_SAM'] == "Yes":
-    #     if 'sam_info' in config and os.path.exists(config['sam_info'].get('sam_checkpoint', '')):
-    #         sam_image = get_sam_image(config)
-    #     else:
-    #         st.error("Cannot find SAM checkpoints. Skipping SAM")
+   
 
     with st.sidebar as sb:
         if example == "MABe":
@@ -679,19 +672,13 @@ def render_page_by_example(example):
             st.caption("Raw video from Horse-30")
         else:
             st.caption("DeepLabCut-SuperAnimal tracked video")
-        if (
-            config["video_info"]["video_file_path"]
-            and config["video_info"]["video_file_path"] is not None
-        ):
-            st.video(config["video_info"]["video_file_path"])
+        
+        if os.path.exists(identifier.video_file_path):        
+            st.video(identifier.video_file_path)
 
         if "uploaded_video_file" in st.session_state:
             st.video(st.session_state["uploaded_video_file"])
-
-        # we only show objects for MausHaus for demo
-        # if sam_image is not None:
-        #     st.caption("SAM segmentation results")
-        #     st.image(sam_image, channels="RGBA")
+      
 
     if (
         st.session_state["example"] == "EPM"
