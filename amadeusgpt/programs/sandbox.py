@@ -507,7 +507,6 @@ The usage and the parameters of the functions are provided."""
         self.message_cache[task_program_name] = qa_message
 
         return qa_message
-    
 
 def save_figure_to_tempfile(fig):
     """
@@ -599,4 +598,15 @@ if __name__ == "__main__":
 
     amadeus = AMADEUS(config)
     sandbox = amadeus.sandbox
+<<<<<<< HEAD
    
+=======
+    analysis = sandbox.exec_namespace["behavior_analysis"]
+    with open("temp_roi_objects.pickle", "rb") as f:
+        roi_objects = pickle.load(f)
+
+    for name, roi_object in roi_objects.items():
+        analysis.object_manager.add_roi_object(ROIObject(name, roi_object["Path"]))
+
+    render_temp_message("random query", sandbox)   
+>>>>>>> 1a4ed8bc30461584f0f361ebd771b6186b289b9d

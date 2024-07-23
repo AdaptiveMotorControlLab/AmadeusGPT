@@ -21,4 +21,5 @@ jobs:
       - name: Codespell
         uses: codespell-project/actions-codespell@v2
         with:
+          skip: "./notebooks"
           config_file: .codespellrc
