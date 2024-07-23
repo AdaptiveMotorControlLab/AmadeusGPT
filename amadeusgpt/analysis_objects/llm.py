@@ -11,17 +11,20 @@ import openai
 from openai import OpenAI
 from amadeusgpt.utils import AmadeusLogger
 from .base import AnalysisObject
-
+from amadeusgpt.utils import QA_Message, create_qa_message
+from amadeusgpt.programs.sandbox import Sandbox
 
 class LLM(AnalysisObject):
     total_tokens = 0
-    prices = {"gpt-4o": {"input": 5 / 10**6, "output": 15 / 10**6}}
+    prices = {"gpt-4o": {"input": 5 / 10**6, "output": 15 / 10**6},
+              "gpt-4o-mini": {"input": 0.15 / 10**6, "output": 0.6 / 10**6}
+    }
     total_cost = 0
 
     def __init__(self, config):
         self.config = config
         self.max_tokens = config.get("max_tokens", 4096)
-        self.gpt_model = config.get("gpt_model", "gpt-4o")
+        self.gpt_model = config.get("gpt_model", "gpt-4o-mini")
         self.keep_last_n_messages = config.get("keep_last_n_messages", 2)
 
         # the list that is actually sent to gpt
@@ -38,6 +41,15 @@ class LLM(AnalysisObject):
         Speak to the chat channel
         """
         raise NotImplementedError("This method should be implemented in the subclass")
+
+    def parse_json_string(self, text):
+        """
+        Text contains a json string with json block
+        """
+        pattern = r"```json(.*?)```"
+        json_string = re.findall(pattern, text, re.DOTALL)[0]
+        json_obj = json.loads(json_string)
+        return json_obj
 
     def connect_gpt(self, messages, **kwargs):
         # if openai version is less than 1
@@ -93,8 +105,10 @@ class LLM(AnalysisObject):
                     + LLM.prices[self.gpt_model]["output"]
                     * response.usage.completion_tokens
                 )
-                print("current total cost", round(LLM.total_cost, 2), "$")
-                print("current total tokens", LLM.total_tokens)
+                
+                print("current total cost", round(LLM.total_cost, 4), "$")
+                print ("current input tokens", response.usage.prompt_tokens)
+                print("current accumulated tokens", LLM.total_tokens)
                 # TODO we need to calculate the actual dollar cost
                 break
 
@@ -121,9 +135,11 @@ class LLM(AnalysisObject):
         """
         """
         encoded_image_list = []
+      
         for image in image_list:
             # images from matplotlib etc.
             if isinstance(image, io.BytesIO):
+                image_bytes = image
                 base64_image = base64.b64encode(image_bytes.getvalue()).decode("utf-8")
             # images from opencv
             elif isinstance(image, np.ndarray):
@@ -175,7 +191,7 @@ class LLM(AnalysisObject):
                     self.context_window[1] = new_message
                 else:
                     self.context_window.append(new_message)
-            else:
+            else:                
                 self.context_window.append(new_message)
 
     def clean_context_window(self):
@@ -206,13 +222,18 @@ class LLM(AnalysisObject):
         thought_process = text.replace(function_code, "<python_code>")
 
         return text, function_code, thought_process
-
+    
+    def get_system_prompt(self, sandbox):
+        raise NotImplementedError("This method should be implemented in the subclass")
+       
 
 class VisualLLM(LLM):
     def __init__(self, config):
         super().__init__(config)
 
-    def speak(self, sandbox, image: np.ndarray):
+    def speak(self, 
+              sandbox: Sandbox, 
+              image: np.ndarray):
         """
         Only to comment about one image
         #1) What animal is there, how many and what superanimal model we should use
@@ -220,15 +241,16 @@ class VisualLLM(LLM):
         #3) We format them in json format
         """
         from amadeusgpt.system_prompts.visual_llm import _get_system_prompt
+
         self.system_prompt = _get_system_prompt()        
         multi_image_content = self.prepare_multi_image_content([image])
+
         self.update_history("system", self.system_prompt)
         self.update_history(
             "user", "here is the image", multi_image_content=multi_image_content, in_place=True
         )
         response = self.connect_gpt(self.context_window, max_tokens=2000)
         text = response.choices[0].message.content.strip()
-        print(text)
         pattern = r"```json(.*?)```"
         if len(re.findall(pattern, text, re.DOTALL)) == 0:
             raise ValueError("can't parse the json string correctly", text)
@@ -246,28 +268,61 @@ class CodeGenerationLLM(LLM):
     def __init__(self, config):
         super().__init__(config)
 
-    def speak(self, sandbox):
+    def speak(self, 
+              sandbox: Sandbox, 
+              qa_message: QA_Message, 
+              share_video_file = True)-> QA_Message:
         """
-        Speak to the chat channel
-        """
-        qa_message = sandbox.messages[-1]
-        query = qa_message["query"]
 
-        self.update_system_prompt(sandbox)
+        """ 
+        query = qa_message.query
+
+        from amadeusgpt.system_prompts.code_generator import _get_system_prompt
+
+        core_api_docs = sandbox.get_core_api_docs()
+        task_program_docs = sandbox.get_task_program_docs()
+
+        if share_video_file:
+            video_file_path = sandbox.video_file_paths[0]
+        else:
+            raise NotImplementedError("This is not implemented yet")
+        
+
+        behavior_analysis = sandbox.analysis_dict[video_file_path]
+        scene_image = behavior_analysis.visual_manager.get_scene_image()
+        keypoint_names = behavior_analysis.animal_manager.get_keypoint_names()
+        object_names = behavior_analysis.object_manager.get_object_names()
+        animal_names = behavior_analysis.animal_manager.get_animal_names()
+        
+
+        self.system_prompt = _get_system_prompt(core_api_docs, 
+                                                task_program_docs, 
+                                                scene_image,
+                                                keypoint_names, 
+                                                object_names,
+                                                animal_names)
+    
+        self.update_history("system", self.system_prompt) 
+
         self.update_history("user", query)
+
         response = self.connect_gpt(self.context_window, max_tokens=2000)
         text = response.choices[0].message.content.strip()
         # need to keep the memory of the answers from LLM
         self.update_history("assistant", text)
 
-        # we need to consider better ways to parse functions
-        # and save them in a more structured way
+        function_code = None 
+
         pattern = r"```python(.*?)```"
         if len(re.findall(pattern, text, re.DOTALL)) == 0:
             pass
         else:
             function_code = re.findall(pattern, text, re.DOTALL)[0]
-            qa_message["code"] = function_code
+
+        # it's a bit meaningless to copy this to every qa_message
+     
+        qa_message.code = function_code
+        qa_message.chain_of_thought = text
 
         # this is for debug use
         with open("temp_answer.json", "w") as f:
@@ -275,77 +330,22 @@ class CodeGenerationLLM(LLM):
             obj["chain_of_thought"] = text
             json.dump(obj, f, indent=4)
 
-        # create a placeholder
-        thought_process = text
-
-        qa_message["chain_of_thought"] = thought_process
-
-    def get_system_prompt(self, sandbox):
-        from amadeusgpt.system_prompts.code_generator import _get_system_prompt
-
-        return _get_system_prompt(
-            sandbox
-        )
-
-    def update_system_prompt(self, sandbox):
-
-        # get the formatted docs / blocks from the sandbox      
-        self.system_prompt = self.get_system_prompt(sandbox)
-
-        # update both history and context window
-        self.update_history("system", self.system_prompt)
-
-class DiagnosisLLM(LLM):
-    """
-    Resource management for testing and error handling
-    """
-
-    @classmethod
-    def get_system_prompt(
-        cls, task_description, function_code, interface_str, traceback_output
-    ):
-        from amadeusgpt.system_prompts.diagnosis import _get_system_prompt
-
-        return _get_system_prompt(
-            task_description, function_code, interface_str, traceback_output
-        )
-
-    def get_diagnosis(
-        self, task_description, function_code, interface_str, traceback_output
-    ):
-        AmadeusLogger.info("traceback seen in error handling")
-        AmadeusLogger.info(traceback_output)
-        message = [
-            {
-                "role": "system",
-                "content": self.get_system_prompt(
-                    task_description, function_code, interface_str, traceback_output
-                ),
-            },
-            {
-                "role": "user",
-                "content": f"<query:> {task_description}\n  <func_str:> {function_code}\n  <errors:> {traceback_output}\n",
-            },
-        ]
-        response = self.connect_gpt(message, max_tokens=400, gpt_model="gpt-3.5-turbo")
-        return response.choices[0]["message"]["content"]
-
+        return qa_message
+   
 
 class SelfDebugLLM(LLM):
 
-    def update_system_prompt(
-        self,
-    ):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def speak(self,  qa_message):
+
+        error_message = qa_message.error_message
+        code = qa_message.code
+
         from amadeusgpt.system_prompts.self_debug import _get_system_prompt
 
         self.system_prompt = _get_system_prompt()
-
-    def speak(self, sandbox):
-        qa_message = sandbox.messages[-1]
-        error_message = qa_message["error_message"]
-        code = qa_message["code"]
-
-        self.update_system_prompt()
         self.update_history("system", self.system_prompt)
         print("the code that gave errors was", code)
         query = f""" The code that caused error was {code}
@@ -358,11 +358,13 @@ Can you correct the code?
         text = response.choices[0].message.content.strip()
 
         print(text)
-        thought_process = text
+
         pattern = r"```python(.*?)```"
         function_code = re.findall(pattern, text, re.DOTALL)[0]
-        qa_message["code"] = function_code
-        qa_message["chain_of_thought"] = thought_process
+
+        qa_message.code = function_code
+
+        qa_message.chain_of_thought = text
 
 
 if __name__ == "__main__":

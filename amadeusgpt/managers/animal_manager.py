@@ -1,19 +1,18 @@
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
-
+from typing import Dict, List
 import numpy as np
 import pandas as pd
 from numpy import ndarray
-
 from amadeusgpt.analysis_objects.animal import AnimalSeq
 from amadeusgpt.programs.api_registry import (register_class_methods,
                                               register_core_api)
 
 from .base import Manager
-from .model_manager import ModelManager
-from amadeusgpt.analysis_objects.event import BaseEvent, Event
+from amadeusgpt.analysis_objects.event import Event
+from amadeusgpt.behavior_analysis.identifier import Identifier
+
 
 def get_orientation_vector(cls, b1_name, b2_name):
     b1 = cls.get_keypoints()[:, :, cls.get_bodypart_index(b1_name), :]
@@ -75,10 +74,12 @@ def reject_outlier_keypoints(keypoints: ndarray, threshold_in_stds: int = 2):
 
 @register_class_methods
 class AnimalManager(Manager):
-    def __init__(self, config: Dict[str, str], model_manager: ModelManager):
+    def __init__(self, 
+                 identifier: Identifier):
         """ """
-        self.config = config
-        self.model_manager = model_manager
+        self.config = identifier.config
+        self.video_file_path = identifier.video_file_path
+        self.keypoint_file_path = identifier.keypoint_file_path
         self.animals: List[AnimalSeq] = []
         self.full_keypoint_names = []
         self.superanimal_predicted_video = None
@@ -99,13 +100,10 @@ class AnimalManager(Manager):
             self.superanimal_name = None
 
     def init_pose(self):
-        keypoint_info = self.config["keypoint_info"]
 
-        if keypoint_info["keypoint_file_path"] is None:
+        if not os.path.exists(self.keypoint_file_path):
             # no need to initialize here
-            return
-        else:
-            self.keypoint_file_path = self.config["keypoint_info"]["keypoint_file_path"]
+            return       
 
         if self.keypoint_file_path.endswith(".h5"):
             all_keypoints = self._process_keypoint_file_from_h5()
@@ -221,18 +219,22 @@ class AnimalManager(Manager):
     @register_core_api
     def filter_array_by_events(self,
                                 array: np.ndarray, 
-                                animal_anme: str,
+                                animal_name: str,
                                 events: List[Event]) -> np.ndarray:
         """
         Filter the array based on the events.
         The array is describing the animal with animal_name. The expected shape (n_frames, n_kpts, n_dims)
         It then returns the array filerted by the masks corresponding to the events.
+        If the events is empty, it will return a nan.
         """
-        assert len(events) > 0, "events must not be empty."
-        mask = np.zeros(events[0].data_length, dytpe=bool)
+
+        if len(events) == 0:
+            return np.ones_like(array) * np.nan
+        
+        mask = np.zeros(events[0].data_length, dtype=bool)
 
         for event in events:
-            if event.sender_animal_name != animal_anme:
+            if event.sender_animal_name != animal_name:
                 continue
             mask[event.start:event.end + 1] = 1
 
@@ -255,13 +257,9 @@ class AnimalManager(Manager):
         """
         Get the keypoints of animals. The shape is of shape  n_frames, n_individuals, n_kpts, n_dims
         Optionally, you can pass a list of events to filter the keypoints based on the events.
-        """
+        """            
 
-        keypoint_file_path = self.config["keypoint_info"]["keypoint_file_path"]
-        video_file_path = self.config["video_info"]["video_file_path"]
-        
-
-        if os.path.exists(video_file_path) and keypoint_file_path is None:
+        if os.path.exists(self.video_file_path) and not os.path.exists(self.keypoint_file_path):
 
             if self.superanimal_name is None:
                 raise ValueError(
@@ -273,26 +271,25 @@ class AnimalManager(Manager):
             from deeplabcut.modelzoo.video_inference import \
                 video_inference_superanimal
 
-            video_suffix = Path(video_file_path).suffix
+            video_suffix = Path(self.video_file_path).suffix
 
-            keypoint_file_path = video_file_path.replace(
+            self.keypoint_file_path = self.video_file_path.replace(
                 video_suffix, "_" + self.superanimal_name + ".h5"
             )
-            self.superanimal_predicted_video = keypoint_file_path.replace(
+            self.superanimal_predicted_video = self.keypoint_file_path.replace(
                 ".h5", "_labeled.mp4"
             )
 
-            if not os.path.exists(keypoint_file_path):
+            if not os.path.exists(self.keypoint_file_path):
                 print(f"going to inference video with {self.superanimal_name}")
                 video_inference_superanimal(
-                    videos=[self.config["video_info"]["video_file_path"]],
+                    videos=[self.video_file_path],
                     superanimal_name=self.superanimal_name,
                     max_individuals=self.max_individuals,
                     video_adapt=False,
                 )
 
-            if os.path.exists(keypoint_file_path):
-                self.config["keypoint_info"]["keypoint_file_path"] = keypoint_file_path
+            if os.path.exists(self.keypoint_file_path):
                 self.init_pose()
                
 
@@ -320,7 +317,7 @@ class AnimalManager(Manager):
     @register_core_api
     def get_acceleration_mag(self) -> ndarray:
         """
-        Get the magnitude of acceleration. The shape is of shape  (n_frames, n_individuals) # 2 is the x and y components
+        Get the magnitude of acceleration. The shape is of shape  (n_frames, n_individuals, 1)
         The acceleration is a vector.
         """
         return np.stack([animal.get_acceleration_mag() for animal in self.animals], axis=1)
@@ -344,6 +341,9 @@ class AnimalManager(Manager):
         """
         Get the names of the bodyparts.
         """
+        # this is to initialize 
+        self.get_keypoints()
+
         return self.full_keypoint_names
 
     def query_animal_states(self, animal_name: str, query: str) -> np.ndarray | None:

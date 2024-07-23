@@ -1,16 +1,15 @@
 import pickle
 from typing import Any, Dict, List
-
 import cv2
 import numpy as np
-
 from amadeusgpt.analysis_objects.object import GridObject, Object, ROIObject
 from amadeusgpt.config import Config
 from amadeusgpt.managers.animal_manager import AnimalManager
 from amadeusgpt.managers.base import Manager
-from amadeusgpt.managers.model_manager import ModelManager
-from amadeusgpt.programs.api_registry import register_class_methods
-
+from amadeusgpt.programs.api_registry import (register_class_methods,
+                                              register_core_api)
+import os
+from amadeusgpt.behavior_analysis.identifier import Identifier
 np.set_printoptions(suppress=True)
 
 
@@ -18,16 +17,15 @@ np.set_printoptions(suppress=True)
 class ObjectManager(Manager):
     def __init__(
         self,
-        config: Dict[str, Any],
-        model_manager: ModelManager,
+        identifier: Identifier,
         animal_manager: AnimalManager,
     ):
-        self.config = config
-        self.model_manager = model_manager
+        self.config = identifier.config
+        self.video_file_path = identifier.video_file_path
         self.animal_manager = animal_manager
         self.roi_objects = []
         self.seg_objects = []
-        self.load_from_disk = config["object_info"]["load_objects_from_disk"]
+        self.load_from_disk = self.config["object_info"]["load_objects_from_disk"]
         if self.load_from_disk:
             self.load_objects_from_disk()
         else:
@@ -44,10 +42,12 @@ class ObjectManager(Manager):
         self.occupation_heatmap = {}
         #####
         # let's not use grid objects for now
-        # if os.path.exists(config['video_info']['video_file_path']):
-        #     self.create_grids()
+        if self.config['object_info'].get('use_grid_objects', False):
+            if os.path.exists(self.video_file_path):
+                self.create_grids()
+                self.create_grid_objects()
         #     self.create_grid_labels()
-        #     self.create_grid_objects()
+             
 
     def summary(self):
         print("roi_objects: ", self.get_roi_object_names())
@@ -67,6 +67,9 @@ class ObjectManager(Manager):
         return self.roi_objects
 
     def filter_duplicates(self, roi_objects):
+        """
+        Certain GUI like streamlit canvas keeps adding the same object multiple times
+        """
         seen = set()
         unique_set = []
         for roi_object in roi_objects:
@@ -102,15 +105,18 @@ class ObjectManager(Manager):
         ckpt_path = sam_info["ckpt_path"]
         model_type = sam_info["model_type"]
         pickle_path = sam_info["pickle_path"]
-        video_file_path = sam_info["video_info"]["video_file_path"]
         sam = SAM(ckpt_path, model_type, filename=pickle_path)
-        sam.save_to_pickle(sam.get_objects(video_file_path), pickle_path)
+        sam.save_to_pickle(sam.get_objects(self.video_file_path), pickle_path)
 
     def get_objects(self) -> List[Object]:
-        return self.roi_objects + self.seg_objects
+        return self.roi_objects + self.seg_objects + self.grid_objects
 
+    @register_core_api
     def get_object_names(self) -> List[str]:
-        return self.get_roi_object_names() + self.get_seg_object_names()
+        """
+        Returns the names of all objects in the scene.
+        """
+        return self.get_roi_object_names() + self.get_seg_object_names() + self.get_grid_object_names()
 
     def create_grids(self):
         """
@@ -124,9 +130,8 @@ class ObjectManager(Manager):
         Returns:
         - A dictionary representing the grids with unique names for each square.
         """
-        video_file_path = self.config["video_info"]["video_file_path"]
 
-        cap = cv2.VideoCapture(video_file_path)
+        cap = cv2.VideoCapture(self.video_file_path)
         ret, frame = cap.read()
         self.image_height, self.image_width = frame.shape[:2]
         cap.release()
@@ -159,6 +164,8 @@ class ObjectManager(Manager):
 
     def get_grid_objects(self) -> List[GridObject]:
         return self.grid_objects
+    def get_grid_object_names(self) -> List[str]:
+        return [obj.name for obj in self.grid_objects]
 
     def create_grid_labels(self):
         # there is a more efficient way to get animal-chessboard region relationships

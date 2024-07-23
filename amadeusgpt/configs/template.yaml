@@ -1,9 +1,11 @@
 keypoint_info:
-  keypoint_file_path:
 object_info:
   load_objects_from_disk: false
 llm_info:
   keep_last_n_messages: 2
 video_info:
   scene_frame_number: 100
-  video_file_path:
+data_info:
+  data_folder: '/Users/shaokaiye/maushaus_workspace'
+  video_suffix: '.mp4'
+  result_folder: 'results'

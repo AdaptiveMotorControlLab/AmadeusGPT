@@ -3,87 +3,10 @@ import inspect
 import sys
 import time
 import traceback
-from itertools import groupby
-from operator import itemgetter
-from typing import Any, Dict, Sequence
-import cv2
 import numpy as np
-from scipy.ndimage.filters import uniform_filter1d
 from amadeusgpt.logger import AmadeusLogger
-
-
-def moving_average(x: Sequence, window_size: int, pos: str = "centered"):
-    """
-    Compute the moving average of a time series.
-    :param x: array_like, 1D input array
-    :param window_size: int
-        Must be odd positive, and less than or equal to the size of *x*.
-    :param pos: str, optional (default="centered")
-        Averaging window position.
-        By default, the window is centered on the current data point,
-        thus averaging over *window_size* // 2 past and future observations;
-        no delay is introduced in the averaging process.
-        Other options are "backward", where the average is taken
-        from the past *window_size* observations; and "forward",
-        where the average is taken from the future *window_size* observations.
-    :return: ndarray
-        Filtered time series with same length as input
-    """
-    # This function is not only very fast (unlike convolution),
-    # but also numerically stable (unlike the one based on cumulative sum).
-    # https://stackoverflow.com/questions/13728392/moving-average-or-running-mean/27681394#27681394
-    x = np.asarray(x, dtype=float)
-    x = np.squeeze(x)
-
-    window_size = int(window_size)
-
-    if window_size > x.size:
-        raise ValueError("Window size must be less than or equal to the size of x.")
-
-    if window_size < 1 or not window_size % 2:
-        raise ValueError("Window size must be a positive odd integer.")
-
-    middle = window_size // 2
-    if pos == "centered":
-        origin = 0
-    elif pos == "backward":
-        origin = middle
-    elif pos == "forward":
-        origin = -middle
-    else:
-        raise ValueError(f"Unrecognized window position '{pos}'.")
-
-    return uniform_filter1d(x, window_size, mode="constant", origin=origin)
-
-
-def smooth_boolean_mask(x: Sequence, window_size: int):
-    # `window_size` should be at least twice as large as the
-    # minimal number of consecutive frames to be smoothed out.
-    if window_size % 2 == 0:
-        window_size += 1
-    return moving_average(x, window_size) > 0.5
-
-
-def group_consecutive(x: Sequence):
-    for _, g in groupby(enumerate(x), key=lambda t: t[0] - t[1]):
-        yield list(map(itemgetter(1), g))
-
-
-def get_fps(video_path):
-    # Load the video
-    video = cv2.VideoCapture(video_path)
-    # Get the FPS
-    fps = video.get(cv2.CAP_PROP_FPS)
-    video.release()
-    return fps
-
-
-def get_video_length(video_path):
-    video = cv2.VideoCapture(video_path)
-    fps = video.get(cv2.CAP_PROP_FPS)
-    n_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
-    return int(n_frames)
-
+from amadeusgpt.analysis_objects.event import Event
+from collections import defaultdict
 
 def filter_kwargs_for_function(func, kwargs):
     sig = inspect.signature(func)
@@ -231,3 +154,86 @@ def func2json(func):
         }
         return json_obj
 
+
+class QA_Message:
+    def __init__(self,
+                  query: str, 
+                  video_file_paths : list[str]):                
+        # user question
+        self.query = query
+        self.video_file_paths = video_file_paths
+        # llm generated code
+        self.code = None        
+        self.chain_of_thought = None
+        ### following fields change per video
+        # a reference to the sandbox
+        self.error_message = defaultdict(list)
+        self.plots = defaultdict(list)
+        self.out_videos = defaultdict(list)
+        self.pose_video = defaultdict(list)
+        self.function_rets = defaultdict(list)
+        self.meta_info = {}    
+
+    def get_masks(self) -> dict[str, np.ndarray]:
+        ret = {}
+        function_rets = self.function_rets
+        # if function_ret is a list of events
+        for video_path, rets in function_rets.items():            
+            if (
+                isinstance(rets, list)
+                and len(rets) > 0
+                and isinstance(rets[0], Event)
+            ):
+                events = rets
+                masks = []
+                for event in events:
+                    masks.append(event.generate_mask())
+                ret[video_path] =  np.array(masks)
+            else:
+                ret[video_path] = None
+            
+        return ret 
+    # STILL UNDER CONSTRUCTION. NEED TO HANDLE SERIALIZATION OF PLOTS
+    def serialize_qa_message(self):
+        return {
+            "query": self.query,
+            "video_file_paths": self.video_file_paths,
+            "code": self.code,
+            "chain_of_thought": self.chain_of_thought,
+            "error_message": self.error_message,
+            "plots": None,
+            "out_videos": self.out_videos,
+            "pose_video": self.pose_video,
+            "function_rets": self.function_rets,
+            "meta_info": self.meta_info
+        }       
+
+def create_qa_message(query:str,
+                video_file_paths:list[str]) -> QA_Message:
+
+    return QA_Message(
+        query,
+        video_file_paths)
+
+
+from IPython.display import Markdown, display
+from IPython.display import Video
+def parse_result(amadeus, qa_message):
+    display(Markdown(qa_message.chain_of_thought))
+    sandbox = amadeus.sandbox
+    qa_message = sandbox.code_execution(qa_message)
+    qa_message = sandbox.render_qa_message(qa_message)
+    display(qa_message.meta_info)
+    if len(qa_message.out_videos) > 0:
+        print (f'videos generated to {qa_message.out_videos}')
+        print ('Open it with media player if it does not properly display in the notebook')
+        if len(qa_message.out_videos) > 0:
+            for video_path, event_videos in qa_message.out_videos.items():
+                for event_video in event_videos:
+                    display(Video(event_video, embed=True))
+
+    if len(qa_message.function_rets) > 0:
+        for video_file_path in qa_message.function_rets:
+            display(Markdown(str(qa_message.function_rets[video_file_path])))
+
+    return qa_message
