@@ -14,6 +14,8 @@ from amadeusgpt.integration_module_hub import IntegrationModuleHub
 from amadeusgpt.programs.task_program_registry import TaskProgramLibrary
 from pathlib import Path
 import glob 
+import os
+import pickle
 class AMADEUS:
     def __init__(self, config: Config):
         self.config = config       
@@ -38,11 +40,9 @@ class AMADEUS:
         video_file_paths = glob.glob(str(data_folder / f'*{video_suffix}'))
 
         # optionally get the corresponding keypoint files
-        keypoint_file_paths = self.get_superanimal_keypoint_files(video_file_paths)
-        if len(keypoint_file_paths) == 0:
-            keypoint_file_paths = [""] * len(video_file_paths)
-        else:
-            assert len(video_file_paths) == len(keypoint_file_paths), "The number of video files and keypoint files should be the same"
+        keypoint_file_paths = self.get_DLC_keypoint_files(video_file_paths)
+       
+        assert len(video_file_paths) == len(keypoint_file_paths), "The number of video files and keypoint files should be the same"
         
 
         self.sandbox = Sandbox(config, 
@@ -64,23 +64,27 @@ class AMADEUS:
         
 
         # can only do this after the register process
-        # self.sandbox.configure_using_vlm()
+        self.sandbox.configure_using_vlm()
 
-    def get_superanimal_keypoint_files(self, video_file_paths: list[str]):
+    def get_DLC_keypoint_files(self, video_file_paths: list[str]):
         ret = []
         # how to get the filename from the path file
-
+        video_folder = Path(video_file_paths[0]).parent
         for video_file_path in video_file_paths:
-            keypoint_file_path = video_file_path.replace(".mp4", "_superanimal_topviewmouse_hrnetw32.h5")
-            ret.append(keypoint_file_path)
-        
+            videoname = Path(video_file_path).stem
+            if len(glob.glob(str(video_folder / f'{videoname}*.h5'))) > 0:
+                keypoint_file_path = glob.glob(str(video_folder / f'{videoname}*.h5'))[0]
+            else:
+                keypoint_file_path = ""
+            ret.append(keypoint_file_path)        
+
         return ret
 
-    def match_integration_module(self, user_query: str):
+    def match_integration_module(self, user_query: str)->list:
         """
         Return a list of matched integration modules
         """
-        sorted_query_results = self.integration_module_hub.match_module(user_query)
+        sorted_query_results = self.integration_module_hub.match_module(user_query)       
         if len(sorted_query_results) == 0:
             return None
         modules = []
@@ -98,22 +102,27 @@ class AMADEUS:
     def step(self, user_query:str)-> QA_Message:
         integration_module_names = self.match_integration_module(user_query)
 
+        # print ('integration modules?')
+        # print (integration_module_names)
+
         self.sandbox.update_matched_integration_modules(integration_module_names)
         qa_message = self.sandbox.llm_step(user_query)
 
         return qa_message
 
-    def get_analysis(self, video_file_path: str):
+    def get_video_file_paths(self)-> list[str]:
+        return self.sandbox.video_file_paths
+
+    def get_behavior_analysis(self, video_file_path: str):
         """
         Every sandbox stores a unique "behavior analysis" instance in its namespace
         Therefore, get analysis gets the current sandbox's analysis.
         """
-        analysis = self.sandbox.namespace_dict[video_file_path]
+        analysis = self.sandbox.namespace_dict[video_file_path]['behavior_analysis']
 
         return analysis
 
     def run_task_program(self, 
-                         config: Config, 
                          task_program_name: str):
         """
         Execute the task program on the currently holding sandbox
@@ -124,54 +133,14 @@ class AMADEUS:
 
         """
         return self.sandbox.run_task_program(task_program_name)
-    
-    # def save_results(self, out_folder: str| None = None):
-    #     """
-    #     Save the results of the qa message (since it has all the information needed)
-    #     """
-    #     # if out_folder is None:
-    #     #     result_folder = self.sandbox.result_folder
-    #     # else:
-    #     #     result_folder = out_folder
-    #     # # make sure it exists
-    #     # os.makedirs(result_folder, exist_ok=True)
-    #     # results = self.sandbox.result_cache
-
-    #     if out_folder is None:
-    #         result_folder = self.result_folder
-    #     else:
-    #         result_folder = out_folder
-    #     # make sure it exists
-    #     os.makedirs(result_folder, exist_ok=True)
-
-    #     ret = defaultdict(dict)
-    #     for video_file_path in self.sandboxes:
-    #         result = self.sandboxes[video_file_path].result_cache
-    #         for query in result:
-    #             ret[video_file_path][query] = result[query].get_serializable()                
-
-    #     # save results to a pickle file
-    #     with open (os.path.join(result_folder, "results.pickle"), "wb") as f:
-    #         pickle.dump(ret, f)
-
-    # def load_results(self, result_folder: str | None = None ):
-    #     if result_folder is None:
-    #         result_folder = self.result_folder
-    #     else:
-    #         result_folder = result_folder
         
-    #     with open (os.path.join(result_folder, "results.pickle"), "rb") as f:
-    #         results = pickle.load(f)
-
-    #     for video_file_path in results:
-    #         self.sandboxes[video_file_path].result_cache = results[video_file_path]
 
     def register_task_program(self, task_program, creator = "human"):
         TaskProgramLibrary.register_task_program(creator = creator)(task_program)
 
-    # def get_results(self, video_file_path: str):
+    def get_messages(self):
         
-    #     return self.sandboxes[video_file_path].result_cache
+        return self.sandbox.message_cache
     
     def get_task_programs(self):
         return TaskProgramLibrary.get_task_programs()

@@ -191,7 +191,7 @@ class Sandbox(SandboxBase):
         # just easier to pass this around
         self.query = None
         self.matched_modules = []
-        # example result_cahe
+
         """
         {'query' :  
             {
@@ -201,7 +201,7 @@ class Sandbox(SandboxBase):
         }         
         """
         
-        self.result_cache = defaultdict(dict)
+        self.message_cache: defaultdict[str, QA_Message] = defaultdict()
         # configure how to save the results to a result folder
         self.result_folder = Path(self.config["result_info"].get("result_folder", "./results"))
 
@@ -235,7 +235,8 @@ The usage and the parameters of the functions are provided."""
         for name, api in self.api_registry.items():
             description = api["description"]
             # parameters is a dictionary that might contain self
-            parameters = self._fill_parameters(api["parameters"])
+            parameters = self._fill_parameters(api["parameters"])          
+
             description = self.enforce_indentation(description)
             ret += f"{name}({parameters}): \n{description}\n"
 
@@ -323,9 +324,7 @@ The usage and the parameters of the functions are provided."""
         for video_file_path, keypoint_file_path in zip(self.video_file_paths, self.keypoint_file_paths):
             namespace = self.namespace_dict[video_file_path]
             code = qa_message.code
-            # not need to do further if´ there was no code found
-            print ('code?')
-            print (code)
+            # not need to do further if´ there was no code found           
             if code is None:
                 continue
             exec(code, namespace)
@@ -348,7 +347,7 @@ The usage and the parameters of the functions are provided."""
                 return qa_message
             result = namespace["result"]
             qa_message.function_rets[video_file_path] = result        
-        print (qa_message.function_rets)
+
         return qa_message
 
     def get_function_name_from_string(self, code) -> str:
@@ -402,8 +401,9 @@ The usage and the parameters of the functions are provided."""
         """
 
         for video_file_path in self.video_file_paths:
+
             namespace = self.namespace_dict[video_file_path]
-            function_rets = qa_message.function_rets[video_file_path]
+            function_rets = qa_message.function_rets[video_file_path]        
             behavior_analysis = namespace["behavior_analysis"]
             bodypart_names = behavior_analysis.animal_manager.get_keypoint_names()
             qa_message.pose_video[video_file_path] = (
@@ -477,7 +477,7 @@ The usage and the parameters of the functions are provided."""
         qa_message = self.llms["code_generator"].speak(self, qa_message)
         # cache the resulted qa message for future use        
 
-        self.result_cache = qa_message
+        self.message_cache[user_query] = qa_message
 
         # TO FIX
         # if qa_message['code'] is not None and qa_message['error_message'] is None:
@@ -491,7 +491,7 @@ The usage and the parameters of the functions are provided."""
         2) self.task_program_library references to a singleton so a different sandbox still has reference to the task program
         """
 
-        task_program = TaskProgramLibrary[task_program_name]
+        task_program = TaskProgramLibrary.LIBRARY[task_program_name]
         # there might be better way to set this
         self.query = task_program_name
 
@@ -504,7 +504,7 @@ The usage and the parameters of the functions are provided."""
 
         qa_message = self.render_qa_message(qa_message)
 
-        self.result_cache = qa_message
+        self.message_cache[task_program_name] = qa_message
 
         return qa_message
     

@@ -92,11 +92,16 @@ class AnimalSeq(Animal):
         codes, verts = zip(*path_data)
         return mpath.Path(verts, codes)
 
-    def get_keypoints(self) -> ndarray:
+    def get_keypoints(self, average_keypoints = False) -> ndarray:
         # the shape should be (n_frames, n_keypoints, 2)
         # extending to 3D?
         assert len(self.keypoints.shape) == 3, f"keypoints shape is {self.keypoints.shape}"
-        return self.keypoints
+        if not average_keypoints:            
+            return self.keypoints
+        else:
+            return np.nanmean(self.keypoints, axis=1)
+
+        
 
     def get_center(self):
         """

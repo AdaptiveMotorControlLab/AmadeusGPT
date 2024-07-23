@@ -101,7 +101,7 @@ class AnimalManager(Manager):
 
     def init_pose(self):
 
-        if self.keypoint_file_path is None:
+        if not os.path.exists(self.keypoint_file_path):
             # no need to initialize here
             return       
 
@@ -341,6 +341,9 @@ class AnimalManager(Manager):
         """
         Get the names of the bodyparts.
         """
+        # this is to initialize 
+        self.get_keypoints()
+
         return self.full_keypoint_names
 
     def query_animal_states(self, animal_name: str, query: str) -> np.ndarray | None:

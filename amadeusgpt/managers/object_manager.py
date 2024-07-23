@@ -6,7 +6,8 @@ from amadeusgpt.analysis_objects.object import GridObject, Object, ROIObject
 from amadeusgpt.config import Config
 from amadeusgpt.managers.animal_manager import AnimalManager
 from amadeusgpt.managers.base import Manager
-from amadeusgpt.programs.api_registry import register_class_methods
+from amadeusgpt.programs.api_registry import (register_class_methods,
+                                              register_core_api)
 import os
 from amadeusgpt.behavior_analysis.identifier import Identifier
 np.set_printoptions(suppress=True)
@@ -41,9 +42,10 @@ class ObjectManager(Manager):
         self.occupation_heatmap = {}
         #####
         # let's not use grid objects for now
-        if os.path.exists(self.video_file_path):
-            self.create_grids()
-            self.create_grid_objects()
+        if self.config['object_info'].get('use_grid_objects', False):
+            if os.path.exists(self.video_file_path):
+                self.create_grids()
+                self.create_grid_objects()
         #     self.create_grid_labels()
              
 
@@ -109,7 +111,11 @@ class ObjectManager(Manager):
     def get_objects(self) -> List[Object]:
         return self.roi_objects + self.seg_objects + self.grid_objects
 
+    @register_core_api
     def get_object_names(self) -> List[str]:
+        """
+        Returns the names of all objects in the scene.
+        """
         return self.get_roi_object_names() + self.get_seg_object_names() + self.get_grid_object_names()
 
     def create_grids(self):

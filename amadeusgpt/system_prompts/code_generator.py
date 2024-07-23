@@ -1,21 +1,25 @@
 def code_related_prompt(core_api_docs,
                         task_program_docs, 
-                        behavior_analysis):
+                        scene_image,
+                        keypoint_names,
+                        object_names,
+                        animal_names):
                          
-    keypoint_names = behavior_analysis.get_keypoint_names()
-    object_names = behavior_analysis.object_manager.get_object_names()
-    scene_image = behavior_analysis.visual_manager.get_scene_image()
     image_h, image_w = scene_image.shape[:2]
-    animal_names = behavior_analysis.get_animal_names()
+
     prompt = f"""
 
 We provide you additionl apis and task programs to help you write code.    
 
 coreapidocs: this block contains information about the core apis for class AnimalBehaviorAnalysis. They do not contain implementation details but you can use them to write code
 taskprograms: this block contains existing functions that capture behaviors. You can choose to reuse them in the main function.
-query: this block contains the user query that you need to answer using code
 
-Here is one example of how to put everything together:
+Here is one example of how to answer user query:
+
+If the animal's relative head angle between the other animals is less than 30 degrees and the relative speed is less than -2,
+then the behavior is watching. Give me events where the animal is watching other animals.
+
+
 
 ```coreapidocs
 
@@ -27,18 +31,13 @@ cross_animal_comparison_list:Optional[List[str]],
 bodypart_names:Optional[List[str]],
 otheranimal_bodypart_names:Optional[List[str]],
 min_window:int,
-max_window:int) -> List[BaseEvent]: function that captures events that involve multiple animals
+max_window:int) -> List[Event]: function that captures events that involve multiple animals
 )
 ```    
 
 ```taskprograms
-get_relative_speed_less_than_neg_2_events(identifier):
+get_relative_speed_less_than_neg_2_events(identifier)-> List[Event]:
 captures behavior of animals that have relative speed less than -2
-```
-
-```query
-If the animal's relative head angle between the other animals is less than 30 degrees and the relative speed is less than -2,
-then the behavior is watching. Give me events where the animal is watching other animals.
 ```
 
 ```python
@@ -84,15 +83,21 @@ RULES:
 def _get_system_prompt(
     core_api_docs,
     task_program_docs,
-    behavior_analysis,
+    scene_image,
+    keypoint_names,
+    object_names,
+    animal_names
 ):   
     system_prompt = f""" 
 You are helpful AI assistant. Your job is to answer user queries. 
 Importantly, before you write the code, you need to explain whether the question can be answered accurately by code. If not,  ask users to give more information.
 
 {code_related_prompt(core_api_docs, 
-                     task_program_docs,
-                     behavior_analysis
+                        task_program_docs,
+                        scene_image,
+                        keypoint_names,
+                        object_names,
+                        animal_names
                      )}
 
 If the question can be answered by code:

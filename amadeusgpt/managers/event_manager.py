@@ -92,7 +92,7 @@ class EventManager(Manager):
         """
         This function is used to retrieve events that involve the interactions between animals and objects.
         object_name : str
-        This parameter represents the name of the object of interest. It is expected to be a string.
+        This parameter represents the name of the object of interest. It is expected to be a string. Must be one of the object names returned from function get_object_names.
         query: str. Examples are 'overlap == True', 'distance==30', 'angle<20',
         bodypart_names: List[str], optional
            bodyparts of the animal. Default to be None which means all keypoints of the animal are considered.

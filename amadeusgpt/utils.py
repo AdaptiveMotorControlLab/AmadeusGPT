@@ -174,31 +174,39 @@ class QA_Message:
         self.function_rets = defaultdict(list)
         self.meta_info = {}    
 
-    def get_masks(self, video_file_path: str) -> np.ndarray:
-        function_rets = self.function_rets[video_file_path]
-        # if function_ret is a list of events
-        if (
-            isinstance(function_rets, list)
-            and len(function_rets) > 0
-            and isinstance(function_rets[0], Event)
-        ):
-            events = function_rets
-            masks = []
-            for event in events:
-                masks.append(event.generate_mask())
-            return np.array(masks)
-        else:
-            raise ValueError("No events found in the function_rets")
-        
-    def get_serializable(self):
-        """
-        Only part of qa messages are serializable.
-        """
-        selected_keys = ['query', 'code', 'chain_of_thought', 'function_rets', 'meta_info']
+    def get_masks(self) -> dict[str, np.ndarray]:
         ret = {}
-        for key in selected_keys:
-            ret[key] = getattr(self, key)
-        return ret
+        function_rets = self.function_rets
+        # if function_ret is a list of events
+        for video_path, rets in function_rets.items():            
+            if (
+                isinstance(rets, list)
+                and len(rets) > 0
+                and isinstance(rets[0], Event)
+            ):
+                events = rets
+                masks = []
+                for event in events:
+                    masks.append(event.generate_mask())
+                ret[video_path] =  np.array(masks)
+            else:
+                ret[video_path] = None
+            
+        return ret 
+    # STILL UNDER CONSTRUCTION. NEED TO HANDLE SERIALIZATION OF PLOTS
+    def serialize_qa_message(self):
+        return {
+            "query": self.query,
+            "video_file_paths": self.video_file_paths,
+            "code": self.code,
+            "chain_of_thought": self.chain_of_thought,
+            "error_message": self.error_message,
+            "plots": None,
+            "out_videos": self.out_videos,
+            "pose_video": self.pose_video,
+            "function_rets": self.function_rets,
+            "meta_info": self.meta_info
+        }       
 
 def create_qa_message(query:str,
                 video_file_paths:list[str]) -> QA_Message:
@@ -208,22 +216,24 @@ def create_qa_message(query:str,
         video_file_paths)
 
 
-
 from IPython.display import Markdown, display
 from IPython.display import Video
 def parse_result(amadeus, qa_message):
-    display(Markdown(qa_message['chain_of_thought']))
+    display(Markdown(qa_message.chain_of_thought))
     sandbox = amadeus.sandbox
     qa_message = sandbox.code_execution(qa_message)
-    sandbox.render_qa_message(qa_message)
-    print ('after executing the function')
-    display(qa_message['meta_info'])
-    print (f'videos generated to {qa_message["out_videos"]}')
-    print ('Open it with media player if it does not properly display in the notebook')
-    if qa_message['out_videos'] is not None:
-        for video_path in qa_message['out_videos']:
+    qa_message = sandbox.render_qa_message(qa_message)
+    display(qa_message.meta_info)
+    if len(qa_message.out_videos) > 0:
+        print (f'videos generated to {qa_message.out_videos}')
+        print ('Open it with media player if it does not properly display in the notebook')
+        if len(qa_message.out_videos) > 0:
+            for video_path, event_videos in qa_message.out_videos.items():
+                for event_video in event_videos:
+                    display(Video(event_video, embed=True))
 
-            display(Video(video_path, embed=True))
+    if len(qa_message.function_rets) > 0:
+        for video_file_path in qa_message.function_rets:
+            display(Markdown(str(qa_message.function_rets[video_file_path])))
 
-    display(Markdown(str(qa_message['function_rets'])))
-    
+    return qa_message

@@ -135,6 +135,7 @@ class LLM(AnalysisObject):
         """
         """
         encoded_image_list = []
+      
         for image in image_list:
             # images from matplotlib etc.
             if isinstance(image, io.BytesIO):
@@ -250,7 +251,6 @@ class VisualLLM(LLM):
         )
         response = self.connect_gpt(self.context_window, max_tokens=2000)
         text = response.choices[0].message.content.strip()
-        print(text)
         pattern = r"```json(.*?)```"
         if len(re.findall(pattern, text, re.DOTALL)) == 0:
             raise ValueError("can't parse the json string correctly", text)
@@ -287,9 +287,20 @@ class CodeGenerationLLM(LLM):
         else:
             raise NotImplementedError("This is not implemented yet")
         
-        behavior_analysis = sandbox.get_analysis(video_file_path)
 
-        self.system_prompt = _get_system_prompt(core_api_docs, task_program_docs, behavior_analysis)
+        behavior_analysis = sandbox.analysis_dict[video_file_path]
+        scene_image = behavior_analysis.visual_manager.get_scene_image()
+        keypoint_names = behavior_analysis.animal_manager.get_keypoint_names()
+        object_names = behavior_analysis.object_manager.get_object_names()
+        animal_names = behavior_analysis.animal_manager.get_animal_names()
+        
+
+        self.system_prompt = _get_system_prompt(core_api_docs, 
+                                                task_program_docs, 
+                                                scene_image,
+                                                keypoint_names, 
+                                                object_names,
+                                                animal_names)
     
         self.update_history("system", self.system_prompt) 
 
@@ -309,8 +320,7 @@ class CodeGenerationLLM(LLM):
             function_code = re.findall(pattern, text, re.DOTALL)[0]
 
         # it's a bit meaningless to copy this to every qa_message
-        print ('text')
-        print(text)
+     
         qa_message.code = function_code
         qa_message.chain_of_thought = text
 
