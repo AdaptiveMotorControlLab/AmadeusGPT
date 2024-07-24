@@ -354,6 +354,13 @@ The usage and the parameters of the functions are provided."""
                 full_traceback = traceback.format_exc()
                 print(full_traceback)
                 qa_message.error_message[video_file_path] = str(full_traceback)
+
+                qa_message = self.llms["self_debug"].speak(
+                                qa_message
+                            )
+                qa_message = self.code_execution(
+                                qa_message
+                            )
                 return qa_message
             result = namespace["result"]
             qa_message.function_rets[video_file_path] = result
