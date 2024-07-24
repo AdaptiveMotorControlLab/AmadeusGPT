@@ -260,6 +260,10 @@ class VisualLLM(LLM):
         )
         response = self.connect_gpt(self.context_window, max_tokens=2000)
         text = response.choices[0].message.content.strip()
+
+        print ('description of the image frame provided')
+        print (text)
+
         pattern = r"```json(.*?)```"
         if len(re.findall(pattern, text, re.DOTALL)) == 0:
             raise ValueError("can't parse the json string correctly", text)
