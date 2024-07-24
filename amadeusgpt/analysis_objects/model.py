@@ -80,51 +80,6 @@ def superanimal_video_inference(
     return pose_video_file
 
 
-@classmethod
-def create_labeled_video(cls, videoname):
-    from moviepy.video.io.bindings import mplfig_to_npimage
-    from moviepy.video.io.VideoFileClip import VideoFileClip
-
-    global frame_index
-    frame_index = 0
-
-    def draw_keypoints(frame, keypoints):
-        # Convert the frame to a numpy array
-        # frame = np.array(frame)
-        # Loop over the keypoints and draw them on the frame
-
-        global frame_index
-        if frame_index == len(keypoints):
-            return frame
-        keypoints = keypoints[frame_index]
-        for animal_id, animal_keypoints in enumerate(keypoints):
-            x = int(np.nanmedian(animal_keypoints, axis=0)[0])
-            y = int(np.nanmedian(animal_keypoints, axis=0)[1])
-
-            cv2.circle(frame, (x, y), 5, (0, 0, 255), -1)
-            cv2.putText(
-                frame,
-                f"animal{animal_id}",
-                (x, y),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 0, 255),
-                2,
-            )
-        # Convert the numpy array back to an image
-        frame_index += 1
-        return frame
-
-    video = VideoFileClip(Database.get(cls.__name__, "video_file_path"))
-    n_individuals = Database.get(cls.__name__, "n_individuals")
-    n_kpts = Database.get(cls.__name__, "n_kpts")
-    keypoints = cls.get_keypoints()
-    keypoints = keypoints.reshape(keypoints.shape[0], n_individuals, n_kpts, -1)[
-        ..., :2
-    ]
-
-    keypoints_clip = video.fl_image(lambda frame: draw_keypoints(frame, keypoints))
-    keypoints_clip.write_videofile(f"{videoname}")
 
 
 from segment_anything import (SamAutomaticMaskGenerator, SamPredictor,
