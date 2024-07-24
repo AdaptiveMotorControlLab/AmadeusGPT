@@ -14,13 +14,13 @@ from amadeusgpt.behavior_analysis.identifier import Identifier
 class RelationshipManager(Manager):
     def __init__(
         self,
-        identifeir: Identifier,
+        identifier: Identifier,
         animal_manager: AnimalManager,
         object_manager: ObjectManager,
         use_cache: bool = False,
     ):
-        super().__init__(identifeir.config, use_cache=use_cache)
-        self.config = identifeir.config
+        super().__init__(identifier.config, use_cache=use_cache)
+        self.config = identifier.config
         self.animal_manager = animal_manager
         self.object_manager = object_manager
         self.animals_objects_relationships = {}

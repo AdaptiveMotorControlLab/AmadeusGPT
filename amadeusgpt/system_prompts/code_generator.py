@@ -50,7 +50,7 @@ def get_watching_events(identifier):
     identifier: Identifier. Contains information about the video, keypoint and config
     '''
     # create_analysis returns an instance of AnimalBehaviorAnalysis
-    analysis = create_analysis(identifeir)
+    analysis = create_analysis(identifier)
     speed_events = get_relative_speed_less_than_neg_2_events(identifier)
     relative_head_angle_events = analysis.get_animals_animals_events(['relative_head_angle'], ['<=30'])
     watching_events = analysis.get_composite_events(relative_head_angle_events,
