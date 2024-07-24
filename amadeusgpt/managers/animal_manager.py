@@ -118,12 +118,12 @@ class AnimalManager(Manager):
             animalseq = AnimalSeq(
                 animal_name, all_keypoints[:, individual_id], self.keypoint_names
             )
-            if "body_orientation_keypoints" in self.config["keypoint_info"]:
+            if self.config["keypoint_info"] and "body_orientation_keypoints" in self.config["keypoint_info"]:
                 animalseq.set_body_orientation_keypoints(
                     self.config["keypoint_info"]["body_orientation_keypoints"]
                 )
 
-            if "head_orientation_keypoints" in self.config["keypoint_info"]:
+            if self.config["keypoint_info"] and "head_orientation_keypoints" in self.config["keypoint_info"]:
                 animalseq.set_head_orientation_keypoints(
                     self.config["keypoint_info"]["head_orientation_keypoints"]
                 )

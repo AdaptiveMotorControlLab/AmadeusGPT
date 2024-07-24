@@ -560,13 +560,13 @@ def render_temp_message(query, sandbox):
     """
     import streamlit as st
 
-    qa_message = create_messages("random query", sandbox)
+    qa_message = create_qa_message("random query", sandbox)
 
     with open("temp_answer.json", "r") as f:
         data = json.load(f)
-        qa_message["chain_of_thought"] = data["chain_of_thought"]
+        qa_message.chain_of_thought = data["chain_of_thought"]
 
-    text = qa_message["chain_of_thought"]
+    text = qa_message.chain_of_thought
     lines = text.split("\n")
     inside_code_block = False
     code_block = []
@@ -578,34 +578,31 @@ def render_temp_message(query, sandbox):
         elif line.strip().startswith("```") and inside_code_block:
             inside_code_block = False
             code = "\n".join(code_block)
-            qa_message["code"] = code
+            qa_message.code = code
             st.code(code, language="python")
         elif inside_code_block:
             code_block.append(line)
         else:
             st.markdown(line)
 
-    if qa_message["code"] is not None:
+    if qa_message.code is not None:
         qa_message = sandbox.code_execution(qa_message)
-        print("after code execution")
-        print(len(qa_message["function_rets"]))
-        events = qa_message["function_rets"]
 
     sandbox.render_qa_message(qa_message)
 
-    if qa_message["function_rets"] is not None:
-        st.markdown(qa_message["function_rets"])
+    if qa_message.function_rets is not None:
+        st.markdown(qa_message.function_rets)
 
-    plots = qa_message["plots"]
-    print("plots", plots)
-    for fig, axe in plots:
-        filename = save_figure_to_tempfile(fig)
-        st.image(filename, width=600)
+    plots = qa_message.plots
+    for video_file_path, plot_list in plots.items():
+        for fig, axe in plot_list:
+            filename = save_figure_to_tempfile(fig)
+            st.image(filename, width=600)
 
-    videos = qa_message["out_videos"]
-    print("videos", videos)
-    for video in videos:
-        st.video(video)
+    out_videos = qa_message["out_videos"]
+    for video_file_path, videos in out_videos.items():
+        for video in videos:
+            st.video(video)
 
 
 if __name__ == "__main__":
@@ -613,7 +610,7 @@ if __name__ == "__main__":
 
     from amadeusgpt import AMADEUS
 
-    config = Config("amadeusgpt/configs/EPM_template.yaml")
+    config = Config("amadeusgpt/configs/MausHaus_template.yaml")
 
     amadeus = AMADEUS(config)
-    sandbox = amadeus.sandbox
+    render_temp_message("random query", amadeus.sandbox)
