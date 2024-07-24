@@ -220,7 +220,6 @@ def parse_result(amadeus, qa_message):
     sandbox = amadeus.sandbox
     qa_message = sandbox.code_execution(qa_message)
     qa_message = sandbox.render_qa_message(qa_message)
-    display(qa_message.meta_info)
     if len(qa_message.out_videos) > 0:
         print(f"videos generated to {qa_message.out_videos}")
         print(
