@@ -80,8 +80,6 @@ def superanimal_video_inference(
     return pose_video_file
 
 
-
-
 from segment_anything import (SamAutomaticMaskGenerator, SamPredictor,
                               sam_model_registry)
 

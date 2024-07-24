@@ -2,7 +2,6 @@ import matplotlib.path as mpath
 import numpy as np
 from pycocotools import mask as mask_decoder
 
-
 from .base import AnalysisObject
 
 
@@ -234,5 +233,3 @@ class GridObject(Object):
             ]
         )
         self.area = region["w"] * region["h"]
-
-

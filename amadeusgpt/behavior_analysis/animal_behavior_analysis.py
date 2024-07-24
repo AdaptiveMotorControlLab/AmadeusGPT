@@ -1,13 +1,12 @@
-from amadeusgpt.managers import (AnimalManager, EventManager, GUIManager,
-                                 Manager, ObjectManager,
-                                 RelationshipManager, VisualManager)
-
 import types
 
-from amadeusgpt.programs.api_registry import (DEFAULT_REGISTRY,
-                                    INTEGRATION_API_REGISTRY)
-
 from amadeusgpt.behavior_analysis.identifier import Identifier
+from amadeusgpt.managers import (AnimalManager, EventManager, GUIManager,
+                                 Manager, ObjectManager, RelationshipManager,
+                                 VisualManager)
+from amadeusgpt.programs.api_registry import (DEFAULT_REGISTRY,
+                                              INTEGRATION_API_REGISTRY)
+
 
 class AnimalBehaviorAnalysis:
     """
@@ -15,24 +14,19 @@ class AnimalBehaviorAnalysis:
     It owns multiple manager classes that are responsible for different aspects of the analysis.
     """
 
-    def __init__(self, 
-                 identifier: Identifier, 
-                 **kwargs):
+    def __init__(self, identifier: Identifier, **kwargs):
 
         # animal manager needs keypoint_file_path and model_manager for pose
         self.animal_manager = AnimalManager(identifier)
 
         # object manager needs sam_info, seriralized pickle objects
-        self.object_manager = ObjectManager(
-            identifier,
-            self.animal_manager
-        )
+        self.object_manager = ObjectManager(identifier, self.animal_manager)
 
         # relationship manager needs animal_manager and object_manager
         self.relationship_manager = RelationshipManager(
-            identifier,  self.animal_manager, self.object_manager
+            identifier, self.animal_manager, self.object_manager
         )
-        
+
         # event manager needs reference to object_manager, animal_manager, and relationship_manager
         self.event_manager = EventManager(
             identifier,
@@ -43,13 +37,10 @@ class AnimalBehaviorAnalysis:
 
         # some managers need references to others to do their job
         self.visual_manager = VisualManager(
-            identifier,
-            self.animal_manager, 
-            self.object_manager
+            identifier, self.animal_manager, self.object_manager
         )
 
-        self.gui_manager = GUIManager(identifier,
-                                      self.object_manager)
+        self.gui_manager = GUIManager(identifier, self.object_manager)
 
         # check all attributes that are inheritance of manager classes
         # and attach them as methods to the main class

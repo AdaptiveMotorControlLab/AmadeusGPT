@@ -2,24 +2,25 @@ import os
 from typing import Any, Dict, List, Optional
 
 import cv2
-from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.figure import Figure
 from matplotlib.patches import Wedge
 
-from amadeusgpt.analysis_objects.event import Event
 from amadeusgpt.analysis_objects.animal import AnimalSeq
+from amadeusgpt.analysis_objects.event import Event
 from amadeusgpt.analysis_objects.visualization import (EventVisualization,
                                                        GraphVisualization,
                                                        KeypointVisualization,
                                                        SceneVisualization)
+from amadeusgpt.behavior_analysis.identifier import Identifier
 from amadeusgpt.programs.api_registry import (register_class_methods,
                                               register_core_api)
 
 from .animal_manager import AnimalManager
 from .base import Manager
 from .object_manager import ObjectManager
-from amadeusgpt.behavior_analysis.identifier import Identifier
+
 
 def mask2distance(locations):
     assert len(locations.shape) == 2
@@ -43,10 +44,9 @@ class VisualManager(Manager):
         self.video_file_path = identifier.video_file_path
         self.keypoint_file_path = identifier.keypoint_file_path
 
-
         if not os.path.exists(self.video_file_path):
             return
-        
+
         self.animal_manager = animal_manager
         self.object_manager = object_manager
 
@@ -163,7 +163,7 @@ class VisualManager(Manager):
         axs: Optional[plt.Axes] = None,
         average_keypoints: bool = True,
         frames: Optional[range] = None,
-        events: Optional[List[Event]] = []
+        events: Optional[List[Event]] = [],
     ) -> None:
         """
         A function that visualizes the keypoints of the animals in the video. The
@@ -274,15 +274,11 @@ class VisualManager(Manager):
 
         """
         fig, axs = plt.subplots(len(self.animal_manager.get_animals()), 1)
-        
+
         axs = np.atleast_1d(axs)
         for idx, animal in enumerate(self.animal_manager.get_animals()):
             event_vis = EventVisualization(
-                axs[idx],
-                events,
-                animal.get_name(),
-                set(),
-                self.video_file_path
+                axs[idx], events, animal.get_name(), set(), self.video_file_path
             )
             axs[idx].set_ylabel(animal.get_name())
             event_vis.draw()
@@ -332,7 +328,7 @@ class VisualManager(Manager):
                             events,
                             sender_animal.get_name(),
                             set([receiver_animal.get_name()]),
-                            self.video_file_path
+                            self.video_file_path,
                         )
                         event_vis.draw()
             else:
@@ -348,11 +344,7 @@ class VisualManager(Manager):
                     if idx == 0:
                         axs[idx].set_ylabel(animal.get_name())
                     event_vis = EventVisualization(
-                        axs[idx],
-                        events,
-                        animal.get_name(),
-                        set(),
-                        self.video_file_path
+                        axs[idx], events, animal.get_name(), set(), self.video_file_path
                     )
                     event_vis.draw()
 

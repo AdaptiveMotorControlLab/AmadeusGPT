@@ -1,14 +1,16 @@
 import os
 import pickle
+
 from openai import OpenAI
 from sklearn.metrics.pairwise import cosine_similarity
+
 from amadeusgpt.programs.api_registry import INTEGRATION_API_REGISTRY
 
 client = OpenAI()
 
 
 class IntegrationModuleHub:
-    def __init__(self): 
+    def __init__(self):
         self.amadeus_root = os.path.dirname(os.path.realpath(__file__))
 
     def save_embeddings(self):

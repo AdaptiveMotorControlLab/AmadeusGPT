@@ -1,3 +1,4 @@
+import os
 import re
 from typing import Any, Dict, List, Literal, Optional, Union
 
@@ -5,6 +6,7 @@ import numpy as np
 
 from amadeusgpt.analysis_objects.event import Event, EventGraph
 from amadeusgpt.analysis_objects.relationship import Relationship
+from amadeusgpt.behavior_analysis.identifier import Identifier
 from amadeusgpt.programs.api_registry import (register_class_methods,
                                               register_core_api)
 
@@ -12,9 +14,7 @@ from .animal_manager import AnimalManager
 from .base import Manager, cache_decorator
 from .object_manager import ObjectManager
 from .relationship_manager import RelationshipManager
-from amadeusgpt.behavior_analysis.identifier import Identifier
 
-import os
 
 def find_complement_number(string):
     digits = ""
@@ -65,7 +65,7 @@ class EventManager(Manager):
     ):
         self.config = identifier.config
         super().__init__(self.config, use_cache=use_cache)
-        
+
         self.object_manager = object_manager
         self.animal_manager = animal_manager
         self.relationship_manager = relationship_manager
@@ -165,7 +165,7 @@ class EventManager(Manager):
         query: str
             Takes the form of {type_of_query}{comparison operator}{numerical value}.
             For example, at 'speed>50', type_of_query is 'speed', comparison operator is '>', and numerical value is 50.
-            Valid type_of_query ONLY INCLUDE "speed", "acceleration_mag" (magnitude of acceleration), "bodypart_pairwise_distance". 
+            Valid type_of_query ONLY INCLUDE "speed", "acceleration_mag" (magnitude of acceleration), "bodypart_pairwise_distance".
             There can only be one compasion operator in the query.
         Returns
         -------
@@ -259,7 +259,6 @@ class EventManager(Manager):
 
         return events
 
-
     # @cache_decorator
     @register_core_api
     def get_animals_animals_events(
@@ -299,7 +298,7 @@ class EventManager(Manager):
         Note
         ----
         To capture a range for a numerical query  (e.g., relative_speed) between 3 and 10, one can do:
-        get_animals_animals_events(cross_animal_query_list = ['relative_speed<10', 'relative_speed>3'], 
+        get_animals_animals_events(cross_animal_query_list = ['relative_speed<10', 'relative_speed>3'],
 
         """
 

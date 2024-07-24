@@ -5,19 +5,23 @@ import os
 import re
 import time
 import traceback
-import numpy as np 
+
 import cv2
+import numpy as np
 import openai
 from openai import OpenAI
-from amadeusgpt.utils import AmadeusLogger
-from .base import AnalysisObject
-from amadeusgpt.utils import QA_Message, create_qa_message
+
 from amadeusgpt.programs.sandbox import Sandbox
+from amadeusgpt.utils import AmadeusLogger, QA_Message, create_qa_message
+
+from .base import AnalysisObject
+
 
 class LLM(AnalysisObject):
     total_tokens = 0
-    prices = {"gpt-4o": {"input": 5 / 10**6, "output": 15 / 10**6},
-              "gpt-4o-mini": {"input": 0.15 / 10**6, "output": 0.6 / 10**6}
+    prices = {
+        "gpt-4o": {"input": 5 / 10**6, "output": 15 / 10**6},
+        "gpt-4o-mini": {"input": 0.15 / 10**6, "output": 0.6 / 10**6},
     }
     total_cost = 0
 
@@ -105,9 +109,9 @@ class LLM(AnalysisObject):
                     + LLM.prices[self.gpt_model]["output"]
                     * response.usage.completion_tokens
                 )
-                
+
                 print("current total cost", round(LLM.total_cost, 4), "$")
-                print ("current input tokens", response.usage.prompt_tokens)
+                print("current input tokens", response.usage.prompt_tokens)
                 print("current accumulated tokens", LLM.total_tokens)
                 # TODO we need to calculate the actual dollar cost
                 break
@@ -132,10 +136,9 @@ class LLM(AnalysisObject):
 
     # image list can be image byte or image array
     def prepare_multi_image_content(self, image_list):
-        """
-        """
+        """ """
         encoded_image_list = []
-      
+
         for image in image_list:
             # images from matplotlib etc.
             if isinstance(image, io.BytesIO):
@@ -148,12 +151,16 @@ class LLM(AnalysisObject):
                 base64_image = base64.b64encode(image_bytes.getvalue()).decode("utf-8")
 
             encoded_image_list.append(base64_image)
-        multi_image_content =  [{"type": "image_url", "image_url": {
-                        "url": f"data:image/jpeg;base64,{encoded_image}"}
-            } for encoded_image in encoded_image_list]
+        multi_image_content = [
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"},
+            }
+            for encoded_image in encoded_image_list
+        ]
         return multi_image_content
 
-    def update_history(self, role, content, multi_image_content = None, in_place=False):
+    def update_history(self, role, content, multi_image_content=None, in_place=False):
         """
         multi_image_content: can support multi image content for gpt-4o or euiqvalent
         in_place: always use the index 1 as the user message. This is for LLM does not need to keep a history
@@ -167,31 +174,32 @@ class LLM(AnalysisObject):
                 self.context_window.append({"role": role, "content": content})
         else:
 
-            if multi_image_content is None:                              
+            if multi_image_content is None:
                 new_message = {"role": role, "content": content}
             else:
                 text_content = {"type": "text", "text": content}
                 multi_image_content = [text_content] + multi_image_content
-                new_message = {"role": role, "content": multi_image_content
-                  }
-                
+                new_message = {"role": role, "content": multi_image_content}
+
             self.history.append(new_message)
-            # responsible for active forgetting 
-            num_AI_messages = (len(self.context_window) - 1) // 2            
+            # responsible for active forgetting
+            num_AI_messages = (len(self.context_window) - 1) // 2
             if num_AI_messages == self.keep_last_n_messages:
-                print ("doing active forgetting")
+                print("doing active forgetting")
                 # we forget the oldest AI message and corresponding answer
                 # index 0 is reserved for system prompt so we always pop index 1
                 self.context_window.pop(1)
                 self.context_window.pop(1)
-            
+
             if in_place == True:
-                assert len(self.context_window) <= 2, "context window should have no more than 2 elements"
+                assert (
+                    len(self.context_window) <= 2
+                ), "context window should have no more than 2 elements"
                 if len(self.context_window) == 2:
                     self.context_window[1] = new_message
                 else:
                     self.context_window.append(new_message)
-            else:                
+            else:
                 self.context_window.append(new_message)
 
     def clean_context_window(self):
@@ -222,18 +230,16 @@ class LLM(AnalysisObject):
         thought_process = text.replace(function_code, "<python_code>")
 
         return text, function_code, thought_process
-    
+
     def get_system_prompt(self, sandbox):
         raise NotImplementedError("This method should be implemented in the subclass")
-       
+
 
 class VisualLLM(LLM):
     def __init__(self, config):
         super().__init__(config)
 
-    def speak(self, 
-              sandbox: Sandbox, 
-              image: np.ndarray):
+    def speak(self, sandbox: Sandbox, image: np.ndarray):
         """
         Only to comment about one image
         #1) What animal is there, how many and what superanimal model we should use
@@ -242,12 +248,15 @@ class VisualLLM(LLM):
         """
         from amadeusgpt.system_prompts.visual_llm import _get_system_prompt
 
-        self.system_prompt = _get_system_prompt()        
+        self.system_prompt = _get_system_prompt()
         multi_image_content = self.prepare_multi_image_content([image])
 
         self.update_history("system", self.system_prompt)
         self.update_history(
-            "user", "here is the image", multi_image_content=multi_image_content, in_place=True
+            "user",
+            "here is the image",
+            multi_image_content=multi_image_content,
+            in_place=True,
         )
         response = self.connect_gpt(self.context_window, max_tokens=2000)
         text = response.choices[0].message.content.strip()
@@ -268,13 +277,10 @@ class CodeGenerationLLM(LLM):
     def __init__(self, config):
         super().__init__(config)
 
-    def speak(self, 
-              sandbox: Sandbox, 
-              qa_message: QA_Message, 
-              share_video_file = True)-> QA_Message:
-        """
-
-        """ 
+    def speak(
+        self, sandbox: Sandbox, qa_message: QA_Message, share_video_file=True
+    ) -> QA_Message:
+        """ """
         query = qa_message.query
 
         from amadeusgpt.system_prompts.code_generator import _get_system_prompt
@@ -286,23 +292,23 @@ class CodeGenerationLLM(LLM):
             video_file_path = sandbox.video_file_paths[0]
         else:
             raise NotImplementedError("This is not implemented yet")
-        
 
         behavior_analysis = sandbox.analysis_dict[video_file_path]
         scene_image = behavior_analysis.visual_manager.get_scene_image()
         keypoint_names = behavior_analysis.animal_manager.get_keypoint_names()
         object_names = behavior_analysis.object_manager.get_object_names()
         animal_names = behavior_analysis.animal_manager.get_animal_names()
-        
 
-        self.system_prompt = _get_system_prompt(core_api_docs, 
-                                                task_program_docs, 
-                                                scene_image,
-                                                keypoint_names, 
-                                                object_names,
-                                                animal_names)
-    
-        self.update_history("system", self.system_prompt) 
+        self.system_prompt = _get_system_prompt(
+            core_api_docs,
+            task_program_docs,
+            scene_image,
+            keypoint_names,
+            object_names,
+            animal_names,
+        )
+
+        self.update_history("system", self.system_prompt)
 
         self.update_history("user", query)
 
@@ -311,7 +317,7 @@ class CodeGenerationLLM(LLM):
         # need to keep the memory of the answers from LLM
         self.update_history("assistant", text)
 
-        function_code = None 
+        function_code = None
 
         pattern = r"```python(.*?)```"
         if len(re.findall(pattern, text, re.DOTALL)) == 0:
@@ -320,7 +326,7 @@ class CodeGenerationLLM(LLM):
             function_code = re.findall(pattern, text, re.DOTALL)[0]
 
         # it's a bit meaningless to copy this to every qa_message
-     
+
         qa_message.code = function_code
         qa_message.chain_of_thought = text
 
@@ -331,14 +337,14 @@ class CodeGenerationLLM(LLM):
             json.dump(obj, f, indent=4)
 
         return qa_message
-   
+
 
 class SelfDebugLLM(LLM):
 
     def __init__(self, config):
         super().__init__(config)
 
-    def speak(self,  qa_message):
+    def speak(self, qa_message):
 
         error_message = qa_message.error_message
         code = qa_message.code
@@ -370,5 +376,6 @@ Can you correct the code?
 if __name__ == "__main__":
     from amadeusgpt.config import Config
 
-    config = Config("/Users/shaokaiye/AmadeusGPT-dev/amadeusgpt/configs/MausHaus_template.yaml")
-
+    config = Config(
+        "/Users/shaokaiye/AmadeusGPT-dev/amadeusgpt/configs/MausHaus_template.yaml"
+    )

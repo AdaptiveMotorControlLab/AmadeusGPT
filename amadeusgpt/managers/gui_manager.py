@@ -7,8 +7,8 @@ from matplotlib.path import Path
 from matplotlib.widgets import PolygonSelector
 
 from amadeusgpt.analysis_objects.object import ROIObject
+from amadeusgpt.behavior_analysis.identifier import Identifier
 from amadeusgpt.programs.api_registry import register_class_methods
-from amadeusgpt.behavior_analysis.identifier import Identifier                                              
 
 from .base import Manager
 from .object_manager import ObjectManager
@@ -58,9 +58,7 @@ class ROISelector:
 
 @register_class_methods
 class GUIManager(Manager):
-    def __init__(self, 
-                 identifier: Identifier,
-                 object_manager: ObjectManager):
+    def __init__(self, identifier: Identifier, object_manager: ObjectManager):
         self.config = identifier.config
         self.video_file_path = identifier.video_file_path
         self.object_manager = object_manager

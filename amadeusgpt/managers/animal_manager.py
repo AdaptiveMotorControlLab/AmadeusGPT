@@ -2,16 +2,18 @@ import json
 import os
 from pathlib import Path
 from typing import Dict, List
+
 import numpy as np
 import pandas as pd
 from numpy import ndarray
+
 from amadeusgpt.analysis_objects.animal import AnimalSeq
+from amadeusgpt.analysis_objects.event import Event
+from amadeusgpt.behavior_analysis.identifier import Identifier
 from amadeusgpt.programs.api_registry import (register_class_methods,
                                               register_core_api)
 
 from .base import Manager
-from amadeusgpt.analysis_objects.event import Event
-from amadeusgpt.behavior_analysis.identifier import Identifier
 
 
 def get_orientation_vector(cls, b1_name, b2_name):
@@ -74,8 +76,7 @@ def reject_outlier_keypoints(keypoints: ndarray, threshold_in_stds: int = 2):
 
 @register_class_methods
 class AnimalManager(Manager):
-    def __init__(self, 
-                 identifier: Identifier):
+    def __init__(self, identifier: Identifier):
         """ """
         self.config = identifier.config
         self.video_file_path = identifier.video_file_path
@@ -103,7 +104,7 @@ class AnimalManager(Manager):
 
         if not os.path.exists(self.keypoint_file_path):
             # no need to initialize here
-            return       
+            return
 
         if self.keypoint_file_path.endswith(".h5"):
             all_keypoints = self._process_keypoint_file_from_h5()
@@ -217,10 +218,9 @@ class AnimalManager(Manager):
         return self.animals
 
     @register_core_api
-    def filter_array_by_events(self,
-                                array: np.ndarray, 
-                                animal_name: str,
-                                events: List[Event]) -> np.ndarray:
+    def filter_array_by_events(
+        self, array: np.ndarray, animal_name: str, events: List[Event]
+    ) -> np.ndarray:
         """
         Filter the array based on the events.
         The array is describing the animal with animal_name. The expected shape (n_frames, n_kpts, n_dims)
@@ -230,13 +230,13 @@ class AnimalManager(Manager):
 
         if len(events) == 0:
             return np.ones_like(array) * np.nan
-        
+
         mask = np.zeros(events[0].data_length, dtype=bool)
 
         for event in events:
             if event.sender_animal_name != animal_name:
                 continue
-            mask[event.start:event.end + 1] = 1
+            mask[event.start : event.end + 1] = 1
 
         return array[mask]
 
@@ -257,9 +257,11 @@ class AnimalManager(Manager):
         """
         Get the keypoints of animals. The shape is of shape  n_frames, n_individuals, n_kpts, n_dims
         Optionally, you can pass a list of events to filter the keypoints based on the events.
-        """            
+        """
 
-        if os.path.exists(self.video_file_path) and not os.path.exists(self.keypoint_file_path):
+        if os.path.exists(self.video_file_path) and not os.path.exists(
+            self.keypoint_file_path
+        ):
 
             if self.superanimal_name is None:
                 raise ValueError(
@@ -291,7 +293,6 @@ class AnimalManager(Manager):
 
             if os.path.exists(self.keypoint_file_path):
                 self.init_pose()
-               
 
         ret = np.stack([animal.get_keypoints() for animal in self.animals], axis=1)
         return ret
@@ -320,7 +321,9 @@ class AnimalManager(Manager):
         Get the magnitude of acceleration. The shape is of shape  (n_frames, n_individuals, 1)
         The acceleration is a vector.
         """
-        return np.stack([animal.get_acceleration_mag() for animal in self.animals], axis=1)
+        return np.stack(
+            [animal.get_acceleration_mag() for animal in self.animals], axis=1
+        )
 
     @register_core_api
     def get_n_individuals(self) -> int:
@@ -341,7 +344,7 @@ class AnimalManager(Manager):
         """
         Get the names of the bodyparts.
         """
-        # this is to initialize 
+        # this is to initialize
         self.get_keypoints()
 
         return self.full_keypoint_names

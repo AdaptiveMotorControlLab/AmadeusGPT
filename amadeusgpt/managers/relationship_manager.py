@@ -3,12 +3,13 @@ from typing import Any, Dict, List, Union
 from amadeusgpt.analysis_objects.relationship import (AnimalAnimalRelationship,
                                                       AnimalObjectRelationship,
                                                       Relationship)
+from amadeusgpt.behavior_analysis.identifier import Identifier
 from amadeusgpt.programs.api_registry import register_class_methods
 
 from .animal_manager import AnimalManager
 from .base import Manager, cache_decorator
 from .object_manager import ObjectManager
-from amadeusgpt.behavior_analysis.identifier import Identifier
+
 
 @register_class_methods
 class RelationshipManager(Manager):

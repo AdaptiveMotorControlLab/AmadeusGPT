@@ -108,7 +108,6 @@ class TaskProgram:
                 or function_def.args.kwarg
             ):
                 raise ValueError("Function should have exactly one input parameter")
-   
 
         except SyntaxError as e:
             raise ValueError("Invalid function body syntax") from e
@@ -137,7 +136,7 @@ class TaskProgramLibrary:
     def register_task_program(cls, creator="human", parents=None, mutation_from=None):
         # we need to add the relationship for the created
         # task program
-        def decorator(func):        
+        def decorator(func):
             if isinstance(func, Callable) and not isinstance(func, TaskProgram):
                 json_obj = func2json(func)
                 id = len(cls.LIBRARY)
@@ -175,10 +174,11 @@ class TaskProgramLibrary:
                 )
                 cls.LIBRARY[json_obj["name"]] = task_program
             else:
-                raise ValueError("The task program should be a function or a dictionary")
+                raise ValueError(
+                    "The task program should be a function or a dictionary"
+                )
 
         return decorator
-  
 
     @classmethod
     def get_task_programs(cls):

@@ -2,7 +2,9 @@ import json
 import os
 from abc import ABC, abstractmethod
 from functools import wraps
+
 from cachetools import LRUCache
+
 from amadeusgpt.config import Config
 
 

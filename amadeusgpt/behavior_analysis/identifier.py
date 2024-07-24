@@ -1,5 +1,8 @@
-from amadeusgpt.config import Config
 import os
+
+from amadeusgpt.config import Config
+
+
 class Identifier:
     """
     config contains project level meta
@@ -7,11 +10,9 @@ class Identifier:
     Currently video_file_path and keypoint_file_path.
     Can be more in the future
     """
-    def __init__(self, 
-                 config: Config,
-                 video_file_path:str, 
-                 keypoint_file_path:str):
-        
+
+    def __init__(self, config: Config, video_file_path: str, keypoint_file_path: str):
+
         self.config = config
         self.video_file_path = video_file_path
         self.keypoint_file_path = keypoint_file_path

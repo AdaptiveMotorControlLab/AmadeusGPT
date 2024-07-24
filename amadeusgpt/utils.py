@@ -3,10 +3,13 @@ import inspect
 import sys
 import time
 import traceback
-import numpy as np
-from amadeusgpt.logger import AmadeusLogger
-from amadeusgpt.analysis_objects.event import Event
 from collections import defaultdict
+
+import numpy as np
+
+from amadeusgpt.analysis_objects.event import Event
+from amadeusgpt.logger import AmadeusLogger
+
 
 def filter_kwargs_for_function(func, kwargs):
     sig = inspect.signature(func)
@@ -156,14 +159,12 @@ def func2json(func):
 
 
 class QA_Message:
-    def __init__(self,
-                  query: str, 
-                  video_file_paths : list[str]):                
+    def __init__(self, query: str, video_file_paths: list[str]):
         # user question
         self.query = query
         self.video_file_paths = video_file_paths
         # llm generated code
-        self.code = None        
+        self.code = None
         self.chain_of_thought = None
         ### following fields change per video
         # a reference to the sandbox
@@ -172,27 +173,24 @@ class QA_Message:
         self.out_videos = defaultdict(list)
         self.pose_video = defaultdict(list)
         self.function_rets = defaultdict(list)
-        self.meta_info = {}    
+        self.meta_info = {}
 
     def get_masks(self) -> dict[str, np.ndarray]:
         ret = {}
         function_rets = self.function_rets
         # if function_ret is a list of events
-        for video_path, rets in function_rets.items():            
-            if (
-                isinstance(rets, list)
-                and len(rets) > 0
-                and isinstance(rets[0], Event)
-            ):
+        for video_path, rets in function_rets.items():
+            if isinstance(rets, list) and len(rets) > 0 and isinstance(rets[0], Event):
                 events = rets
                 masks = []
                 for event in events:
                     masks.append(event.generate_mask())
-                ret[video_path] =  np.array(masks)
+                ret[video_path] = np.array(masks)
             else:
                 ret[video_path] = None
-            
-        return ret 
+
+        return ret
+
     # STILL UNDER CONSTRUCTION. NEED TO HANDLE SERIALIZATION OF PLOTS
     def serialize_qa_message(self):
         return {
@@ -205,19 +203,18 @@ class QA_Message:
             "out_videos": self.out_videos,
             "pose_video": self.pose_video,
             "function_rets": self.function_rets,
-            "meta_info": self.meta_info
-        }       
-
-def create_qa_message(query:str,
-                video_file_paths:list[str]) -> QA_Message:
-
-    return QA_Message(
-        query,
-        video_file_paths)
+            "meta_info": self.meta_info,
+        }
 
 
-from IPython.display import Markdown, display
-from IPython.display import Video
+def create_qa_message(query: str, video_file_paths: list[str]) -> QA_Message:
+
+    return QA_Message(query, video_file_paths)
+
+
+from IPython.display import Markdown, Video, display
+
+
 def parse_result(amadeus, qa_message):
     display(Markdown(qa_message.chain_of_thought))
     sandbox = amadeus.sandbox
@@ -225,8 +222,10 @@ def parse_result(amadeus, qa_message):
     qa_message = sandbox.render_qa_message(qa_message)
     display(qa_message.meta_info)
     if len(qa_message.out_videos) > 0:
-        print (f'videos generated to {qa_message.out_videos}')
-        print ('Open it with media player if it does not properly display in the notebook')
+        print(f"videos generated to {qa_message.out_videos}")
+        print(
+            "Open it with media player if it does not properly display in the notebook"
+        )
         if len(qa_message.out_videos) > 0:
             for video_path, event_videos in qa_message.out_videos.items():
                 for event_video in event_videos:

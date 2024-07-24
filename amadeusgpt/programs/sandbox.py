@@ -5,21 +5,23 @@ import os
 import re
 import traceback
 import typing
+from collections import defaultdict
 from functools import wraps
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
-from amadeusgpt.behavior_analysis.analysis_factory import create_analysis
-from amadeusgpt.behavior_analysis.identifier import Identifier
+
 from amadeusgpt.analysis_objects.event import Event
 from amadeusgpt.analysis_objects.relationship import Orientation
+from amadeusgpt.behavior_analysis.analysis_factory import create_analysis
+from amadeusgpt.behavior_analysis.identifier import Identifier
 from amadeusgpt.config import Config
 from amadeusgpt.programs.api_registry import (CORE_API_REGISTRY,
                                               INTEGRATION_API_REGISTRY)
-from amadeusgpt.programs.task_program_registry import (TaskProgramLibrary)
-from pathlib import Path
-from collections import defaultdict
-from amadeusgpt.utils import create_qa_message, QA_Message
+from amadeusgpt.programs.task_program_registry import TaskProgramLibrary
+from amadeusgpt.utils import QA_Message, create_qa_message
 
 
 class SandboxBase:
@@ -37,11 +39,11 @@ class SandboxBase:
     BaseEvent: A class that represents an event
     get_speed() -> np.ndarray
     get_animal_state_events() -> List[BaseEvent]
-    '''   
+    '''
 
     '''taskprograms
     # available task programs
-    '''       
+    '''
 
     '''maincode
     def main()
@@ -161,11 +163,12 @@ def wrap_instance_method(instance, method_name):
 
 
 class Sandbox(SandboxBase):
-    def __init__(self, 
-                 config: Config,
-                 video_file_paths: list[str],
-                 keypoint_file_paths: list[str],
-                   ):
+    def __init__(
+        self,
+        config: Config,
+        video_file_paths: list[str],
+        keypoint_file_paths: list[str],
+    ):
         super().__init__()
         self.config = config
         self.video_file_paths = video_file_paths
@@ -173,14 +176,17 @@ class Sandbox(SandboxBase):
         self.namespace_dict = {}
         self.analysis_dict = {}
 
-        for video_file_path, keypoint_file_path in zip(self.video_file_paths, self.keypoint_file_paths):
-            self.analysis_dict[video_file_path] = create_analysis(Identifier(self.config, video_file_path, keypoint_file_path))
+        for video_file_path, keypoint_file_path in zip(
+            self.video_file_paths, self.keypoint_file_paths
+        ):
+            self.analysis_dict[video_file_path] = create_analysis(
+                Identifier(self.config, video_file_path, keypoint_file_path)
+            )
 
         for video_file_path in self.video_file_paths:
             self.namespace_dict[video_file_path] = {"__builtins__": __builtins__}
 
         # update_namespace initializes behavior analysis
-        
 
         self.update_namespace()
 
@@ -200,10 +206,12 @@ class Sandbox(SandboxBase):
             }
         }         
         """
-        
+
         self.message_cache: defaultdict[str, QA_Message] = defaultdict()
         # configure how to save the results to a result folder
-        self.result_folder = Path(self.config["result_info"].get("result_folder", "./results"))
+        self.result_folder = Path(
+            self.config["result_info"].get("result_folder", "./results")
+        )
 
     def configure_using_vlm(self):
         # example meta_info:
@@ -220,7 +228,7 @@ class Sandbox(SandboxBase):
             json_obj = self.llms["visual_llm"].speak(self, scene_image)
 
             self.meta_info[video_file_path] = json_obj
-            # configure meta info on the analysis managers    
+            # configure meta info on the analysis managers
             analysis.animal_manager.configure_animal_from_meta(json_obj)
 
     def get_core_api_docs(self) -> str:
@@ -235,7 +243,7 @@ The usage and the parameters of the functions are provided."""
         for name, api in self.api_registry.items():
             description = api["description"]
             # parameters is a dictionary that might contain self
-            parameters = self._fill_parameters(api["parameters"])          
+            parameters = self._fill_parameters(api["parameters"])
 
             description = self.enforce_indentation(description)
             ret += f"{name}({parameters}): \n{description}\n"
@@ -266,7 +274,7 @@ The usage and the parameters of the functions are provided."""
         query = self.query
         ret = f"```query\n {query}\n```"
         return ret
-    
+
     def get_analysis(self, video_file_path):
         """
         Every sandbox stores a unique "behavior analysis" instance in its namespace
@@ -278,11 +286,11 @@ The usage and the parameters of the functions are provided."""
     def update_matched_integration_modules(self, matched_modules):
         self.matched_modules = matched_modules
 
-    def update_namespace(self):                              
+    def update_namespace(self):
         # we need to manage the scope of the session
         # there are potentially new variables, new task programs, new apis
         for video_file_path, analysis in self.analysis_dict.items():
-        
+
             namespace = self.namespace_dict[video_file_path]
 
             for api in self.api_registry.values():
@@ -298,7 +306,7 @@ The usage and the parameters of the functions are provided."""
                     value, (int, float, str, list, dict, tuple)
                 ):
                     namespace[name] = value
-            
+
             namespace["Identifier"] = Identifier
             # the namespace needs to access AnimalBehaviorAnalysis for API
 
@@ -317,20 +325,22 @@ The usage and the parameters of the functions are provided."""
             namespace["task_programs"] = TaskProgramLibrary.get_task_programs()
 
     def code_execution(self, qa_message: QA_Message) -> QA_Message:
-        # update the namespace in the beginning of code execution makes sure that 
+        # update the namespace in the beginning of code execution makes sure that
         # if there is a change in the config, we always use the newest config
         self.update_namespace()
 
-        for video_file_path, keypoint_file_path in zip(self.video_file_paths, self.keypoint_file_paths):
+        for video_file_path, keypoint_file_path in zip(
+            self.video_file_paths, self.keypoint_file_paths
+        ):
             namespace = self.namespace_dict[video_file_path]
             code = qa_message.code
-            # not need to do further if´ there was no code found           
+            # not need to do further if´ there was no code found
             if code is None:
                 continue
             exec(code, namespace)
 
             identifier = Identifier(self.config, video_file_path, keypoint_file_path)
-            namespace['identifier'] = identifier
+            namespace["identifier"] = identifier
 
             # call the main function
             function_name = self.get_function_name_from_string(code)
@@ -339,14 +349,14 @@ The usage and the parameters of the functions are provided."""
                 exec(f"result = {call_str}", namespace)
                 qa_message.error_message[video_file_path] = None
             except Exception as e:
-                print ("error occurs in code execution")
+                print("error occurs in code execution")
                 # use traceback to get full error
                 full_traceback = traceback.format_exc()
                 print(full_traceback)
                 qa_message.error_message[video_file_path] = str(full_traceback)
                 return qa_message
             result = namespace["result"]
-            qa_message.function_rets[video_file_path] = result        
+            qa_message.function_rets[video_file_path] = result
 
         return qa_message
 
@@ -377,10 +387,9 @@ The usage and the parameters of the functions are provided."""
     def register_llm(self, name, llm):
         self.llms[name] = llm
 
-    def events_to_videos(self, 
-                         video_file_path: str,
-                         events: list[Event], 
-                         function_name: str):
+    def events_to_videos(
+        self, video_file_path: str, events: list[Event], function_name: str
+    ):
 
         analysis = self.analysis_dict[video_file_path]
 
@@ -393,17 +402,17 @@ The usage and the parameters of the functions are provided."""
             out_folder, events, behavior_name
         )
 
-    def render_qa_message(self, qa_message:QA_Message)-> QA_Message:
+    def render_qa_message(self, qa_message: QA_Message) -> QA_Message:
         """
         To be called after code execution.
         If the function returns a list of events, we visualize those events to keypoint plot, ethogram plot and videos
-        if the function returns is a tuple of axe and figure, we put them into the plots filed 
+        if the function returns is a tuple of axe and figure, we put them into the plots filed
         """
 
         for video_file_path in self.video_file_paths:
 
             namespace = self.namespace_dict[video_file_path]
-            function_rets = qa_message.function_rets[video_file_path]        
+            function_rets = qa_message.function_rets[video_file_path]
             behavior_analysis = namespace["behavior_analysis"]
             bodypart_names = behavior_analysis.animal_manager.get_keypoint_names()
             qa_message.pose_video[video_file_path] = (
@@ -434,10 +443,12 @@ The usage and the parameters of the functions are provided."""
                                     bodypart_names=bodypart_names, events=e
                                 )
                             )
-                            qa_message.out_videos[video_file_path] = self.events_to_videos(
-                                video_file_path,
-                                e, 
-                                self.get_function_name_from_string(qa_message.code)
+                            qa_message.out_videos[video_file_path] = (
+                                self.events_to_videos(
+                                    video_file_path,
+                                    e,
+                                    self.get_function_name_from_string(qa_message.code),
+                                )
                             )
 
             elif (
@@ -456,10 +467,10 @@ The usage and the parameters of the functions are provided."""
                 )
                 qa_message.out_videos[video_file_path] = self.events_to_videos(
                     video_file_path,
-                    function_rets, 
-                    self.get_function_name_from_string(qa_message.code)
+                    function_rets,
+                    self.get_function_name_from_string(qa_message.code),
                 )
-        
+
             qa_message.plots[video_file_path].extend(plots)
         return qa_message
 
@@ -475,7 +486,7 @@ The usage and the parameters of the functions are provided."""
             qa_message.meta_info = self.meta_info
 
         qa_message = self.llms["code_generator"].speak(self, qa_message)
-        # cache the resulted qa message for future use        
+        # cache the resulted qa message for future use
 
         self.message_cache[user_query] = qa_message
 
@@ -485,7 +496,7 @@ The usage and the parameters of the functions are provided."""
 
         return qa_message
 
-    def run_task_program(self, task_program_name :str):
+    def run_task_program(self, task_program_name: str):
         """
         1) sandbox is also responsible for running task program
         2) self.task_program_library references to a singleton so a different sandbox still has reference to the task program
@@ -496,9 +507,9 @@ The usage and the parameters of the functions are provided."""
         self.query = task_program_name
 
         qa_message = create_qa_message(self.query, self.video_file_paths)
-        
+
         qa_message.code = task_program["source_code"]
-        
+
         # code execution will use the latest config, if updated
         self.code_execution(qa_message)
 
@@ -507,6 +518,7 @@ The usage and the parameters of the functions are provided."""
         self.message_cache[task_program_name] = qa_message
 
         return qa_message
+
 
 def save_figure_to_tempfile(fig):
     """
@@ -598,4 +610,3 @@ if __name__ == "__main__":
 
     amadeus = AMADEUS(config)
     sandbox = amadeus.sandbox
-    

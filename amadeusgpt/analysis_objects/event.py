@@ -1,12 +1,14 @@
 from __future__ import annotations
+
 import os
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
+
+import cv2
 import numpy as np
 from numpy import ndarray
-from amadeusgpt.analysis_objects.base import AnalysisObject
-from typing import Sequence
 from scipy.ndimage import uniform_filter1d
-import cv2
+
+from amadeusgpt.analysis_objects.base import AnalysisObject
 
 
 def moving_average(x: Sequence, window_size: int, pos: str = "centered"):
@@ -59,6 +61,7 @@ def smooth_boolean_mask(x: Sequence, window_size: int):
     if window_size % 2 == 0:
         window_size += 1
     return moving_average(x, window_size) > 0.5
+
 
 def get_fps(video_path):
     # Load the video
@@ -226,7 +229,7 @@ end: {self.end}
         """
         mask = np.zeros(events[0].data_length, dtype=bool)
         sender_animal_name = events[0].sender_animal_name
-       
+
         video_file_path = events[0].video_file_path
         for event in events:
             mask |= event.generate_mask()
@@ -443,8 +446,6 @@ class EventGraph:
             graph.insert_node(node)
 
         return graph
-
-        
 
     @classmethod
     def init_from_mask(

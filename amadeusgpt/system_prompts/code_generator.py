@@ -1,10 +1,12 @@
-def code_related_prompt(core_api_docs,
-                        task_program_docs, 
-                        scene_image,
-                        keypoint_names,
-                        object_names,
-                        animal_names):
-                         
+def code_related_prompt(
+    core_api_docs,
+    task_program_docs,
+    scene_image,
+    keypoint_names,
+    object_names,
+    animal_names,
+):
+
     image_h, image_w = scene_image.shape[:2]
 
     prompt = f"""
@@ -85,8 +87,8 @@ def _get_system_prompt(
     scene_image,
     keypoint_names,
     object_names,
-    animal_names
-):   
+    animal_names,
+):
     system_prompt = f""" 
 You are helpful AI assistant. Your job is to answer user queries. 
 Importantly, before you write the code, you need to explain whether the question can be answered accurately by code. If not,  ask users to give more information.
