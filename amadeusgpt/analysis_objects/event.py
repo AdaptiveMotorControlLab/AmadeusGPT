@@ -5,7 +5,7 @@ import numpy as np
 from numpy import ndarray
 from amadeusgpt.analysis_objects.base import AnalysisObject
 from typing import Sequence
-from scipy.ndimage.filters import uniform_filter1d
+from scipy.ndimage import uniform_filter1d
 import cv2
 
 
