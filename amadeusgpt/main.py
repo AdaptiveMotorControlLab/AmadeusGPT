@@ -20,7 +20,7 @@ from amadeusgpt.programs.task_program_registry import TaskProgramLibrary
 
 
 class AMADEUS:
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, use_vlm=True):
         self.config = config
         ### fields that decide the behavior of the application
         self.use_self_debug = True
@@ -65,7 +65,8 @@ class AMADEUS:
             self.sandbox.register_llm("self_debug", self.self_debug_llm)
 
         # can only do this after the register process
-        self.sandbox.configure_using_vlm()
+        if use_vlm:
+            self.sandbox.configure_using_vlm()
 
     def get_DLC_keypoint_files(self, video_file_paths: list[str]):
         ret = []
@@ -114,6 +115,9 @@ class AMADEUS:
 
     def get_video_file_paths(self) -> list[str]:
         return self.sandbox.video_file_paths
+    
+    def get_keypoint_file_paths(self) -> list[str]:
+        return self.sandbox.keypoint_file_paths
 
     def get_behavior_analysis(self, video_file_path: str):
         """
