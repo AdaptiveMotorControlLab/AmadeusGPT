@@ -1,5 +1,5 @@
 # This environment can be used to install amadeusGPT
-name: amadeusgpt-minimal
+name: amadeusgpt
 channels:
     - defaults
 dependencies:
@@ -8,3 +8,4 @@ dependencies:
     - hdf5
     - pip
     - jupyter
+    - amadeusGPT
