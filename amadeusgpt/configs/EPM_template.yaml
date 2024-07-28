@@ -1,5 +1,4 @@
 keypoint_info:
-  keypoint_file_path: "examples/EPM/EPM_11DLC_snapshot-1000.h5" 
   body_orientation_keypoints:
     neck: "nose"
     tail_base: "tail_base"
@@ -13,4 +12,7 @@ llm_info:
   keep_last_n_messages: 2
 video_info:
   scene_frame_number: 100
-  video_file_path: "examples/EPM/EPM_11DLC_snapshot-1000_labeled_x264.mp4"
+data_info:
+  data_folder: 'examples/EPM'
+  video_suffix: '.mp4'
+  result_folder: 'results'

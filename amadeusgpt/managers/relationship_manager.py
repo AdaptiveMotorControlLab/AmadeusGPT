@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Union
 from amadeusgpt.analysis_objects.relationship import (AnimalAnimalRelationship,
                                                       AnimalObjectRelationship,
                                                       Relationship)
+from amadeusgpt.behavior_analysis.identifier import Identifier
 from amadeusgpt.programs.api_registry import register_class_methods
 
 from .animal_manager import AnimalManager
@@ -14,13 +15,13 @@ from .object_manager import ObjectManager
 class RelationshipManager(Manager):
     def __init__(
         self,
-        config: Dict[str, Any],
+        identifier: Identifier,
         animal_manager: AnimalManager,
         object_manager: ObjectManager,
         use_cache: bool = False,
     ):
-        super().__init__(config, use_cache=use_cache)
-        self.config = config
+        super().__init__(identifier.config, use_cache=use_cache)
+        self.config = identifier.config
         self.animal_manager = animal_manager
         self.object_manager = object_manager
         self.animals_objects_relationships = {}
@@ -35,7 +36,6 @@ class RelationshipManager(Manager):
 
         # roi, sam, animals are all objects
         roi_objs = self.object_manager.get_roi_objects()
-        print(self.object_manager.roi_objects)
         seg_objs = self.object_manager.get_seg_objects()
         grid_objs = self.object_manager.get_grid_objects()
         animals = self.animal_manager.get_animals()

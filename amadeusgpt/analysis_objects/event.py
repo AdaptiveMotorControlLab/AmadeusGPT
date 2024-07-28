@@ -1,18 +1,82 @@
-import copy
-import os
-from asyncio import events
-from collections import defaultdict
-from functools import reduce
-from tracemalloc import start
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from __future__ import annotations
 
+import os
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
+
+import cv2
 import numpy as np
-from cv2 import merge
-from numpy import block, ndarray, object_, rec
+from numpy import ndarray
+from scipy.ndimage import uniform_filter1d
 
 from amadeusgpt.analysis_objects.base import AnalysisObject
-from amadeusgpt.utils import (get_fps, get_video_length, group_consecutive,
-                              smooth_boolean_mask)
+
+
+def moving_average(x: Sequence, window_size: int, pos: str = "centered"):
+    """
+    Compute the moving average of a time series.
+    :param x: array_like, 1D input array
+    :param window_size: int
+        Must be odd positive, and less than or equal to the size of *x*.
+    :param pos: str, optional (default="centered")
+        Averaging window position.
+        By default, the window is centered on the current data point,
+        thus averaging over *window_size* // 2 past and future observations;
+        no delay is introduced in the averaging process.
+        Other options are "backward", where the average is taken
+        from the past *window_size* observations; and "forward",
+        where the average is taken from the future *window_size* observations.
+    :return: ndarray
+        Filtered time series with same length as input
+    """
+    # This function is not only very fast (unlike convolution),
+    # but also numerically stable (unlike the one based on cumulative sum).
+    # https://stackoverflow.com/questions/13728392/moving-average-or-running-mean/27681394#27681394
+    x = np.asarray(x, dtype=float)
+    x = np.squeeze(x)
+
+    window_size = int(window_size)
+
+    if window_size > x.size:
+        raise ValueError("Window size must be less than or equal to the size of x.")
+
+    if window_size < 1 or not window_size % 2:
+        raise ValueError("Window size must be a positive odd integer.")
+
+    middle = window_size // 2
+    if pos == "centered":
+        origin = 0
+    elif pos == "backward":
+        origin = middle
+    elif pos == "forward":
+        origin = -middle
+    else:
+        raise ValueError(f"Unrecognized window position '{pos}'.")
+
+    return uniform_filter1d(x, window_size, mode="constant", origin=origin)
+
+
+def smooth_boolean_mask(x: Sequence, window_size: int):
+    # `window_size` should be at least twice as large as the
+    # minimal number of consecutive frames to be smoothed out.
+    if window_size % 2 == 0:
+        window_size += 1
+    return moving_average(x, window_size) > 0.5
+
+
+def get_fps(video_path):
+    # Load the video
+    video = cv2.VideoCapture(video_path)
+    # Get the FPS
+    fps = video.get(cv2.CAP_PROP_FPS)
+    video.release()
+    return fps
+
+
+def get_video_length(video_path):
+    video = cv2.VideoCapture(video_path)
+    fps = video.get(cv2.CAP_PROP_FPS)
+    n_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
+    return int(n_frames)
 
 
 class BaseEvent(AnalysisObject):
@@ -59,8 +123,8 @@ class BaseEvent(AnalysisObject):
         """
         Get the indices of first true and last true in the binary mask
         """
-        start = np.argmax(mask)
-        end = len(mask) - np.argmax(mask[::-1]) - 1
+        start = int(np.argmax(mask))
+        end = int(len(mask) - np.argmax(mask[::-1]) - 1)
         return start, end
 
     def __lt__(self, other):
@@ -141,7 +205,7 @@ end: {self.end}
 
     @classmethod
     # UNDER CONSTRUCTION
-    def remove_overlapping_events(cls, events: List[BaseEvent]) -> List[BaseEvent]:
+    def remove_overlapping_events(cls, events: List[Event]) -> List[Event]:
         # Assuming events are already sorted by start time
         filtered_events = []
         prev_event = None
@@ -158,15 +222,14 @@ end: {self.end}
 
     @classmethod
     # UNDER CONSTRUCTION
-    def event_negate(cls, events: List[BaseEvent]) -> List[BaseEvent]:
+    def event_negate(cls, events: List[Event]) -> List[Event]:
         """
         Get list of events that are negates of those events
         The core attributes must stay the same
         """
         mask = np.zeros(events[0].data_length, dtype=bool)
         sender_animal_name = events[0].sender_animal_name
-        for event in events:
-            assert sender_animal_name == event.sender_animal_name
+
         video_file_path = events[0].video_file_path
         for event in events:
             mask |= event.generate_mask()
@@ -184,7 +247,7 @@ end: {self.end}
         return negate_events
 
     @classmethod
-    def check_max_in_sum(cls, events: List[BaseEvent]):
+    def check_max_in_sum(cls, events: List[Event]):
         """
         Check the maximum value in the sum of the masks of the events
         """
@@ -193,7 +256,7 @@ end: {self.end}
         return np.max(_sum)
 
     @classmethod
-    def events2onemask(cls, events: List[BaseEvent]) -> ndarray:
+    def events2onemask(cls, events: List[Event]) -> ndarray:
         """
         return events to one mask that is a union of all the events
         """
@@ -220,7 +283,7 @@ end: {self.end}
         receiver_animal_names: Set[str],
         object_names: Set[str],
         smooth_window_size: int = 5,
-    ) -> List[BaseEvent]:
+    ) -> List[Event]:
         """
         Turn a binary mask to a list of Events
         The resulted event has the same sender animal name
@@ -253,11 +316,11 @@ end: {self.end}
     # UNDER CONSTRUCTION
     def filter_events_by_duration(
         cls,
-        events: List[BaseEvent],
+        events: List[Event],
         min_duration: Union[int, float],
         max_duration: Union[int, float],
         unit: str = "frames",
-    ) -> List[BaseEvent]:
+    ) -> List[Event]:
         """
         Filter events by duration in frames
         """
@@ -287,9 +350,9 @@ end: {self.end}
     # UNDER CONSTRUCTION
     def concat_two_events(
         cls,
-        early_event: BaseEvent,
-        late_event: BaseEvent,
-    ) -> Union[None, BaseEvent]:
+        early_event: Event,
+        late_event: Event,
+    ) -> Union[None, Event]:
         """
         Concatenate two events into one, fill the gap between two events if there are
         """
@@ -312,11 +375,11 @@ end: {self.end}
 
 # Trying to implement temporal graph
 class Node:
-    def __init__(self, start: int, children: List[BaseEvent]):
+    def __init__(self, start: int, children: List[Event]):
         self.children = children
         self.start: int = start
-        self.next: Node = None
-        self.prev: Node = None
+        self.next: Node | None = None
+        self.prev: Node | None = None
 
     def get_children_by_key(self, key: str):
         """ """
@@ -342,7 +405,7 @@ class EventGraph:
         self.head: Node = None
         self.n_nodes = 0
 
-    def to_list(self) -> List[BaseEvent]:
+    def to_list(self) -> List[Event]:
         ret = []
         cur_node = self.head
         while cur_node is not None:
@@ -358,7 +421,7 @@ class EventGraph:
         return list(set([event.sender_animal_name for event in self.to_list()]))
 
     @classmethod
-    def check_list_sorted(cls, events: List[BaseEvent]) -> bool:
+    def check_list_sorted(cls, events: List[Event]) -> bool:
         """
         Check if the list of events is sorted
         """
@@ -366,7 +429,7 @@ class EventGraph:
         return temp == sorted(temp)
 
     @classmethod
-    def init_from_list(cls, events: List[BaseEvent]) -> "EventGraph":
+    def init_from_list(cls, events: List[Event]) -> "EventGraph":
         graph = cls()
         start_time_dict = {}
 
@@ -383,8 +446,6 @@ class EventGraph:
             graph.insert_node(node)
 
         return graph
-
-        
 
     @classmethod
     def init_from_mask(
@@ -591,7 +652,7 @@ class EventGraph:
                 head = head.next
         return graph
 
-    def traverse_by_kvs(self, kvs: Dict[str, Any]) -> List[BaseEvent]:
+    def traverse_by_kvs(self, kvs: Dict[str, Any]) -> List[Event]:
         """
         Traverse the graph and get a list of events that have the same key
         """

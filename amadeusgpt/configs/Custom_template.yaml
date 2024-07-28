@@ -1,5 +1,4 @@
 keypoint_info:
-  keypoint_file_path:
 llm_info:
   keep_last_n_messages: 2  
 object_info:
@@ -7,5 +6,7 @@ object_info:
 video_info:
   scene_frame_number: 100
   video_file_path: 
-result_info:
-  result_folder: "./results"
+data_info:
+  data_folder: 'examples/Custom'
+  video_suffix: '.mp4'
+  result_folder: 'results'

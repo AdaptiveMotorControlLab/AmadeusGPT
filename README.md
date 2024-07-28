@@ -22,66 +22,35 @@
 - We use large language models (LLMs) to bridge natural language and behavior analysis.
 - This work is published at **NeurIPS2023!** Read the paper, [AmadeusGPT: a natural language interface for interactive animal behavioral analysis]([https://www.google.com/search?q=amadeusgpt+openreview&sca_esv=590699485&rlz=1C5CHFA_enCH1059CH1060&ei=K1N6ZaHdKvmrur8PosOOkAo&ved=0ahUKEwjhnta83I2DAxX5le4BHaKhA6IQ4dUDCBE&uact=5&oq=amadeusgpt+openreview&gs_lp=Egxnd3Mtd2l6LXNlcnAiFWFtYWRldXNncHQgb3BlbnJldmlldzIHECEYoAEYCjIHECEYoAEYCki2HVDfAliOHHACeACQAQGYAYMDoAHaGaoBCDEuMTEuMS40uAEDyAEA-AEBwgIFECEYqwLCAggQABiABBiiBMICCBAAGIkFGKIE4gMEGAEgQYgGAQ&sclient=gws-wiz-serp#:~:text=AmadeusGPT%3A%20a%20natural,net%20%E2%80%BA%20pdf](https://proceedings.neurips.cc/paper_files/paper/2023/file/1456560769bbc38e4f8c5055048ea712-Paper-Conference.pdf)) by [Shaokai Ye](https://github.com/yeshaokai), [Jessy Lauer](https://github.com/jeylau), [Mu Zhou](https://github.com/zhoumu53), [Alexander Mathis](https://github.com/AlexEMG) & [Mackenzie W. Mathis](https://github.com/MMathisLab).
 - Like this project? Please consider giving us a star ⭐️!
+
+## What is AmadeusGPT? 
+
+**Developed by part of the same team that brought you [DeepLabCut](https://www.mackenziemathislab.org/deeplabcut), AmadeusGPT is a natural language interface that turns natural language descriptions of behaviors into machine-executable code.** The process of quantifying and analyzing animal behavior involves translating the naturally occurring descriptive language of their actions into machine-readable code. Yet, codifying behavior analysis is often challenging without deep understanding of animal behavior and technical machine learning knowledge, so we wanted to ease this jump.
+In short, we provide a "code-free" interface for you to analysis video data of animals. If you are a [DeepLabCut](https://www.mackenziemathislab.org/deeplabcut) user, this means you could upload your videos and .h5 keypoint files and then ask questions, such as "How much time does the mouse spend in the middle of the open field?". 
+In our original work (NeurIPS 2023) we used GPT3.5 and GPT4 as part of our agent. We continue to support the latest OpenAI models, and are continuing to actively develop this project. 
   
-## Install & Run AmadeusGPT🎻
+## Get started: install AmadeusGPT🎻
 
-### Install with `pypi`
+### [1] Set up a conda environment:
 
-- AmadeusGPT is a Python package hosted on `pypi`. You can create a virtual env (conda, etc, see below*) and run:
-```python
-pip install 'amadeusgpt[streamlit]'
-```
-Note that in order to access our demo video and keypoint files, we recommend to install from the source.
-
-### Install from the source
-
-**Make sure you edit those installation scripts to point to your own conda path before you run them**
-
-#### Minimal installation
-**Recommended for:** Running AmadeusGPT without GPUs. This setup is lightweight and is limited to processing movie files and keypoint outputs (.h5) from DeepLabCut.
+Conda is an easy-to-use Python interface that supports launching [Jupyter Notebooks](https://jupyter.org/). If you are completely new to this, we recommend checking out the [docs here for getting conda installed](https://deeplabcut.github.io/DeepLabCut/docs/beginner-guides/beginners-guide.html#beginner-user-guide). Otherwise, proceed to use one of [our supplied conda files](https://github.com/AdaptiveMotorControlLab/AmadeusGPT/tree/main/conda). As you will see we have minimal dependencies to get started, and [here is a simple step-by-step guide](https://deeplabcut.github.io/DeepLabCut/docs/installation.html#step-2-build-an-env-using-our-conda-file) you can reference for setting it up (or see [BONUS](README.md#bonus---customized-your-conda-env) below). Here is the quick start command:
 
 ```bash
-# Install the minimal environment
-bash install_minimal.sh
-
-# Activate the conda environment
-conda activate amadeusgpt-minimal
+conda env create -f amadeusGPT.yml
 ```
+To note, some modules AmadeusGPT can use benefit from GPU support, therefore we recommend also having an NVIDIA GPU available and installing CUDA. 
 
-#### GPU installation
-**Recommended for:** Users on Linux with GPUs. Support for Windows and MacOS will be added in the future.
+### [2] You will need an openAI key:
 
-```bash
-# Install the gpu environment
-bash install_gpu.sh
+**Why OpenAI API Key is needed** AmadeusGPT relies on API calls of OpenAI (we will add more LLM options in the future) for language understanding and code writing. Sign up for a [openAI API key](https://platform.openai.com/account/api-keys) [here](https://platform.openai.com/account/api-keys).
 
-# Activate the conda environment
-conda activate amadeusgpt-gpu
-```
-
-#### CPU installation
-**Recommended for:** MacOS / Linux users working with very small video files.
-
-```bash
-# Install the cpu environment
-bash install_cpu.sh
-
-# Activate the conda environment
-conda activate amadeusgpt-cpu
-```
-
-
-### Setup OpenAI API Key to use AmadeusGPT
-
-**Why OpenAI API Key is needed** AmadeusGPT relies on API calls of OpenAI (we will add more options in the future) for language understanding and code writing.
-
-You can either add this into your environment by following:
+Then, you can add this into your environment by passing the following in the terminal after you launched your conda env:
 
 ```bash
 export OPENAI_API_KEY='your API key' 
 ```
 
-Or inside your python script or jupyter notebook, add this line in the beginning of the file
+Or inside a python script or Jupyter Notebook, add this if you did not pass at the terminal stage:
 
 
 ```python
@@ -89,35 +58,52 @@ import os
 os.environ["OPENAI_API_KEY"] = 'your api key' 
 ```
 
-- Please note that you need an [openAI API key](https://platform.openai.com/account/api-keys), which you can easily create [here](https://platform.openai.com/account/api-keys).
+### [3] 🪄 That's it! Now you have AmadeusGPT installed! 
+
+See below on how to get started!
+
+
+## Get started: run AmadeusGPT🎻
+
+We provide a StreamLit App, or you can use AmadeusGPT in any python interface, such as Jupyter notebooks. For this we suggest getting started from our demos:
+
+### Try AmadeusGPT with an example Jupyter Notebook
+You can git clone (or download) this repo to grab a copy and go. We provide example notebooks [here](notebook)!
+
+### Here are a few demos that could fuel your own work, so please check them out!
+
+1) [Draw a region of interest (ROI) and ask, "when is the animal in the ROI?"](notebook/EPM_demo.ipynb)
+2) [Use a DeepLabCut SuperAnimal pose model to do video inference](notebook/custom_mouse_demo.ipynb) - (make sure you use a GPU if you don't have corresponding DeepLabCut keypoint files already!
+3) [Write you own integration modules and use them](notebook/Horse_demo.ipynb). Bonus: [source code](amadeusgpt/integration_modules). Make sure you delete the cached modules_embedding.pickle if you add new modules!
+4) [Multi-Animal social interactions](notebook/MABe_demo.ipynb)
+5) [Reuse the task program generated by LLM and run it on different videos](notebook/MABe_demo.ipynb)
+7) You can ask one query across multiple videos. Put your keypoint files and video files (pairs) in the same folder and specify the `data_folder` as shown in this [Demo](notebook/custom_mouse_video.ipynb). Make sure your video file and keypoint file follows the normal DeepLabCut convention, i.e., `prefix.mp4` `prefix*.h5`.
 
 
 
-### Try AmadeusGPT with local web app
+### Try AmadeusGPT with a local WebApp
+- You will need to git clone this repo and have a copy locally. Then in your env run `pip install 'amadeusGPT[streamlit]'`
+- Then you can open the terminal and within the directory run:
 ```python
 make app
 ```
 
-### Do I need to provide keypoint files?
-- If you only provide the raw video file, we use SuperAnimal models [SuperAnimal models](https://www.nature.com/articles/s41467-024-48792-2) to predict your video. This is only supported with cpu or gpu installation. While we highly recommend gpu installation, we are working on faster, light-weight superanimal models to work on your CPU.
-- If you already have keypoint file corresponding to the video file, look up how we set-up the config file in the notebooks.  Right now we only support keypoint output from DeepLabCut. Other keypoint formats can be added upon feature requests.
 
+## [BONUS - customized your conda env] 
+If you want to set up your own env, 
 
-### Try AmadeusGPT with our example notebooks
-We provide example notebooks at [Notebooks](notebook)
-
-### Notebook as use-case demo
-
-1) Draw ROI and ask when is the animal in the ROI.  [Demo](notebook/EPM_demo.ipynb)
-2) Obtain the binary mask for retrieved masks (for further sampling such as neural data pairing) [Demo](notebook/EPM_demo.ipynb)
-3) Use SuperAnimal video inference (make sure you use gpu or cpu installation) if you don't have corresponding DeepLabCut keypoint file [Demo](notebook/custom_mouse_demo.ipynb)
-4) Write you own integration modules and use them [Demo](notebook/Horse_demo.ipynb) [Source code](amadeusgpt/integration_modules). Make sure you delete the cached modules_embedding.pickle if you add new modules
-5) Multi-Animal social interaction.  [Demo](notebook/MABe_demo.ipynb)
-6) Reuse the task program generated by LLM and run it on different videos [Demo](notebook/MABe_demo.ipynb)
-
+```bash
+conda create -n amadesuGPT python=3.10
+```
+the key dependencies that need installed are:
+```python
+pip install notebook
+conda install hdf5
+pip install amadeusgpt
+```
 ## Citation
 
-  If you use ideas or code from this project in your work, please cite us  using the following BibTeX entry. 🙏
+  If you use ideas or code from this project in your work, please cite us using the following BibTeX entry. 🙏
 
 ```
 @article{ye2023amadeusGPT,
@@ -133,10 +119,17 @@ We provide example notebooks at [Notebooks](notebook)
 ## License 
 
 AmadeusGPT is license under the Apache-2.0 license.
-  -  🚨 Please note several key dependencies have their own licensing. Please carefully check the license information for [DeepLabCut](https://github.com/DeepLabCut/DeepLabCut) (LGPL-3.0 license), [SAM](https://github.com/facebookresearch/segment-anything) (Apache-2.0 license), [CEBRA](https://github.com/AdaptiveMotorControlLab/CEBRA) (Non-Commercial), etc.
+  -  🚨 Please note several key dependencies have their own licensing. Please carefully check the license information for [DeepLabCut](https://github.com/DeepLabCut/DeepLabCut) (LGPL-3.0 license), [SAM](https://github.com/facebookresearch/segment-anything) (Apache-2.0 license), etc.
 
+## FAQ:
+
+### Do I need to provide keypoint files or is video-only enough to get starte?
+- If you only provide a video file, we use SuperAnimal models [SuperAnimal models](https://www.nature.com/articles/s41467-024-48792-2) to predict which animal is in your video. While we highly recommend GPU installation, we are working on faster, light-weight SuperAnimal models to work on your CPU.
+- If you already have keypoint file corresponding to the video file, look how we set-up the config file in the Notebooks.  Right now we only support keypoint output from DeepLabCut.
 
 ## News
+- July 2024 0.1.0 is released! This is a major code update ...
+- June 2024 as part of the CZI EOSS, The Kavli Foundation now supports this work! ✨
 - 🤩 Dec 2023, code released!
 - 🔥 Our work was accepted to NeuRIPS2023
 - 🧙‍♀️ Open-source code coming in the fall of 2023

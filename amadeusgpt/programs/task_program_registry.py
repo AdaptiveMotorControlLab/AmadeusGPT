@@ -109,10 +109,6 @@ class TaskProgram:
             ):
                 raise ValueError("Function should have exactly one input parameter")
 
-            # Check if the function takes a config parameter
-            if function_def.args.args[0].arg != "config":
-                raise ValueError("Function should take a config parameter")
-
         except SyntaxError as e:
             raise ValueError("Invalid function body syntax") from e
 
@@ -177,6 +173,10 @@ class TaskProgramLibrary:
                     mutation_from=mutation_from,
                 )
                 cls.LIBRARY[json_obj["name"]] = task_program
+            else:
+                raise ValueError(
+                    "The task program should be a function or a dictionary"
+                )
 
         return decorator
 

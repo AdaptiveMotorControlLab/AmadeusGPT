@@ -15,9 +15,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from PIL import Image
 from scipy.signal import medfilt
 
+from amadeusgpt.analysis_objects.event import get_fps, get_video_length
 from amadeusgpt.analysis_objects.object import Object, ROIObject, SegObject
-from amadeusgpt.utils import (filter_kwargs_for_function, get_fps,
-                              get_video_length)
+from amadeusgpt.utils import filter_kwargs_for_function
 
 from .base import AnalysisObject
 from .event import BaseEvent, Event, EventGraph

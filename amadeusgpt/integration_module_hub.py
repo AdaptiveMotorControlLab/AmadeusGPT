@@ -1,6 +1,5 @@
 import os
 import pickle
-from typing import Dict, List, Optional
 
 from openai import OpenAI
 from sklearn.metrics.pairwise import cosine_similarity
@@ -11,7 +10,7 @@ client = OpenAI()
 
 
 class IntegrationModuleHub:
-    def __init__(self, config: Dict[str, str]):
+    def __init__(self):
         self.amadeus_root = os.path.dirname(os.path.realpath(__file__))
 
     def save_embeddings(self):
