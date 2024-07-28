@@ -82,7 +82,8 @@ You can git clone (or download) this repo to grab a copy and go. We provide exam
 
 
 ### Try AmadeusGPT with a local WebApp
-- you will need to git clone this repo and have a copy locally. Then you can open the terminal and within the directory run:
+- You will need to git clone this repo and have a copy locally. Then in your env run `pip install 'amadeusGPT[streamlit]'`
+- Then you can open the terminal and within the directory run:
 ```python
 make app
 ```
