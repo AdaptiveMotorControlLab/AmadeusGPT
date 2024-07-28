@@ -1,9 +1,11 @@
-from amadeusgpt.analysis_objects.object import Object
-from numpy import ndarray
-from scipy.spatial import ConvexHull
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 import matplotlib.path as mpath
 import numpy as np
+from numpy import ndarray
+from scipy.spatial import ConvexHull
+
+from amadeusgpt.analysis_objects.object import Object
 
 
 class Animal(Object):
@@ -92,11 +94,16 @@ class AnimalSeq(Animal):
         codes, verts = zip(*path_data)
         return mpath.Path(verts, codes)
 
-    def get_keypoints(self) -> ndarray:
+    def get_keypoints(self, average_keypoints=False) -> ndarray:
         # the shape should be (n_frames, n_keypoints, 2)
         # extending to 3D?
-        assert len(self.keypoints.shape) == 3, f"keypoints shape is {self.keypoints.shape}"
-        return self.keypoints
+        assert (
+            len(self.keypoints.shape) == 3
+        ), f"keypoints shape is {self.keypoints.shape}"
+        if not average_keypoints:
+            return self.keypoints
+        else:
+            return np.nanmean(self.keypoints, axis=1)
 
     def get_center(self):
         """
@@ -166,13 +173,13 @@ class AnimalSeq(Animal):
         )
         assert len(accelerations.shape) == 3
         return accelerations
-    
+
     def get_acceleration_mag(self) -> ndarray:
         """
-        Returns the magnitude of the acceleration vector    
+        Returns the magnitude of the acceleration vector
         """
         accelerations = self.get_acceleration()
-        acceleration_mag = np.linalg.norm(accelerations, axis=-1)  
+        acceleration_mag = np.linalg.norm(accelerations, axis=-1)
         acceleration_mag = np.expand_dims(acceleration_mag, axis=-1)
         assert len(acceleration_mag.shape) == 3
         return acceleration_mag
@@ -226,23 +233,24 @@ class AnimalSeq(Animal):
         return mouse_cs
 
 
-
 if __name__ == "__main__":
     # unit testing the shape of kinematics data
     # acceleration, acceleration_mag, velocity, speed, and keypoints
 
     from amadeusgpt.config import Config
     from amadeusgpt.main import AMADEUS
-    config = Config("/Users/shaokaiye/AmadeusGPT-dev/amadeusgpt/configs/MausHaus_template.yaml")
+
+    config = Config(
+        "/Users/shaokaiye/AmadeusGPT-dev/amadeusgpt/configs/MausHaus_template.yaml"
+    )
     amadeus = AMADEUS(config)
     analysis = amadeus.get_analysis()
     # get an instance of animal
     animal = analysis.animal_manager.get_animals()[0]
 
-    print ("velocity shape", animal.get_velocity().shape)
-    print ("speed shape", animal.get_speed().shape)
-    print ("acceleration shape", animal.get_acceleration().shape)
-    print ("acceleration_mag shape", animal.get_acceleration_mag().shape)
+    print("velocity shape", animal.get_velocity().shape)
+    print("speed shape", animal.get_speed().shape)
+    print("acceleration shape", animal.get_acceleration().shape)
+    print("acceleration_mag shape", animal.get_acceleration_mag().shape)
 
     print(animal.query_states("acceleration_mag").shape)
-

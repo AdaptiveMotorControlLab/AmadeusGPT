@@ -1,30 +1,11 @@
-import random
-
-from amadeusgpt.managers import (AnimalManager, EventManager, GUIManager,
-                                 Manager, ModelManager, ObjectManager,
-                                 RelationshipManager, VisualManager)
-
-random.seed(78)
 import types
-from typing import Dict
 
-from .programs.api_registry import (CORE_API_REGISTRY, DEFAULT_REGISTRY,
-                                    INTEGRATION_API_REGISTRY)
-
-"""
-write a class called FuncObj that inherits from pydantic BaseModel that takes a function string,
-use AST to parse the function string to input and output types, function name, args, kwargs, and function body
-"""
-
-
-class FuncObj:
-    function_string: str
-    input_type: Dict[str, str]
-    output_type: Dict[str, str]
-    function_name: str
-    args: list
-    kwargs: dict
-    function_body: str
+from amadeusgpt.behavior_analysis.identifier import Identifier
+from amadeusgpt.managers import (AnimalManager, EventManager, GUIManager,
+                                 Manager, ObjectManager, RelationshipManager,
+                                 VisualManager)
+from amadeusgpt.programs.api_registry import (DEFAULT_REGISTRY,
+                                              INTEGRATION_API_REGISTRY)
 
 
 class AnimalBehaviorAnalysis:
@@ -33,36 +14,33 @@ class AnimalBehaviorAnalysis:
     It owns multiple manager classes that are responsible for different aspects of the analysis.
     """
 
-    def __init__(self, config, use_cache=False):
+    def __init__(self, identifier: Identifier, **kwargs):
 
-        self.model_manager = ModelManager(config)
         # animal manager needs keypoint_file_path and model_manager for pose
-        self.animal_manager = AnimalManager(config, self.model_manager)
+        self.animal_manager = AnimalManager(identifier)
 
         # object manager needs sam_info, seriralized pickle objects
-        self.object_manager = ObjectManager(
-            config, self.model_manager, self.animal_manager
-        )
+        self.object_manager = ObjectManager(identifier, self.animal_manager)
 
         # relationship manager needs animal_manager and object_manager
         self.relationship_manager = RelationshipManager(
-            config, self.animal_manager, self.object_manager, use_cache=use_cache
+            identifier, self.animal_manager, self.object_manager
         )
+
         # event manager needs reference to object_manager, animal_manager, and relationship_manager
         self.event_manager = EventManager(
-            config,
+            identifier,
             self.object_manager,
             self.animal_manager,
             self.relationship_manager,
-            use_cache=use_cache,
         )
 
         # some managers need references to others to do their job
         self.visual_manager = VisualManager(
-            config, self.animal_manager, self.object_manager
+            identifier, self.animal_manager, self.object_manager
         )
 
-        self.gui_manager = GUIManager(config, self.object_manager)
+        self.gui_manager = GUIManager(identifier, self.object_manager)
 
         # check all attributes that are inheritance of manager classes
         # and attach them as methods to the main class

@@ -5,9 +5,9 @@ import numpy as np
 from numpy import ndarray
 from scipy.spatial.distance import cdist
 
+from .animal import AnimalSeq
 from .base import AnalysisObject
 from .object import Object
-from .animal import AnimalSeq
 
 
 class Orientation(IntEnum):

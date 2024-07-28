@@ -181,7 +181,7 @@ def main():
         )
 
     if st.session_state["exist_valid_openai_api_key"]:
-        example_list = ["Welcome", "Custom", "EPM", "MausHaus", "MABe", "Horse"]
+        example_list = ["Welcome", "EPM", "MausHaus", "MABe", "Horse"]
     else:
         example_list = ["Welcome"]
 

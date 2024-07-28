@@ -1,19 +1,19 @@
-import glob
 import os
 from typing import Any, Dict, List, Optional
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.figure import Figure
 from matplotlib.patches import Wedge
 
-from amadeusgpt.analysis_objects.event import BaseEvent
 from amadeusgpt.analysis_objects.animal import AnimalSeq
+from amadeusgpt.analysis_objects.event import Event
 from amadeusgpt.analysis_objects.visualization import (EventVisualization,
                                                        GraphVisualization,
                                                        KeypointVisualization,
                                                        SceneVisualization)
-from amadeusgpt.managers.model_manager import ModelManager
+from amadeusgpt.behavior_analysis.identifier import Identifier
 from amadeusgpt.programs.api_registry import (register_class_methods,
                                               register_core_api)
 
@@ -35,69 +35,27 @@ def mask2distance(locations):
 class VisualManager(Manager):
     def __init__(
         self,
-        config: Dict[str, Any],
+        identifier: Identifier,
         animal_manager: AnimalManager,
         object_manager: ObjectManager,
     ):
-        super().__init__(config)
-        self.config = config
-        video_info = config["video_info"]
-        if video_info["video_file_path"] is None:
+        super().__init__(identifier.config)
+        self.config = identifier.config
+        self.video_file_path = identifier.video_file_path
+        self.keypoint_file_path = identifier.keypoint_file_path
+
+        if not os.path.exists(self.video_file_path):
             return
-        self.video_file_path = config["video_info"]["video_file_path"]
+
         self.animal_manager = animal_manager
         self.object_manager = object_manager
 
     def get_scene_image(self):
         scene_frame_index = self.config["video_info"]["scene_frame_number"]
-        cap = cv2.VideoCapture(self.config["video_info"]["video_file_path"])
+        cap = cv2.VideoCapture(self.video_file_path)
         cap.set(cv2.CAP_PROP_POS_FRAMES, scene_frame_index)
         ret, frame = cap.read()
         return frame
-
-    def sanity_check_files(self, video_folder, video_type, keypoint_type):
-        """
-        Check whether the keypoints match the videos by plotting the keypoints on the video
-        """
-        os.makedirs(os.path.join(video_folder, "sanity_check"), exist_ok=True)
-
-        sanity_check_folder = os.path.join(video_folder, "sanity_check")
-        video_files = sorted(glob.glob(f"{video_folder}/*{video_type}"))
-        keypoint_files = sorted(glob.glob(f"{video_folder}/*{keypoint_type}"))
-        # assert video file and keypoint file match
-        assert len(video_files) == len(keypoint_files)
-        print(video_files, keypoint_files)
-        for video_file, keypoint_file in zip(video_files, keypoint_files):
-            video_name = video_file.split("/")[-1].replace(video_type, "")
-            keypoint_name = keypoint_file.split("/")[-1].replace(keypoint_type, "")
-            assert video_name == keypoint_name
-
-            # plot the keypoints on the video
-            temp_config = {
-                "video_info": {"video_file_path": video_file},
-                "keypoint_info": {"keypoint_file_path": keypoint_file},
-                "sam_info": {},
-            }
-            animal_manager = AnimalManager(temp_config, ModelManager(temp_config))
-
-            # generate videos with keypoints
-            keypoints = animal_manager.get_keypoints()
-            # keypoints are in the format of (n_frames, n_individuals, n_keypoints, 2)
-            for frame_number, keypoints_per_frame in enumerate(keypoints):
-                if frame_number > 5:
-                    break
-                cap = cv2.VideoCapture(video_file)
-                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
-                ret, frame = cap.read()
-                for keypoints in keypoints_per_frame:
-                    kp = np.nanmean(keypoints, axis=0)
-                    cv2.circle(frame, (int(kp[0]), int(kp[1])), 3, (0, 0, 255), -1)
-                cv2.imwrite(
-                    os.path.join(
-                        sanity_check_folder, f"{video_name}_{frame_number}.png"
-                    ),
-                    frame,
-                )
 
     def get_scene_visualization(
         self,
@@ -192,7 +150,7 @@ class VisualManager(Manager):
         """
         A function that returns the frame rate of the video.
         """
-        cap = cv2.VideoCapture(self.config["video_info"]["video_file_path"])
+        cap = cv2.VideoCapture(self.video_file_path)
         fps = cap.get(cv2.CAP_PROP_FPS)
         return fps
 
@@ -201,11 +159,11 @@ class VisualManager(Manager):
         self,
         render: bool = False,
         bodypart_names: Optional[List[str]] = None,
-        fig: Optional[plt.Figure] = None,
+        fig: Optional[Figure] = None,
         axs: Optional[plt.Axes] = None,
         average_keypoints: bool = True,
         frames: Optional[range] = None,
-        events: Optional[List[BaseEvent]] = None,
+        events: Optional[List[Event]] = [],
     ) -> None:
         """
         A function that visualizes the keypoints of the animals in the video. The
@@ -223,8 +181,8 @@ class VisualManager(Manager):
             ):
 
                 fig, axs = plt.subplots(
-                    self.animal_manager.get_n_individuals(),
-                    self.animal_manager.get_n_individuals() - 1,
+                    nrows=self.animal_manager.get_n_individuals(),
+                    ncols=self.animal_manager.get_n_individuals() - 1,
                     squeeze=False,
                 )
                 axs = np.atleast_1d(axs)
@@ -303,7 +261,7 @@ class VisualManager(Manager):
 
     def get_ethogram_visualization(
         self,
-        events: List[BaseEvent],
+        events: List[Event],
         verbose: bool = False,
         render: bool = False,
         axs: Optional[plt.Axes] = None,
@@ -316,14 +274,11 @@ class VisualManager(Manager):
 
         """
         fig, axs = plt.subplots(len(self.animal_manager.get_animals()), 1)
+
         axs = np.atleast_1d(axs)
         for idx, animal in enumerate(self.animal_manager.get_animals()):
             event_vis = EventVisualization(
-                axs[idx],
-                events,
-                animal.get_name(),
-                set(),
-                self.config["video_info"]["video_file_path"],
+                axs[idx], events, animal.get_name(), set(), self.video_file_path
             )
             axs[idx].set_ylabel(animal.get_name())
             event_vis.draw()
@@ -334,7 +289,7 @@ class VisualManager(Manager):
     # @register_core_api
     def get_animal_animal_visualization(
         self,
-        events: List[BaseEvent],
+        events: List[Event],
         render: bool = False,
         axs: Optional[plt.Axes] = None,
     ) -> None:
@@ -373,7 +328,7 @@ class VisualManager(Manager):
                             events,
                             sender_animal.get_name(),
                             set([receiver_animal.get_name()]),
-                            self.config["video_info"]["video_file_path"],
+                            self.video_file_path,
                         )
                         event_vis.draw()
             else:
@@ -389,11 +344,7 @@ class VisualManager(Manager):
                     if idx == 0:
                         axs[idx].set_ylabel(animal.get_name())
                     event_vis = EventVisualization(
-                        axs[idx],
-                        events,
-                        animal.get_name(),
-                        set(),
-                        self.config["video_info"]["video_file_path"],
+                        axs[idx], events, animal.get_name(), set(), self.video_file_path
                     )
                     event_vis.draw()
 
@@ -417,7 +368,7 @@ class VisualManager(Manager):
         return super().get_serializeable_list_names()
 
     def plot_chessboard_regions(self, frame: np.ndarray):
-        objects = self.object_manager.get_chessboard_region_objects()
+        objects = self.object_manager.get_grid_objects()
 
         for obj in objects:
             x_min, y_min, x_max, y_max = obj.x_min, obj.y_min, obj.x_max, obj.y_max
@@ -676,7 +627,7 @@ class VisualManager(Manager):
         return out_videos
 
     def generate_video_clips_from_events(
-        self, out_folder, events: List[BaseEvent], behavior_name
+        self, out_folder, events: List[Event], behavior_name
     ):
         """
         This function takes a list of events and generates video clips from the events
@@ -684,7 +635,7 @@ class VisualManager(Manager):
         2) For the same event on the same video, we plot the animal name and the "sender" of the event
         3) Then we write those videos to the disk
         """
-        video_file = self.config["video_info"]["video_file_path"]
+        video_file = self.video_file_path
 
         videoname = video_file.split("/")[-1].replace(".mp4", "").replace(".avi", "")
         video_name = f"{videoname}_{behavior_name}_video.mp4"
