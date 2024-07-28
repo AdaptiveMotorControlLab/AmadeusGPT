@@ -99,6 +99,7 @@ the key dependencies that need installed are:
 ```python
 pip install notebook
 conda install hdf5
+conda install pytables==3.8
 pip install amadeusgpt
 ```
 ## Citation
