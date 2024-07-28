@@ -128,7 +128,7 @@ AmadeusGPT is license under the Apache-2.0 license.
 - If you already have keypoint file corresponding to the video file, look how we set-up the config file in the Notebooks.  Right now we only support keypoint output from DeepLabCut.
 
 ## News
-- July 2024 0.1.0 is released! This is a major code update ...
+- July 2024 [v0.1.0](https://github.com/AdaptiveMotorControlLab/AmadeusGPT/releases/tag/v0.1.0) is released! This is a major code update ...
 - June 2024 as part of the CZI EOSS, The Kavli Foundation now supports this work! ✨
 - 🤩 Dec 2023, code released!
 - 🔥 Our work was accepted to NeuRIPS2023
