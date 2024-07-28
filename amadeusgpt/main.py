@@ -2,6 +2,7 @@ import warnings
 
 from amadeusgpt.config import Config
 from amadeusgpt.programs.sandbox import Sandbox
+import yaml
 ##########
 # all these are providing the customized classes for the code execution
 ##########
@@ -20,7 +21,7 @@ from amadeusgpt.programs.task_program_registry import TaskProgramLibrary
 
 
 class AMADEUS:
-    def __init__(self, config: Config, use_vlm=True):
+    def __init__(self, config: Config | dict, use_vlm=True):
         self.config = config
         ### fields that decide the behavior of the application
         self.use_self_debug = True
@@ -42,6 +43,9 @@ class AMADEUS:
         video_suffix = data_info["video_suffix"]
         video_file_paths = glob.glob(str(data_folder / f"*{video_suffix}"))
 
+        if len(video_file_paths) == 0:
+            print (f"No video files found in the data folder {data_folder}. Please check the data folder and the video suffix")
+            return 
         # optionally get the corresponding keypoint files
         keypoint_file_paths = self.get_DLC_keypoint_files(video_file_paths)
 
@@ -114,7 +118,13 @@ class AMADEUS:
         return qa_message
 
     def get_video_file_paths(self) -> list[str]:
-        return self.sandbox.video_file_paths
+        data_info = self.config["data_info"]
+        data_folder = data_info['data_folder']
+        video_suffix = data_info['video_suffix']
+        video_file_paths = glob.glob(os.path.join(data_folder, f"*{video_suffix}"))
+
+        return video_file_paths
+
     
     def get_keypoint_file_paths(self) -> list[str]:
         return self.sandbox.keypoint_file_paths
@@ -143,12 +153,11 @@ class AMADEUS:
         TaskProgramLibrary.register_task_program(creator=creator)(task_program)
 
     def get_messages(self):
-
         return self.sandbox.message_cache
 
     def get_task_programs(self):
         return TaskProgramLibrary.get_task_programs()
-
+                
 
 if __name__ == "__main__":
     from amadeusgpt.analysis_objects.llm import VisualLLM

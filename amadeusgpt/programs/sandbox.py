@@ -165,7 +165,7 @@ def wrap_instance_method(instance, method_name):
 class Sandbox(SandboxBase):
     def __init__(
         self,
-        config: Config,
+        config: Config | dict,
         video_file_paths: list[str],
         keypoint_file_paths: list[str],
     ):
