@@ -8,3 +8,4 @@ dependencies:
     - hdf5
     - pip
     - jupyter
+    - amadeusGPT
