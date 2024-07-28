@@ -7,7 +7,7 @@ name = "AmadeusGPT"
 readme = "README.md"
 requires-python = ">=3.10"
 dynamic = ["version"]
-version = "0.1.1rc1"
+version = "0.1.1rc2"
 
 [tool.setuptools]
 packages = ["amadeusgpt"]
