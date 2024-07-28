@@ -90,7 +90,8 @@ from amadeusgpt.utils import parse_result
 if 'OPENAI_API_KEY' not in os.environ:  
      os.environ['OPENAI_API_KEY'] = 'your key'
 
-# data folder contains video file and optionally keypoint files
+# data folder contains video files and optionally keypoint files
+# please pay attention to the naming convention as described above
 data_folder = "temp_data_folder"
 # where the results are saved 
 result_folder = "temp_result_folder"
