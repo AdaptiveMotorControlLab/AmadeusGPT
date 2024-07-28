@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 from amadeusgpt.integration_modules import *
 from amadeusgpt.main import AMADEUS
 from amadeusgpt.version import VERSION, __version__
-
+from amadeusgpt.project import create_project
 params = {
     "axes.labelsize": 10,
     "legend.fontsize": 10,
