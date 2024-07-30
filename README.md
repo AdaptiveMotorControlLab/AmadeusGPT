@@ -36,7 +36,7 @@ In our original work (NeurIPS 2023) we used GPT3.5 and GPT4 as part of our agent
 Conda is an easy-to-use Python interface that supports launching [Jupyter Notebooks](https://jupyter.org/). If you are completely new to this, we recommend checking out the [docs here for getting conda installed](https://deeplabcut.github.io/DeepLabCut/docs/beginner-guides/beginners-guide.html#beginner-user-guide). Otherwise, proceed to use one of [our supplied conda files](https://github.com/AdaptiveMotorControlLab/AmadeusGPT/tree/main/conda). As you will see we have minimal dependencies to get started, and [here is a simple step-by-step guide](https://deeplabcut.github.io/DeepLabCut/docs/installation.html#step-2-build-an-env-using-our-conda-file) you can reference for setting it up (or see [BONUS](README.md#bonus---customized-your-conda-env) below). Here is the quick start command:
 
 ```bash
-conda env create -f conda/amadeusGPT.yml
+conda env create -f amadeusGPT.yml
 ```
 To note, some modules AmadeusGPT can use benefit from GPU support, therefore we recommend also having an NVIDIA GPU available and installing CUDA. 
 
