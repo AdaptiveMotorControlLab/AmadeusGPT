@@ -110,9 +110,7 @@ class AnimalManager(Manager):
         elif self.keypoint_file_path.endswith(".json"):
             # could be coco format
             all_keypoints = self._process_keypoint_file_from_json()
-        elif self.keypoint_file_path.endswith(".npy"):
-            # assuming it's for 3D keypoints
-            all_keypoints = self._process_keypoint_file_from_npy()
+                   
         for individual_id in range(self.n_individuals):
             animal_name = f"animal_{individual_id}"
             # by default, we initialize all animals with the same keypoints and all the keypoint names
@@ -130,16 +128,7 @@ class AnimalManager(Manager):
                     self.config["keypoint_info"]["head_orientation_keypoints"]
                 )
 
-            self.animals.append(animalseq)
-
-    def _process_keypoint_file_from_npy(self) -> ndarray:
-
-        all_keypoints = np.load(self.keypoint_file_path)
-        # (n_frames, n_keypoints, 4 -> (x,y,z, confidence))
-        all_keypoints = all_keypoints[..., :3]
-
-        
-        return all_keypoints
+            self.animals.append(animalseq)   
 
     def _process_keypoint_file_from_h5(self) -> ndarray:
         df = pd.read_hdf(self.keypoint_file_path)
