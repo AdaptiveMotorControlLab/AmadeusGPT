@@ -6,5 +6,5 @@
 #
 # Licensed under Apache 2.0
 
-__version__ = "0.1.1rc2"
+__version__ = "0.1.1"
 VERSION = __version__
