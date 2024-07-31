@@ -2,7 +2,6 @@ import warnings
 
 from amadeusgpt.config import Config
 from amadeusgpt.programs.sandbox import Sandbox
-import yaml
 ##########
 # all these are providing the customized classes for the code execution
 ##########
@@ -21,7 +20,7 @@ from amadeusgpt.programs.task_program_registry import TaskProgramLibrary
 
 
 class AMADEUS:
-    def __init__(self, config: Config | dict, use_vlm=True):
+    def __init__(self, config: Config | dict, use_vlm=False):
         self.config = config
         ### fields that decide the behavior of the application
         self.use_self_debug = True

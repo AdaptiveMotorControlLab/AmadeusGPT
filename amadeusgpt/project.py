@@ -20,6 +20,12 @@ def create_project(data_folder,
             "temperature": 0.0,
             "keep_last_n_messages": 2
         },
+        "object_info": {
+            "load_objects_from_disk": False,
+            "use_grid_objects": False
+        },
+        "result_info" :{},
+        "video_info": {} 
     }
     # save the dictionary config to yaml
 
@@ -31,7 +37,7 @@ def create_project(data_folder,
         yaml.dump(config, f)
 
     print (f"Project created at {result_folder}. Results will be saved to {result_folder}")
-    print (f"The project will load video files (*.{video_suffix}) and optionally keypoint files from {data_folder}")        
+    print (f"The project will load video files (*{video_suffix}) and optionally keypoint files from {data_folder}")        
     print (f"A copy of the project config file is saved at {file_path}")
     pprint.pprint(config)
 

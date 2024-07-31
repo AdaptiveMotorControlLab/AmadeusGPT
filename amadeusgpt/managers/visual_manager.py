@@ -51,7 +51,7 @@ class VisualManager(Manager):
         self.object_manager = object_manager
 
     def get_scene_image(self):
-        scene_frame_index = self.config["video_info"]["scene_frame_number"]
+        scene_frame_index = self.config["video_info"].get("scene_frame_number", 1)
         cap = cv2.VideoCapture(self.video_file_path)
         cap.set(cv2.CAP_PROP_POS_FRAMES, scene_frame_index)
         ret, frame = cap.read()

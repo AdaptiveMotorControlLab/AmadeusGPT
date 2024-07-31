@@ -27,8 +27,8 @@ class AnimalSeq(Animal):
     body center, left, right, above, top are relative to the subset of keypoints.
     Attributes
     ----------
-    self._coords: arr potentially subset of keypoints
-    self.wholebody: full set of keypoints. This is important for overlap relationship
+    self.wholebody: np.ndarray of keypoints of all bodyparts
+    self.keypoint
     """
 
     def __init__(self, animal_name: str, keypoints: ndarray, keypoint_names: List[str]):
