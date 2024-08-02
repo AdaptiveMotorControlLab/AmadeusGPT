@@ -178,7 +178,7 @@ class Sandbox(SandboxBase):
 
         for video_file_path, keypoint_file_path in zip(
             self.video_file_paths, self.keypoint_file_paths
-        ):
+        ):          
             self.analysis_dict[video_file_path] = create_analysis(
                 Identifier(self.config, video_file_path, keypoint_file_path)
             )
