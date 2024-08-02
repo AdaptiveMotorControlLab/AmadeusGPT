@@ -24,6 +24,7 @@ def create_project(data_folder,
             "load_objects_from_disk": False,
             "use_grid_objects": False
         },
+        "keypoint_info": {},
         "result_info" :{},
         "video_info": {} 
     }
