@@ -17,7 +17,8 @@ def test_demo_data(template_name):
     assert len(video_file_paths) == 1
     assert len(keypoint_file_paths) == 1
     assert os.path.exists(os.path.join(config['data_info']['data_folder'], 'example.json'))
-
+    query = "plot the trajectory of the animal"
+    qa_message = amadeus.step(query)
 
 
 
