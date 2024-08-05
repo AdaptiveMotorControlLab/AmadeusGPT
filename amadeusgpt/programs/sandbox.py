@@ -222,6 +222,7 @@ class Sandbox(SandboxBase):
         }
         """
         for identifier, analysis in self.analysis_dict.items():
+
             scene_image = analysis.visual_manager.get_scene_image()
             json_obj = self.llms["visual_llm"].speak(self, scene_image)
             self.meta_info[identifier] = json_obj
