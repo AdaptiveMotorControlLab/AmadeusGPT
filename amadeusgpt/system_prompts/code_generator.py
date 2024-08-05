@@ -106,5 +106,5 @@ Importantly, before you write the code, you need to explain whether the question
 If the question can be answered by code:
 - YOU MUST only write one function and no other classes or functions when you write code.
 
-"""  
+"""
     return system_prompt

@@ -42,7 +42,7 @@ class VisualManager(Manager):
         super().__init__(identifier.config)
         self.config = identifier.config
         self.video_file_path = identifier.video_file_path
-        self.keypoint_file_path = identifier.keypoint_file_path        
+        self.keypoint_file_path = identifier.keypoint_file_path
 
         self.animal_manager = animal_manager
         self.object_manager = object_manager
@@ -218,7 +218,7 @@ class VisualManager(Manager):
                             self.animal_manager.get_n_individuals(),
                             average_keypoints=average_keypoints,
                             events=events,
-                            use_3d = self.config['keypoint_info'].get('use_3d', False)
+                            use_3d=self.config["keypoint_info"].get("use_3d", False),
                         )
                         scene_vis.draw()
                         keypoint_vis.draw()
@@ -231,12 +231,12 @@ class VisualManager(Manager):
                     fig, axs = plt.subplots(self.animal_manager.get_n_individuals())
                     axs = np.atleast_1d(axs)
 
-
                 for idx, sender_animal in enumerate(self.animal_manager.get_animals()):
-                    if not self.config['keypoint_info'].get('use_3d', False):
-                        
+                    if not self.config["keypoint_info"].get("use_3d", False):
+
                         scene_vis = self.get_scene_visualization(
-                            self.config["video_info"]["scene_frame_number"], axs=axs[idx]
+                            self.config["video_info"]["scene_frame_number"],
+                            axs=axs[idx],
                         )
                         scene_vis.draw()
 
@@ -258,7 +258,7 @@ class VisualManager(Manager):
                         average_keypoints=average_keypoints,
                         events=events,
                     )
-                    
+
                     keypoint_vis.draw()
 
         if render:
@@ -537,7 +537,9 @@ class VisualManager(Manager):
                 if time_slice[0] <= current_frame < time_slice[1]:
                     # select the keypoint based on the frame number
 
-                    if self.config['keypoint_info'].get('head_orientation_keypoints', False):
+                    if self.config["keypoint_info"].get(
+                        "head_orientation_keypoints", False
+                    ):
                         frame = self.sender_visual_cone_on_frame(
                             self.animal_manager.get_animal_by_name(sender_animal_name),
                             frame,

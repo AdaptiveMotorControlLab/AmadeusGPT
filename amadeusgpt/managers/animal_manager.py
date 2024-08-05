@@ -102,7 +102,7 @@ class AnimalManager(Manager):
             self.superanimal_name = None
 
     def init_pose(self):
-        
+
         if not os.path.exists(self.keypoint_file_path):
             # no need to initialize here
             return
@@ -111,7 +111,7 @@ class AnimalManager(Manager):
             all_keypoints = self._process_keypoint_file_from_h5()
         elif self.keypoint_file_path.endswith(".json"):
             # could be coco format
-            all_keypoints = self._process_keypoint_file_from_json()       
+            all_keypoints = self._process_keypoint_file_from_json()
         for individual_id in range(self.n_individuals):
             animal_name = f"animal_{individual_id}"
             # by default, we initialize all animals with the same keypoints and all the keypoint names
@@ -119,12 +119,18 @@ class AnimalManager(Manager):
             animalseq = AnimalSeq(
                 animal_name, all_keypoints[:, individual_id], self.keypoint_names
             )
-            if self.config["keypoint_info"] and "body_orientation_keypoints" in self.config["keypoint_info"]:
+            if (
+                self.config["keypoint_info"]
+                and "body_orientation_keypoints" in self.config["keypoint_info"]
+            ):
                 animalseq.set_body_orientation_keypoints(
                     self.config["keypoint_info"]["body_orientation_keypoints"]
                 )
 
-            if self.config["keypoint_info"] and "head_orientation_keypoints" in self.config["keypoint_info"]:
+            if (
+                self.config["keypoint_info"]
+                and "head_orientation_keypoints" in self.config["keypoint_info"]
+            ):
                 animalseq.set_head_orientation_keypoints(
                     self.config["keypoint_info"]["head_orientation_keypoints"]
                 )
@@ -145,10 +151,13 @@ class AnimalManager(Manager):
         self.n_kpts = len(self.keypoint_names)
 
         # whether to keep the 3rd dimension in the last axis
-        if self.config['keypoint_info'].get('use_3d', False) == True or self.config['keypoint_info'].get('include_confidence', False) == True:
-           df_array = df.to_numpy().reshape(
+        if (
+            self.config["keypoint_info"].get("use_3d", False) == True
+            or self.config["keypoint_info"].get("include_confidence", False) == True
+        ):
+            df_array = df.to_numpy().reshape(
                 (self.n_frames, self.n_individuals, self.n_kpts, -1)
-              )
+            )
         else:
             df_array = df.to_numpy().reshape(
                 (self.n_frames, self.n_individuals, self.n_kpts, -1)

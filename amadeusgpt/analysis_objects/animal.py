@@ -120,10 +120,10 @@ class AnimalSeq(Animal):
 
     def get_ymax(self):
         return np.nanmax(self.keypoints[..., 1], axis=1)
-    
+
     def get_zmin(self):
         return np.nanmin(self.keypoints[..., 2], axis=1)
-    
+
     def get_zmax(self):
         return np.nanmax(self.keypoints[..., 2], axis=1)
 

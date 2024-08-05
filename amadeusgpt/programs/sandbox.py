@@ -176,14 +176,14 @@ class Sandbox(SandboxBase):
         self.namespace_dict = {}
         self.analysis_dict = {}
         self.identifiers = []
-       
+
         for video_file_path, keypoint_file_path in zip(
             self.video_file_paths, self.keypoint_file_paths
-        ):      
-            identifier =  Identifier(self.config, video_file_path, keypoint_file_path)
+        ):
+            identifier = Identifier(self.config, video_file_path, keypoint_file_path)
             self.identifiers.append(identifier)
-            self.analysis_dict[identifier] = create_analysis(identifier)                                
-            self.namespace_dict[identifier] = {"__builtins__": __builtins__}        
+            self.analysis_dict[identifier] = create_analysis(identifier)
+            self.namespace_dict[identifier] = {"__builtins__": __builtins__}
         # update_namespace initializes behavior analysis
 
         self.update_namespace()
@@ -221,8 +221,8 @@ class Sandbox(SandboxBase):
         "background_objects": ["laboratory equipment", "white surface", "colored dots"]
         }
         """
-        for identifier, analysis in self.analysis_dict.items():           
-            scene_image = analysis.visual_manager.get_scene_image()           
+        for identifier, analysis in self.analysis_dict.items():
+            scene_image = analysis.visual_manager.get_scene_image()
             json_obj = self.llms["visual_llm"].speak(self, scene_image)
             self.meta_info[identifier] = json_obj
             # configure meta info on the analysis managers
@@ -286,10 +286,12 @@ The usage and the parameters of the functions are provided."""
     def update_namespace(self):
         # we need to manage the scope of the session
         # there are potentially new variables, new task programs, new apis
-        for video_file_path, keypoint_file_path in zip(self.video_file_paths, self.keypoint_file_paths):
+        for video_file_path, keypoint_file_path in zip(
+            self.video_file_paths, self.keypoint_file_paths
+        ):
             identifier = Identifier(self.config, video_file_path, keypoint_file_path)
             analysis = self.analysis_dict[identifier]
-            namespace = self.namespace_dict[identifier]            
+            namespace = self.namespace_dict[identifier]
             for api in self.api_registry.values():
                 f = wrap_instance_method(analysis, api["name"])
                 namespace[api["name"]] = f
@@ -321,7 +323,7 @@ The usage and the parameters of the functions are provided."""
             # to allow the program to access existing task programs
             namespace["task_programs"] = TaskProgramLibrary.get_task_programs()
 
-    def code_execution(self, qa_message: QA_Message, debug = True) -> QA_Message:
+    def code_execution(self, qa_message: QA_Message, debug=True) -> QA_Message:
         # update the namespace in the beginning of code execution makes sure that
         # if there is a change in the config, we always use the newest config
         self.update_namespace()
@@ -338,7 +340,7 @@ The usage and the parameters of the functions are provided."""
             if code is None:
                 continue
             exec(code, namespace)
-            
+
             # call the main function
             function_name = self.get_function_name_from_string(code)
             call_str = f"{function_name}(identifier)"
@@ -346,7 +348,6 @@ The usage and the parameters of the functions are provided."""
                 exec(f"result = {call_str}", namespace)
                 qa_message.error_message[identifier] = None
             except Exception as e:
-
 
                 print("error occurs in code execution")
                 # use traceback to get full error
@@ -356,12 +357,8 @@ The usage and the parameters of the functions are provided."""
 
                 if not debug:
                     return qa_message
-                qa_message = self.llms["self_debug"].speak(
-                                qa_message
-                            )
-                qa_message = self.code_execution(
-                                qa_message
-                            )
+                qa_message = self.llms["self_debug"].speak(qa_message)
+                qa_message = self.code_execution(qa_message)
                 return qa_message
             result = namespace["result"]
             qa_message.function_rets[identifier] = result
@@ -416,7 +413,9 @@ The usage and the parameters of the functions are provided."""
         if the function returns is a tuple of axe and figure, we put them into the plots filed
         """
 
-        for video_file_path, keypoint_file_path in zip(self.video_file_paths, self.keypoint_file_paths):
+        for video_file_path, keypoint_file_path in zip(
+            self.video_file_paths, self.keypoint_file_paths
+        ):
             identifier = Identifier(self.config, video_file_path, keypoint_file_path)
 
             namespace = self.namespace_dict[identifier]
@@ -451,12 +450,10 @@ The usage and the parameters of the functions are provided."""
                                     bodypart_names=bodypart_names, events=e
                                 )
                             )
-                            qa_message.out_videos[identifier] = (
-                                self.events_to_videos(
-                                    identifier,
-                                    e,
-                                    self.get_function_name_from_string(qa_message.code),
-                                )
+                            qa_message.out_videos[identifier] = self.events_to_videos(
+                                identifier,
+                                e,
+                                self.get_function_name_from_string(qa_message.code),
                             )
 
             elif (

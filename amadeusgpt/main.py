@@ -15,16 +15,13 @@ from pathlib import Path
 
 from amadeusgpt.analysis_objects.llm import (CodeGenerationLLM, SelfDebugLLM,
                                              VisualLLM)
+from amadeusgpt.behavior_analysis.identifier import Identifier
 from amadeusgpt.integration_module_hub import IntegrationModuleHub
 from amadeusgpt.programs.task_program_registry import TaskProgramLibrary
-from amadeusgpt.behavior_analysis.identifier import Identifier
 
 
 class AMADEUS:
-    def __init__(self, 
-                    config: Config | dict, 
-                 use_vlm=False, 
-                 movie2keypoint_func=None):
+    def __init__(self, config: Config | dict, use_vlm=False, movie2keypoint_func=None):
         self.config = config
         ### fields that decide the behavior of the application
         self.use_self_debug = True
@@ -40,11 +37,13 @@ class AMADEUS:
         ### For the sake of multiple animal, we store multiple sandboxes
         ### the example {video_file_path : sandbox }
         self.result_folder: str = config["data_info"]["result_folder"]
-        self.data_folder = config["data_info"]['data_folder']
+        self.data_folder = config["data_info"]["data_folder"]
         self.video_suffix = config["data_info"]["video_suffix"]
-       
-        self.video_file_paths, self.keypoint_file_paths = self.fetch_data_from_data_folder(movie2keypoint_func)    
-              
+
+        self.video_file_paths, self.keypoint_file_paths = (
+            self.fetch_data_from_data_folder(movie2keypoint_func)
+        )
+
         self.sandbox = Sandbox(config, self.video_file_paths, self.keypoint_file_paths)
 
         self.code_generator_llm = CodeGenerationLLM(config)
@@ -78,10 +77,12 @@ class AMADEUS:
             a list of video file paths
         keypoint_file_paths: list[str]
             a list of keypoint file paths
-        
+
         """
         video_files = glob.glob(os.path.join(self.data_folder, f"*{self.video_suffix}"))
-        video_files = [video_file for video_file in video_files if "labeled" not in video_file]
+        video_files = [
+            video_file for video_file in video_files if "labeled" not in video_file
+        ]
         keypoint_files = glob.glob(os.path.join(self.data_folder, "*.h5"))
         # case 1
         if movie2keypoint_func is None:
@@ -92,26 +93,28 @@ class AMADEUS:
                 return video_files, self.get_DLC_keypoint_files(video_files)
             # case 3
             elif len(video_files) > 1 and len(keypoint_files) == 1:
-                print ("We assume this is 3D data with multiple video files and one keypoint file")
+                print(
+                    "We assume this is 3D data with multiple video files and one keypoint file"
+                )
                 return video_files, [keypoint_files[0]] * len(video_files)
             # case 4
             elif len(video_files) == 0 and len(keypoint_files) == 0:
-                raise ValueError("No video files and keypoint files found in the data folder")
+                raise ValueError(
+                    "No video files and keypoint files found in the data folder"
+                )
             # case 5
             elif len(video_files) == 0 and len(keypoint_files) > 0:
-                print ("No video found. We proceed with the keypoint file only")
+                print("No video found. We proceed with the keypoint file only")
                 return [""] * len(keypoint_files), keypoint_files
             else:
                 return video_files, keypoint_files
         else:
             if len(video_files) > 0:
-                return video_files, [movie2keypoint_func(video_file) for video_file in video_files]
+                return video_files, [
+                    movie2keypoint_func(video_file) for video_file in video_files
+                ]
             else:
                 raise ValueError("No video files found in the data folder")
-
-
-
-
 
     def get_DLC_keypoint_files(self, video_file_paths: list[str]):
         ret = []
@@ -149,7 +152,7 @@ class AMADEUS:
 
     def step(self, user_query: str) -> QA_Message:
         integration_module_names = self.match_integration_module(user_query)
-    
+
         self.sandbox.update_matched_integration_modules(integration_module_names)
         qa_message = self.sandbox.llm_step(user_query)
 
@@ -157,14 +160,13 @@ class AMADEUS:
 
     def get_video_file_paths(self) -> list[str]:
         return self.video_file_paths
-    
+
     def get_keypoint_file_paths(self) -> list[str]:
         return self.keypoint_file_paths
 
-    def get_behavior_analysis(self, 
-                              video_file_path: str = "",
-                              keypoint_file_path: str = ""):
-
+    def get_behavior_analysis(
+        self, video_file_path: str = "", keypoint_file_path: str = ""
+    ):
         """
         Every sandbox stores a unique "behavior analysis" instance in its namespace
         Therefore, get analysis gets the current sandbox's analysis.
@@ -193,7 +195,7 @@ class AMADEUS:
 
     def get_task_programs(self):
         return TaskProgramLibrary.get_task_programs()
-                
+
 
 if __name__ == "__main__":
     from amadeusgpt.analysis_objects.llm import VisualLLM

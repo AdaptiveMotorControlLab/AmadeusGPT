@@ -1,5 +1,6 @@
 import matplotlib.path as mpath
 import numpy as np
+
 from .base import AnalysisObject
 
 
@@ -141,6 +142,7 @@ class SegObject(Object):
         _seg: dict = self.masks.get("segmentation")
         # this is rle format
         from pycocotools import mask as mask_decoder
+
         if "counts" in _seg:
             self.segmentation = mask_decoder.decode(_seg)
         else:

@@ -12,8 +12,8 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from PIL import Image
 from mpl_toolkits.mplot3d import Axes3D
+from PIL import Image
 from scipy.signal import medfilt
 
 from amadeusgpt.analysis_objects.event import get_fps, get_video_length
@@ -288,9 +288,9 @@ class KeypointVisualization(MatplotlibVisualization):
                 continue
 
             if not kwargs.get("use_3d", False):
-                x, y = masked_data[:, 0], masked_data[:, 1]      
-                _mask = (x!=0) & (y!=0)
-                
+                x, y = masked_data[:, 0], masked_data[:, 1]
+                _mask = (x != 0) & (y != 0)
+
                 x = x[_mask]
                 y = y[_mask]
                 if len(x) < 1:
@@ -322,10 +322,9 @@ class KeypointVisualization(MatplotlibVisualization):
                     **kwargs,
                 )
             else:
-                #TODO
+                # TODO
                 # implement 3d event plot
                 pass
-
 
         return self.axs
 

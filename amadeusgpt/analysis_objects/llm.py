@@ -262,8 +262,8 @@ class VisualLLM(LLM):
         response = self.connect_gpt(self.context_window, max_tokens=2000)
         text = response.choices[0].message.content.strip()
 
-        print ('description of the image frame provided')
-        print (text)
+        print("description of the image frame provided")
+        print(text)
 
         pattern = r"```json(.*?)```"
         if len(re.findall(pattern, text, re.DOTALL)) == 0:
@@ -311,7 +311,7 @@ class CodeGenerationLLM(LLM):
             keypoint_names,
             object_names,
             animal_names,
-        )  
+        )
 
         self.update_history("system", self.system_prompt)
 
@@ -339,10 +339,10 @@ class CodeGenerationLLM(LLM):
         with open("temp_answer.json", "w") as f:
             obj = {}
             obj["chain_of_thought"] = text
-            obj['code'] = function_code
-            obj['video_file_paths'] = sandbox.video_file_paths
-            obj['keypoint_file_paths'] = sandbox.keypoint_file_paths
-            obj['config'] = str(sandbox.config)
+            obj["code"] = function_code
+            obj["video_file_paths"] = sandbox.video_file_paths
+            obj["keypoint_file_paths"] = sandbox.keypoint_file_paths
+            obj["config"] = str(sandbox.config)
             json.dump(obj, f, indent=4)
 
         return qa_message
