@@ -17,10 +17,14 @@ from amadeusgpt.analysis_objects.llm import (CodeGenerationLLM, SelfDebugLLM,
                                              VisualLLM)
 from amadeusgpt.integration_module_hub import IntegrationModuleHub
 from amadeusgpt.programs.task_program_registry import TaskProgramLibrary
+from amadeusgpt.behavior_analysis.identifier import Identifier
 
 
 class AMADEUS:
-    def __init__(self, config: Config | dict, use_vlm=False):
+    def __init__(self, 
+                    config: Config | dict, 
+                 use_vlm=False, 
+                 movie2keypoint_func=None):
         self.config = config
         ### fields that decide the behavior of the application
         self.use_self_debug = True
@@ -35,28 +39,17 @@ class AMADEUS:
 
         ### For the sake of multiple animal, we store multiple sandboxes
         ### the example {video_file_path : sandbox }
-        data_info = config["data_info"]
-        self.result_folder: str = data_info["result_folder"]
+        self.result_folder: str = config["data_info"]["result_folder"]
+        self.data_folder = config["data_info"]['data_folder']
+        self.video_suffix = config["data_info"]["video_suffix"]
+       
+        self.video_file_paths, self.keypoint_file_paths = self.fetch_data_from_data_folder(movie2keypoint_func)    
+              
+        self.sandbox = Sandbox(config, self.video_file_paths, self.keypoint_file_paths)
 
-        data_folder = Path(data_info["data_folder"])
-        video_suffix = data_info["video_suffix"]
-        video_file_paths = glob.glob(str(data_folder / f"*{video_suffix}"))
-
-        if len(video_file_paths) == 0:
-            print (f"No video files found in the data folder {data_folder}. Please check the data folder and the video suffix")
-            return 
-        # optionally get the corresponding keypoint files
-        keypoint_file_paths = self.get_DLC_keypoint_files(video_file_paths)
-
-        assert len(video_file_paths) == len(
-            keypoint_file_paths
-        ), "The number of video files and keypoint files should be the same"
-
-        self.sandbox = Sandbox(config, video_file_paths, keypoint_file_paths)
-
-        self.code_generator_llm = CodeGenerationLLM(config.get("llm_info", {}))
-        self.self_debug_llm = SelfDebugLLM(config.get("llm_info", {}))
-        self.visual_llm = VisualLLM(config.get("llm_info", {}))
+        self.code_generator_llm = CodeGenerationLLM(config)
+        self.self_debug_llm = SelfDebugLLM(config)
+        self.visual_llm = VisualLLM(config)
 
         ####
 
@@ -70,6 +63,55 @@ class AMADEUS:
         # can only do this after the register process
         if use_vlm:
             self.sandbox.configure_using_vlm()
+
+    def fetch_data_from_data_folder(self, movie2keypoint_func):
+        """
+        1) video file exists, keypoint file does not exist
+        2) video file and keypoint file both exist and one-to-one mapping
+        3) many video files and one keypoint file (many-to-one mapping), perhaps for 3D data
+        4) none of video file and keypoint file exist
+        5) only keypoint file exists
+
+        Returns
+        -------
+        video_file_paths: list[str]
+            a list of video file paths
+        keypoint_file_paths: list[str]
+            a list of keypoint file paths
+        
+        """
+        video_files = glob.glob(os.path.join(self.data_folder, f"*{self.video_suffix}"))
+        video_files = [video_file for video_file in video_files if "labeled" not in video_file]
+        keypoint_files = glob.glob(os.path.join(self.data_folder, "*.h5"))
+        # case 1
+        if movie2keypoint_func is None:
+            if len(video_files) > 0 and len(keypoint_files) == 0:
+                return video_files, [""] * len(video_files)
+            # case 2
+            elif len(video_files) > 0 and len(video_files) == len(keypoint_files):
+                return video_files, self.get_DLC_keypoint_files(video_files)
+            # case 3
+            elif len(video_files) > 1 and len(keypoint_files) == 1:
+                print ("We assume this is 3D data with multiple video files and one keypoint file")
+                return video_files, [keypoint_files[0]] * len(video_files)
+            # case 4
+            elif len(video_files) == 0 and len(keypoint_files) == 0:
+                raise ValueError("No video files and keypoint files found in the data folder")
+            # case 5
+            elif len(video_files) == 0 and len(keypoint_files) > 0:
+                print ("No video found. We proceed with the keypoint file only")
+                return [""] * len(keypoint_files), keypoint_files
+            else:
+                return video_files, keypoint_files
+        else:
+            if len(video_files) > 0:
+                return video_files, [movie2keypoint_func(video_file) for video_file in video_files]
+            else:
+                raise ValueError("No video files found in the data folder")
+
+
+
+
 
     def get_DLC_keypoint_files(self, video_file_paths: list[str]):
         ret = []
@@ -107,33 +149,28 @@ class AMADEUS:
 
     def step(self, user_query: str) -> QA_Message:
         integration_module_names = self.match_integration_module(user_query)
-
-        # print ('integration modules?')
-        # print (integration_module_names)
-
+    
         self.sandbox.update_matched_integration_modules(integration_module_names)
         qa_message = self.sandbox.llm_step(user_query)
 
         return qa_message
 
     def get_video_file_paths(self) -> list[str]:
-        data_info = self.config["data_info"]
-        data_folder = data_info['data_folder']
-        video_suffix = data_info['video_suffix']
-        video_file_paths = glob.glob(os.path.join(data_folder, f"*{video_suffix}"))
-
-        return video_file_paths
-
+        return self.video_file_paths
     
     def get_keypoint_file_paths(self) -> list[str]:
-        return self.sandbox.keypoint_file_paths
+        return self.keypoint_file_paths
 
-    def get_behavior_analysis(self, video_file_path: str):
+    def get_behavior_analysis(self, 
+                              video_file_path: str = "",
+                              keypoint_file_path: str = ""):
+
         """
         Every sandbox stores a unique "behavior analysis" instance in its namespace
         Therefore, get analysis gets the current sandbox's analysis.
         """
-        analysis = self.sandbox.namespace_dict[video_file_path]["behavior_analysis"]
+        identifier = Identifier(self.config, video_file_path, keypoint_file_path)
+        analysis = self.sandbox.namespace_dict[identifier]["behavior_analysis"]
 
         return analysis
 

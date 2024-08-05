@@ -26,8 +26,7 @@ def create_project(data_folder,
         "keypoint_info": {"use_3d": False,
                           "include_confidence": False,
                           },
-        "result_info" :{},
-        "video_info": {} 
+        "video_info": {"scene_frame_number": 1} 
     }
     # save the dictionary config to yaml
 

@@ -95,8 +95,6 @@ class AnimalSeq(Animal):
         return mpath.Path(verts, codes)
 
     def get_keypoints(self, average_keypoints=False) -> ndarray:
-        # the shape should be (n_frames, n_keypoints, 2)
-        # extending to 3D?
         assert (
             len(self.keypoints.shape) == 3
         ), f"keypoints shape is {self.keypoints.shape}"
@@ -122,6 +120,12 @@ class AnimalSeq(Animal):
 
     def get_ymax(self):
         return np.nanmax(self.keypoints[..., 1], axis=1)
+    
+    def get_zmin(self):
+        return np.nanmin(self.keypoints[..., 2], axis=1)
+    
+    def get_zmax(self):
+        return np.nanmax(self.keypoints[..., 2], axis=1)
 
     def get_keypoint_names(self):
         return self.keypoint_names

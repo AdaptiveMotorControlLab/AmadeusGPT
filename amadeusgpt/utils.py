@@ -215,8 +215,11 @@ def create_qa_message(query: str, video_file_paths: list[str]) -> QA_Message:
 from IPython.display import Markdown, Video, display
 
 
-def parse_result(amadeus, qa_message):
-    display(Markdown(qa_message.chain_of_thought))
+def parse_result(amadeus, qa_message, use_ipython = True):
+    if use_ipython:
+        display(Markdown(qa_message.chain_of_thought))
+    else:
+        print (qa_message.chain_of_thought)
     sandbox = amadeus.sandbox
     qa_message = sandbox.code_execution(qa_message)
     qa_message = sandbox.render_qa_message(qa_message)
@@ -225,13 +228,16 @@ def parse_result(amadeus, qa_message):
         print(
             "Open it with media player if it does not properly display in the notebook"
         )
-        if len(qa_message.out_videos) > 0:
-            for video_path, event_videos in qa_message.out_videos.items():
-                for event_video in event_videos:
-                    display(Video(event_video, embed=True))
+        if use_ipython:
+            if len(qa_message.out_videos) > 0:
+                for video_path, event_videos in qa_message.out_videos.items():
+                    for event_video in event_videos:
+                        display(Video(event_video, embed=True))
 
-    if len(qa_message.function_rets) > 0:
-        for video_file_path in qa_message.function_rets:
-            display(Markdown(str(qa_message.function_rets[video_file_path])))
+    if use_ipython:
+        if len(qa_message.function_rets) > 0:
+            for video_file_path in qa_message.function_rets:
+                display(Markdown(str(qa_message.function_rets[video_file_path])))
+    
 
     return qa_message

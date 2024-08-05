@@ -6,11 +6,12 @@ def code_related_prompt(
     object_names,
     animal_names,
 ):
-
-    image_h, image_w = scene_image.shape[:2]
+    if scene_image is not None:
+        image_h, image_w = scene_image.shape[:2]
+    else:
+        image_h, image_w = "not available", "not available"
 
     prompt = f"""
-
 We provide you additionl apis and task programs to help you write code.    
 
 coreapidocs: this block contains information about the core apis for class AnimalBehaviorAnalysis. They do not contain implementation details but you can use them to write code
@@ -77,6 +78,8 @@ RULES:
 7) if your plotting code plots coordinates of keypoints, make sure you invert y axis so that the plot is consistent with the image
 8) make sure the xlim and ylim covers the whole image. The image (h,w) is ({image_h},{image_w})    
 9) Do not define your own objects (including grid objects). Only use  objects that are given to you.
+10) You MUST use the index from get_keypoint_names to access the keypoint data of specific keyponit names. Do not assume the order of the bodypart.
+11) You MUST call functions in api docs on the analysis object.
 """
     return prompt
 
@@ -92,7 +95,6 @@ def _get_system_prompt(
     system_prompt = f""" 
 You are helpful AI assistant. Your job is to answer user queries. 
 Importantly, before you write the code, you need to explain whether the question can be answered accurately by code. If not,  ask users to give more information.
-
 {code_related_prompt(core_api_docs, 
                         task_program_docs,
                         scene_image,
@@ -104,6 +106,5 @@ Importantly, before you write the code, you need to explain whether the question
 If the question can be answered by code:
 - YOU MUST only write one function and no other classes or functions when you write code.
 
-"""
-
+"""  
     return system_prompt

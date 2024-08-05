@@ -102,8 +102,7 @@ class AnimalManager(Manager):
             self.superanimal_name = None
 
     def init_pose(self):
-
-        print ('self.keypoint_file_path', self.keypoint_file_path)
+        
         if not os.path.exists(self.keypoint_file_path):
             # no need to initialize here
             return
@@ -145,9 +144,15 @@ class AnimalManager(Manager):
         self.n_frames = df.shape[0]
         self.n_kpts = len(self.keypoint_names)
 
-        df_array = df.to_numpy().reshape(
-            (self.n_frames, self.n_individuals, self.n_kpts, -1)
-        )[..., :2]
+        # whether to keep the 3rd dimension in the last axis
+        if self.config['keypoint_info'].get('use_3d', False) == True or self.config['keypoint_info'].get('include_confidence', False) == True:
+           df_array = df.to_numpy().reshape(
+                (self.n_frames, self.n_individuals, self.n_kpts, -1)
+              )
+        else:
+            df_array = df.to_numpy().reshape(
+                (self.n_frames, self.n_individuals, self.n_kpts, -1)
+            )[..., :2]
 
         df_array = reject_outlier_keypoints(df_array)
         df_array = ast_fillna_2d(df_array)
@@ -257,7 +262,9 @@ class AnimalManager(Manager):
     @register_core_api
     def get_keypoints(self) -> ndarray:
         """
-        Get the keypoints of animals. The shape is of shape  n_frames, n_individuals, n_kpts, n_dims
+        Get the keypoints of animals. The keypoints are of shape  (n_frames, n_individuals, n_kpts, n_dims)
+        n_dims is 2 (x,y) for 2D keypoints and 3 (x,y,z) for 3D keypoints.
+        Do not forget the n_individuals dimension. If there is only one animal, the n_individuals dimension is 1.
         Optionally, you can pass a list of events to filter the keypoints based on the events.
         """
 
@@ -312,7 +319,7 @@ class AnimalManager(Manager):
     @register_core_api
     def get_velocity(self) -> ndarray:
         """
-        Get the velocity. The shape is (n_frames, n_individuals, n_kpts, 2) # 2 is the x and y components
+        Get the velocity. The shape is (n_frames, n_individuals, n_kpts, n_dim) n_dim is 2 or 3
         The velocity is a vector.
         """
         return np.stack([animal.get_velocity() for animal in self.animals], axis=1)
@@ -344,7 +351,7 @@ class AnimalManager(Manager):
     @register_core_api
     def get_keypoint_names(self) -> List[str]:
         """
-        Get the names of the bodyparts.
+        Get the names of the bodyparts. This is used to index the keypoints for a specific bodypart.
         """
         # this is to initialize
         self.get_keypoints()
