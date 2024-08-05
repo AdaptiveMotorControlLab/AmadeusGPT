@@ -14,8 +14,10 @@ def test_superanimal():
 
     config = create_project(data_folder, result_folder, **kwargs)
     amadeus = AMADEUS(config, use_vlm=True)
-    qa_message = amadeus.step("plot the trajectory")
-    parse_result(amadeus, qa_message, use_ipython=False)   
+    behavior_analysis = amadeus.get_behavior_analysis(video_file_path=amadeus.get_video_file_paths()[0])
+    keypoints = behavior_analysis.get_keypoints()
+    assert keypoints.shape == (5, 1, 27, 2)
+
 
 if __name__ == "__main__":
     test_superanimal()
