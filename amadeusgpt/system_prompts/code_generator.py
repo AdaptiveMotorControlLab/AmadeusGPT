@@ -13,9 +13,13 @@ def code_related_prompt(
         image_h, image_w = "not available", "not available"
 
     if use_3d:
-        keypoint_description = "the last axis of the keypoint data is 3, which means it is 3D keypoint data. They are x,y,z coordinates and y is the height and z is the depth"
+        keypoint_description = """
+the last axis of the keypoint data is 3, which means it is 3D keypoint data. They are x,y,z coordinates and y is the height and z is the depth. 
+The higher the z value, the further the object is to the camera. 
+The higher the y value, the higher the object is in the image. Saying object A is higher than object B means the y value of object A is higher than object B.
+        """
     else:
-        keypoint_description = "the last axis of the keypoint data is 2, which means it is 2D keypoint data. They are x,y coordinates. The x axis is the width and y axis is the height"
+        keypoint_description = "the last axis of the keypoint data is 2, which means it is 2D keypoint data. They are x,y coordinates. The x axis is the width and y axis is the height. The higher the y value, the higher the object is in the image.  "
     prompt = f"""
 We provide you additionl apis and task programs to help you write code.    
 
@@ -81,7 +85,7 @@ RULES:
 4) Make sure you do not import any libraries in your code. All needed libraries are imported already.
 5) Make sure you disintuigh positional and keyword arguments when you call functions in api docs
 6) If you are writing code that uses matplotlib to plot, make sure you comment shape of the data to be plotted to double-check
-7) if your plotting code plots coordinates of keypoints, make sure you invert y axis so that the plot is consistent with the image
+7) if your plotting code plots coordinates of keypoints, make sure you invert y axis (only during plotting) so that the plot is consistent with the image
 8) make sure the xlim and ylim covers the whole image. The image (h,w) is ({image_h},{image_w})    
 9) Do not define your own objects (including grid objects). Only use  objects that are given to you.
 10) You MUST use the index from get_keypoint_names to access the keypoint data of specific keyponit names. Do not assume the order of the bodypart.
