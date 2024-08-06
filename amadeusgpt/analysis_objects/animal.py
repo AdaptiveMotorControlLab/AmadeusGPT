@@ -4,7 +4,6 @@ import matplotlib.path as mpath
 import numpy as np
 from numpy import ndarray
 from scipy.spatial import ConvexHull
-
 from amadeusgpt.analysis_objects.object import Object
 
 
@@ -129,6 +128,7 @@ class AnimalSeq(Animal):
 
     def get_keypoint_names(self):
         return self.keypoint_names
+    
 
     def query_states(self, query: str) -> ndarray:
         assert query in [

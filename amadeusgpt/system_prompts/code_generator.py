@@ -14,9 +14,9 @@ def code_related_prompt(
 
     if use_3d:
         keypoint_description = """
-the last axis of the keypoint data is 3, which means it is 3D keypoint data. They are x,y,z coordinates and y is the height and z is the depth. 
-The higher the z value, the further the object is to the camera. 
-The higher the y value, the higher the object is in the image. Saying object A is higher than object B means the y value of object A is higher than object B.
+the last axis of the keypoint data is 3, which means it is 3D keypoint data. They are x,y,z coordinates and y is the depth and z is the height. 
+The higher the y value, the further the object is to the camera. 
+The higher the z value, the higher the object is in the image. 
         """
     else:
         keypoint_description = "the last axis of the keypoint data is 2, which means it is 2D keypoint data. They are x,y coordinates. The x axis is the width and y axis is the height. The higher the y value, the higher the object is in the image.  "

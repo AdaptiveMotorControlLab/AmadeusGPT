@@ -14,7 +14,7 @@ from amadeusgpt.programs.api_registry import (register_class_methods,
                                               register_core_api)
 
 from .base import Manager
-
+from scipy.interpolate import interp1d
 
 def get_orientation_vector(cls, b1_name, b2_name):
     b1 = cls.get_keypoints()[:, :, cls.get_bodypart_index(b1_name), :]
@@ -22,34 +22,45 @@ def get_orientation_vector(cls, b1_name, b2_name):
     return b1 - b2
 
 
-def ast_fillna_2d(arr: ndarray) -> ndarray:
+def interpolate_keypoints(keypoints):
     """
-    Fills NaN values in a 4D keypoints array using linear interpolation.
-
+    Interpolate missing (NaN or 0) keypoints in neighboring frames.
+    
     Parameters:
-    arr (np.ndarray): A 4D numpy array of shape (n_frames, n_individuals, n_kpts, n_dims).
-
+    keypoints (numpy array): Array of shape (n_frames, n_individuals, n_keypoints, n_dim).
+    
     Returns:
-    np.ndarray: The 4D array with NaN values filled.
+    numpy array: Interpolated keypoints array.
     """
-    n_frames, n_individuals, n_kpts, n_dims = arr.shape
-    arr_reshaped = arr.reshape(n_frames, -1)
-    x = np.arange(n_frames)
-    for i in range(arr_reshaped.shape[1]):
-        valid_mask = ~np.isnan(arr_reshaped[:, i])
-        if np.all(valid_mask):
-            continue
-        elif np.any(valid_mask):
-            # Perform interpolation when there are some valid points
-            arr_reshaped[:, i] = np.interp(
-                x, x[valid_mask], arr_reshaped[valid_mask, i]
-            )
-        else:
-            # Handle the case where all values are NaN
-            # Replace with a default value or another suitable handling
-            arr_reshaped[:, i].fill(0)  # Example: filling with 0
-
-    return arr_reshaped.reshape(n_frames, n_individuals, n_kpts, n_dims)
+    n_frames, n_individuals, n_keypoints, n_dim = keypoints.shape
+    
+    # Replace zeros with NaNs for interpolation purposes
+    keypoints[keypoints == 0] = np.nan
+    
+    # Function to interpolate along the frames axis
+    def interpolate_along_frames(data):
+        for individual in range(n_individuals):
+            for keypoint in range(n_keypoints):
+                for dim in range(n_dim):
+                    # Extract the data for the current dimension
+                    values = data[:, individual, keypoint, dim]
+                    valid_mask = ~np.isnan(values)
+                    
+                    if valid_mask.sum() > 1:
+                        # Interpolate only if we have more than one valid value
+                        interp_fn = interp1d(np.flatnonzero(valid_mask), values[valid_mask], bounds_error=False, fill_value="extrapolate")
+                        values[~valid_mask] = interp_fn(np.flatnonzero(~valid_mask))
+                        data[:, individual, keypoint, dim] = values
+                        
+        return data
+    
+    # Interpolate missing values
+    keypoints = interpolate_along_frames(keypoints)
+    
+    # Replace NaNs back with zeros if needed
+    keypoints[np.isnan(keypoints)] = 0
+    
+    return keypoints
 
 
 def reject_outlier_keypoints(keypoints: ndarray, threshold_in_stds: int = 2):
@@ -164,8 +175,10 @@ class AnimalManager(Manager):
             )[..., :2]
 
         df_array = reject_outlier_keypoints(df_array)
-        df_array = ast_fillna_2d(df_array)
+        df_array = interpolate_keypoints(df_array)
         return df_array
+
+
 
     def _process_keypoint_file_from_json(self) -> ndarray:
         # default as the mabe predicted keypoints from mmpose-superanimal-topviewmouse
