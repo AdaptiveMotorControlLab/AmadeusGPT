@@ -79,7 +79,7 @@ Present animals are: {animal_names}. Don't assume there exist other animals.
 {keypoint_description}
 
 RULES:
-1) If you are asked to provide plotting code, make sure you don't call plt.show() but return a tuple figure, axs
+1) If you are asked to provide plotting code, make sure you don't call plt.show() but return a tuple (figure, axs) or an instance of animation.FuncAnimation.
 2) Make sure you must write a clear docstring for your code.
 3) Make sure your function signature looks like func_name(identifier: Identifier)
 4) Make sure you do not import any libraries in your code. All needed libraries are imported already.
@@ -91,6 +91,9 @@ RULES:
 10) You MUST use the index from get_keypoint_names to access the keypoint data of specific keyponit names. Do not assume the order of the bodypart.
 11) You MUST call functions in api docs on the analysis object.
 12) For api functions that require min_window and max_window, make sure you leave them as default values unless you are asked to change them.
+
+HOW TO AVOID BUGS:
+You should always comment the shape of the any numpy array you are working with to avoid bugs. YOU MUST DO IT.
 """
     return prompt
 

@@ -374,7 +374,7 @@ All the modules were already imported so you don't need to import them again.
 Can you correct the code? Make sure you only write one function which is the updated function.
 """
         self.update_history("user", query)
-        response = self.connect_gpt(self.context_window, max_tokens=700)
+        response = self.connect_gpt(self.context_window, max_tokens=4096)
         text = response.choices[0].message.content.strip()
         print(text)
         pattern = r"```python(.*?)```"

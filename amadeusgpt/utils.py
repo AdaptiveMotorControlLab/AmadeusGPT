@@ -215,13 +215,14 @@ def create_qa_message(query: str, video_file_paths: list[str]) -> QA_Message:
 from IPython.display import Markdown, Video, display
 
 
-def parse_result(amadeus, qa_message, use_ipython=True):
+def parse_result(amadeus, qa_message, use_ipython=True, skip_code_execution=False):
     if use_ipython:
         display(Markdown(qa_message.chain_of_thought))
     else:
         print(qa_message.chain_of_thought)
     sandbox = amadeus.sandbox
-    qa_message = sandbox.code_execution(qa_message)
+    if not skip_code_execution:
+        qa_message = sandbox.code_execution(qa_message)
     qa_message = sandbox.render_qa_message(qa_message)
     if len(qa_message.out_videos) > 0:
         print(f"videos generated to {qa_message.out_videos}")

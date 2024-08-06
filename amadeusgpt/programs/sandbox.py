@@ -321,14 +321,15 @@ The usage and the parameters of the functions are provided."""
             namespace["Event"] = Event
             # numpy might be needed for raw kinematics
             namespace["np"] = np
+            import matplotlib.animation as animation
+            namespace["animation"] = animation
             # to allow the program to access existing task programs
             namespace["task_programs"] = TaskProgramLibrary.get_task_programs()
 
     def code_execution(self, qa_message: QA_Message, debug=True) -> QA_Message:
         # update the namespace in the beginning of code execution makes sure that
         # if there is a change in the config, we always use the newest config
-        self.update_namespace()
-
+        self.update_namespace()      
         for video_file_path, keypoint_file_path in zip(
             self.video_file_paths, self.keypoint_file_paths
         ):
