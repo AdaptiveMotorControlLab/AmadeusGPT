@@ -168,6 +168,8 @@ class EventManager(Manager):
         List[Event]
         --------
         """
+
+        print ('mask shape', mask.shape)
         if len(mask.shape) == 1:
             mask = mask.reshape(-1, 1)
 
