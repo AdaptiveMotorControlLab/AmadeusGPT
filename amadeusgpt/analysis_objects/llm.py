@@ -374,12 +374,9 @@ Can you correct the code? Make sure you only write one function which is the upd
         response = self.connect_gpt(self.context_window, max_tokens=700)
         text = response.choices[0].message.content.strip()
         print(text)
-
         pattern = r"```python(.*?)```"
         function_code = re.findall(pattern, text, re.DOTALL)[0]
-
         qa_message.code = function_code
-
         qa_message.chain_of_thought = text
 
         return qa_message

@@ -361,7 +361,8 @@ The usage and the parameters of the functions are provided."""
                 qa_message = self.llms["self_debug"].speak(qa_message)
                 print ("after self debug")
                 print (qa_message.code)
-                return self.code_execution(qa_message)
+                # set debug = False to avoid infinite loop
+                return self.code_execution(qa_message, debug = False)
 
             result = namespace["result"]
             qa_message.function_rets[identifier] = result
