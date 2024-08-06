@@ -22,6 +22,9 @@ class Config:
     def __setitem__(self, key, value):
         self.data[key] = value
 
+    def to_dict(self):
+        return self.data
+
     def load_config(self):
         # Load the YAML config file
         if os.path.exists(self.config_file_path):

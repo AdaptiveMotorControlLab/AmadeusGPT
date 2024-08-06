@@ -344,7 +344,10 @@ class CodeGenerationLLM(LLM):
             obj["code"] = function_code
             obj["video_file_paths"] = sandbox.video_file_paths
             obj["keypoint_file_paths"] = sandbox.keypoint_file_paths
-            obj["config"] = str(json.dumps(sandbox.config))
+            if not isinstance(sandbox.config, dict):
+                obj["config"] = sandbox.config.to_dict()
+            else:
+                obj["config"] = sandbox.config
             json.dump(obj, f, indent=4)
 
         return qa_message
