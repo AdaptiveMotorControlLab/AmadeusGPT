@@ -163,17 +163,20 @@ class EventManager(Manager):
         mask: np.ndarray, optional.
             The mask must be of shape (n_frames, n_individuals). It is a boolean mask that describes the condition for the behavior.
             If n_individuals is 1, the shape should be (n_frames, 1)
+        min_window : int, optional, default 10
+            Only include events that are longer than min_window
+        max_window : int, optional, default 1000000
+            Only include events that are shorter than max_window
         Returns
         -------
         List[Event]
         --------
         """
 
-        print ('mask shape', mask.shape)
         if len(mask.shape) == 1:
             mask = mask.reshape(-1, 1)
 
-        ret_events = []
+        ret_events = []       
         for animal_idx, sender_animal_name in enumerate(
             self.animal_manager.get_animal_names()
         ):
@@ -185,9 +188,8 @@ class EventManager(Manager):
                 sender_animal_name,
                 set(),
                 set(),
-            )
-
-            events = Event.filter_events_by_duration(events, min_window, max_window)
+            )       
+            events = Event.filter_events_by_duration(events, min_window, max_window)        
             ret_events.extend(events)
 
         ret_events = sorted(ret_events, key=lambda x: x.start)
