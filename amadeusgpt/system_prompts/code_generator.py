@@ -5,12 +5,17 @@ def code_related_prompt(
     keypoint_names,
     object_names,
     animal_names,
+    use_3d = False,
 ):
     if scene_image is not None:
         image_h, image_w = scene_image.shape[:2]
     else:
         image_h, image_w = "not available", "not available"
 
+    if use_3d:
+        keypoint_description = "the last axis of the keypoint data is 3, which means it is 3D keypoint data. They are x,y,z coordinates and y is the height and z is the depth"
+    else:
+        keypoint_description = "the last axis of the keypoint data is 2, which means it is 2D keypoint data. They are x,y coordinates. The x axis is the width and y axis is the height"
     prompt = f"""
 We provide you additionl apis and task programs to help you write code.    
 
@@ -67,6 +72,7 @@ Now that you have seen the examples, following is the information you need to wr
 The keypoint names for the animals are: {keypoint_names}. Don't assume there are other keypoints.
 Available objects are: {object_names}. Don't assume there exist other objects. DO NOT define new objects.
 Present animals are: {animal_names}. Don't assume there exist other animals.
+{keypoint_description}
 
 RULES:
 1) If you are asked to provide plotting code, make sure you don't call plt.show() but return a tuple figure, axs
@@ -91,6 +97,7 @@ def _get_system_prompt(
     keypoint_names,
     object_names,
     animal_names,
+    use_3d = False,
 ):
     system_prompt = f""" 
 You are helpful AI assistant. Your job is to answer user queries. 
@@ -100,7 +107,8 @@ Importantly, before you write the code, you need to explain whether the question
                         scene_image,
                         keypoint_names,
                         object_names,
-                        animal_names
+                        animal_names,
+                        use_3d = use_3d
                      )}
 
 If the question can be answered by code:

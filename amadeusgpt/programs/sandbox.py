@@ -359,8 +359,10 @@ The usage and the parameters of the functions are provided."""
                 if not debug:
                     return qa_message
                 qa_message = self.llms["self_debug"].speak(qa_message)
-                qa_message = self.code_execution(qa_message)
-                return qa_message
+                print ("after self debug")
+                print (qa_message.code)
+                return self.code_execution(qa_message)
+
             result = namespace["result"]
             qa_message.function_rets[identifier] = result
 

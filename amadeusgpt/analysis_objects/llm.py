@@ -302,8 +302,9 @@ class CodeGenerationLLM(LLM):
         scene_image = behavior_analysis.visual_manager.get_scene_image()
         keypoint_names = behavior_analysis.animal_manager.get_keypoint_names()
         object_names = behavior_analysis.object_manager.get_object_names()
-        animal_names = behavior_analysis.animal_manager.get_animal_names()
-
+        animal_names = behavior_analysis.animal_manager.get_animal_names()        
+        use_3d = sandbox.config['keypoint_info'].get('use_3d', False)
+        
         self.system_prompt = _get_system_prompt(
             core_api_docs,
             task_program_docs,
@@ -311,7 +312,8 @@ class CodeGenerationLLM(LLM):
             keypoint_names,
             object_names,
             animal_names,
-        )
+            use_3d=use_3d,
+        ) 
 
         self.update_history("system", self.system_prompt)
 
@@ -366,12 +368,11 @@ class SelfDebugLLM(LLM):
         query = f""" The code that caused error was {code}
 And the error message was {error_message}. 
 All the modules were already imported so you don't need to import them again.
-Can you correct the code?
+Can you correct the code? Make sure you only write one function which is the updated function.
 """
         self.update_history("user", query)
         response = self.connect_gpt(self.context_window, max_tokens=700)
         text = response.choices[0].message.content.strip()
-
         print(text)
 
         pattern = r"```python(.*?)```"
@@ -381,6 +382,7 @@ Can you correct the code?
 
         qa_message.chain_of_thought = text
 
+        return qa_message
 
 if __name__ == "__main__":
     from amadeusgpt.config import Config
