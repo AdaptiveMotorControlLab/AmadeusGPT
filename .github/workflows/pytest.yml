@@ -36,7 +36,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pytest numpy==1.23.5 tables==3.8.0
-        pip install git+https://github.com/DeepLabCut/DeepLabCut.git@pytorch_dlc#egg=deeplabcut[modelzoo]
+        pip install deeplabcut==3.0.0rc4
         pip install pytest
         pip install pytest-timeout
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi

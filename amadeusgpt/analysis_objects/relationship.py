@@ -55,7 +55,7 @@ def get_pairwise_distance(arr1: np.ndarray, arr2: np.ndarray):
     # pariwise distance (n_frames, n_kpts, n_kpts)
     pairwise_distances = np.ones((arr1.shape[0], arr1.shape[1], arr2.shape[1])) * 100000
     for frame_id in range(arr1.shape[0]):
-        # should we use the mean of all keypooints for the distance?
+        # should we use the mean of all keypoints for the distance?
         pairwise_distances[frame_id] = cdist(arr1[frame_id], arr2[frame_id])
 
     return pairwise_distances
