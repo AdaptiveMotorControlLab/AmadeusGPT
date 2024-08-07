@@ -28,7 +28,11 @@ class ObjectManager(Manager):
         self.animal_manager = animal_manager
         self.roi_objects = []
         self.seg_objects = []
-        self.load_from_disk = self.config["object_info"]["load_objects_from_disk"]
+
+        self.load_from_disk = self.config["object_info"].get(
+            "load_objects_from_disk", False
+        )
+
         if self.load_from_disk:
             self.load_objects_from_disk()
         else:

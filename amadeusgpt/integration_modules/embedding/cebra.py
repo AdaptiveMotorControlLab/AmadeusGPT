@@ -20,7 +20,7 @@ def get_cebra_embedding(self, inputs: np.ndarray, n_dimension=3) -> np.ndarray:
     features = inputs.reshape(inputs.shape[0], -1)
     features = np.nan_to_num(features)
 
-    print ('features shape', features.shape)
+    print("features shape", features.shape)
     cebra_params = dict(
         model_architecture="offset10-model",
         batch_size=512,
@@ -34,11 +34,11 @@ def get_cebra_embedding(self, inputs: np.ndarray, n_dimension=3) -> np.ndarray:
         verbose=True,
         time_offsets=10,
     )
-    print ('got here1')
+    print("got here1")
     model = CEBRA(**cebra_params)
-    print ('got here2')
+    print("got here2")
     model.fit(features)
-    print ('got here3')
+    print("got here3")
     embeddings = model.transform(features)
-    print ('got here4')
+    print("got here4")
     return embeddings
