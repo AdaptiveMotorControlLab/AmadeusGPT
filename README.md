@@ -115,11 +115,11 @@ make app
 ```
 
 
-## [BONUS - customized your conda env] 
+## [BONUS - installation via a customized conda env] 
 If you want to set up your own env, 
 
 ```bash
-conda create -n amadesuGPT python=3.10
+conda create -n amadeusGPT python=3.10
 ```
 the key dependencies that need installed are:
 ```python
