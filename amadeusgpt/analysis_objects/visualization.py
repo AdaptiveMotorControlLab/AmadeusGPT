@@ -12,6 +12,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.mplot3d import Axes3D
 from PIL import Image
 from scipy.signal import medfilt
 
@@ -125,7 +126,8 @@ class SceneVisualization(MatplotlibVisualization):
 
         self._draw_seg_objects()
         self._draw_roi_objects()
-        self.axs.imshow(self.scene_frame)
+        if self.scene_frame is not None:
+            self.axs.imshow(self.scene_frame)
 
 
 class KeypointVisualization(MatplotlibVisualization):
@@ -284,37 +286,46 @@ class KeypointVisualization(MatplotlibVisualization):
             masked_data = medfilt(masked_data, kernel_size=(k, 1))
             if masked_data.shape[0] == 0:
                 continue
-            x, y = masked_data[:, 0], masked_data[:, 1]
-            x = x[x.nonzero()]
-            y = y[y.nonzero()]
-            if len(x) < 1:
-                continue
 
-            scatter = self.axs.plot(
-                x,
-                y,
-                label=f"event{event_id}",
-                color=line_colors[event_id],
-                alpha=0.5,
-            )
-            scatter = self.axs.scatter(
-                x[0],
-                y[0],
-                marker="*",
-                s=100,
-                color=line_colors[event_id],
-                alpha=0.5,
-                **kwargs,
-            )
-            self.axs.scatter(
-                x[-1],
-                y[-1],
-                marker="x",
-                s=100,
-                color=line_colors[event_id],
-                alpha=0.5,
-                **kwargs,
-            )
+            if not kwargs.get("use_3d", False):
+                x, y = masked_data[:, 0], masked_data[:, 1]
+                _mask = (x != 0) & (y != 0)
+
+                x = x[_mask]
+                y = y[_mask]
+                if len(x) < 1:
+                    continue
+
+                scatter = self.axs.plot(
+                    x,
+                    y,
+                    label=f"event{event_id}",
+                    color=line_colors[event_id],
+                    alpha=0.5,
+                )
+                scatter = self.axs.scatter(
+                    x[0],
+                    y[0],
+                    marker="*",
+                    s=100,
+                    color=line_colors[event_id],
+                    alpha=0.5,
+                    **kwargs,
+                )
+                self.axs.scatter(
+                    x[-1],
+                    y[-1],
+                    marker="x",
+                    s=100,
+                    color=line_colors[event_id],
+                    alpha=0.5,
+                    **kwargs,
+                )
+            else:
+                # TODO
+                # implement 3d event plot
+                pass
+
         return self.axs
 
     def display(self):

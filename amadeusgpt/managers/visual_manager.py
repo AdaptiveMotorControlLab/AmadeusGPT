@@ -44,18 +44,18 @@ class VisualManager(Manager):
         self.video_file_path = identifier.video_file_path
         self.keypoint_file_path = identifier.keypoint_file_path
 
-        if not os.path.exists(self.video_file_path):
-            return
-
         self.animal_manager = animal_manager
         self.object_manager = object_manager
 
     def get_scene_image(self):
-        scene_frame_index = self.config["video_info"]["scene_frame_number"]
-        cap = cv2.VideoCapture(self.video_file_path)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, scene_frame_index)
-        ret, frame = cap.read()
-        return frame
+        scene_frame_index = self.config["video_info"].get("scene_frame_number", 1)
+        if os.path.exists(self.video_file_path):
+            cap = cv2.VideoCapture(self.video_file_path)
+            cap.set(cv2.CAP_PROP_POS_FRAMES, scene_frame_index)
+            ret, frame = cap.read()
+            return frame
+        else:
+            return None
 
     def get_scene_visualization(
         self,
@@ -218,6 +218,7 @@ class VisualManager(Manager):
                             self.animal_manager.get_n_individuals(),
                             average_keypoints=average_keypoints,
                             events=events,
+                            use_3d=self.config["keypoint_info"].get("use_3d", False),
                         )
                         scene_vis.draw()
                         keypoint_vis.draw()
@@ -231,9 +232,14 @@ class VisualManager(Manager):
                     axs = np.atleast_1d(axs)
 
                 for idx, sender_animal in enumerate(self.animal_manager.get_animals()):
-                    scene_vis = self.get_scene_visualization(
-                        self.config["video_info"]["scene_frame_number"], axs=axs[idx]
-                    )
+                    if not self.config["keypoint_info"].get("use_3d", False):
+
+                        scene_vis = self.get_scene_visualization(
+                            self.config["video_info"]["scene_frame_number"],
+                            axs=axs[idx],
+                        )
+                        scene_vis.draw()
+
                     axs[idx].set_ylabel(sender_animal.get_name())
                     # always feed the full keypoints to visualization
                     full_keypoints = sender_animal.get_keypoints(
@@ -252,7 +258,7 @@ class VisualManager(Manager):
                         average_keypoints=average_keypoints,
                         events=events,
                     )
-                    scene_vis.draw()
+
                     keypoint_vis.draw()
 
         if render:
@@ -531,11 +537,14 @@ class VisualManager(Manager):
                 if time_slice[0] <= current_frame < time_slice[1]:
                     # select the keypoint based on the frame number
 
-                    frame = self.sender_visual_cone_on_frame(
-                        self.animal_manager.get_animal_by_name(sender_animal_name),
-                        frame,
-                        current_frame,
-                    )
+                    if self.config["keypoint_info"].get(
+                        "head_orientation_keypoints", False
+                    ):
+                        frame = self.sender_visual_cone_on_frame(
+                            self.animal_manager.get_animal_by_name(sender_animal_name),
+                            frame,
+                            current_frame,
+                        )
 
                     sender_location = sender_keypoints[current_frame]
 

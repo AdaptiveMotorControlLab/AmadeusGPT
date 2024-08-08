@@ -70,7 +70,7 @@ class cache_decorator:
 
 
 class Manager(BaseManager):
-    def __init__(self, config: Config, use_cache: bool = False):
+    def __init__(self, config: Config | dict, use_cache: bool = False):
         self.config = config
         self.use_cache = use_cache
         self._cache = LRUCache(maxsize=128)

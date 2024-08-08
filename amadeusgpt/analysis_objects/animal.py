@@ -4,7 +4,6 @@ import matplotlib.path as mpath
 import numpy as np
 from numpy import ndarray
 from scipy.spatial import ConvexHull
-
 from amadeusgpt.analysis_objects.object import Object
 
 
@@ -27,8 +26,8 @@ class AnimalSeq(Animal):
     body center, left, right, above, top are relative to the subset of keypoints.
     Attributes
     ----------
-    self._coords: arr potentially subset of keypoints
-    self.wholebody: full set of keypoints. This is important for overlap relationship
+    self.wholebody: np.ndarray of keypoints of all bodyparts
+    self.keypoint
     """
 
     def __init__(self, animal_name: str, keypoints: ndarray, keypoint_names: List[str]):
@@ -95,8 +94,6 @@ class AnimalSeq(Animal):
         return mpath.Path(verts, codes)
 
     def get_keypoints(self, average_keypoints=False) -> ndarray:
-        # the shape should be (n_frames, n_keypoints, 2)
-        # extending to 3D?
         assert (
             len(self.keypoints.shape) == 3
         ), f"keypoints shape is {self.keypoints.shape}"
@@ -123,8 +120,15 @@ class AnimalSeq(Animal):
     def get_ymax(self):
         return np.nanmax(self.keypoints[..., 1], axis=1)
 
+    def get_zmin(self):
+        return np.nanmin(self.keypoints[..., 2], axis=1)
+
+    def get_zmax(self):
+        return np.nanmax(self.keypoints[..., 2], axis=1)
+
     def get_keypoint_names(self):
         return self.keypoint_names
+    
 
     def query_states(self, query: str) -> ndarray:
         assert query in [

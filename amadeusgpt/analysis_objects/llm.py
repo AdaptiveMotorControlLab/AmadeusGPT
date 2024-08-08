@@ -27,8 +27,9 @@ class LLM(AnalysisObject):
 
     def __init__(self, config):
         self.config = config
-        self.max_tokens = config.get("max_tokens", 4096)
-        self.gpt_model = config.get("gpt_model", "gpt-4o-mini")
+
+        self.max_tokens = config["llm_info"].get("max_tokens", 4096)
+        self.gpt_model = config["llm_info"].get("gpt_model", "gpt-4o-mini")
         self.keep_last_n_messages = config.get("keep_last_n_messages", 2)
 
         # the list that is actually sent to gpt
@@ -261,8 +262,8 @@ class VisualLLM(LLM):
         response = self.connect_gpt(self.context_window, max_tokens=2000)
         text = response.choices[0].message.content.strip()
 
-        print ('description of the image frame provided')
-        print (text)
+        print("description of the image frame provided")
+        print(text)
 
         pattern = r"```json(.*?)```"
         if len(re.findall(pattern, text, re.DOTALL)) == 0:
@@ -293,16 +294,17 @@ class CodeGenerationLLM(LLM):
         task_program_docs = sandbox.get_task_program_docs()
 
         if share_video_file:
-            video_file_path = sandbox.video_file_paths[0]
+            identifier = sandbox.identifiers[0]
         else:
             raise NotImplementedError("This is not implemented yet")
 
-        behavior_analysis = sandbox.analysis_dict[video_file_path]
+        behavior_analysis = sandbox.analysis_dict[identifier]
         scene_image = behavior_analysis.visual_manager.get_scene_image()
         keypoint_names = behavior_analysis.animal_manager.get_keypoint_names()
         object_names = behavior_analysis.object_manager.get_object_names()
-        animal_names = behavior_analysis.animal_manager.get_animal_names()
-
+        animal_names = behavior_analysis.animal_manager.get_animal_names()        
+        use_3d = sandbox.config['keypoint_info'].get('use_3d', False)
+        
         self.system_prompt = _get_system_prompt(
             core_api_docs,
             task_program_docs,
@@ -310,7 +312,8 @@ class CodeGenerationLLM(LLM):
             keypoint_names,
             object_names,
             animal_names,
-        )
+            use_3d=use_3d,
+        ) 
 
         self.update_history("system", self.system_prompt)
 
@@ -338,6 +341,13 @@ class CodeGenerationLLM(LLM):
         with open("temp_answer.json", "w") as f:
             obj = {}
             obj["chain_of_thought"] = text
+            obj["code"] = function_code
+            obj["video_file_paths"] = sandbox.video_file_paths
+            obj["keypoint_file_paths"] = sandbox.keypoint_file_paths
+            if not isinstance(sandbox.config, dict):
+                obj["config"] = sandbox.config.to_dict()
+            else:
+                obj["config"] = sandbox.config
             json.dump(obj, f, indent=4)
 
         return qa_message
@@ -361,21 +371,18 @@ class SelfDebugLLM(LLM):
         query = f""" The code that caused error was {code}
 And the error message was {error_message}. 
 All the modules were already imported so you don't need to import them again.
-Can you correct the code?
+Can you correct the code? Make sure you only write one function which is the updated function.
 """
         self.update_history("user", query)
-        response = self.connect_gpt(self.context_window, max_tokens=700)
+        response = self.connect_gpt(self.context_window, max_tokens=4096)
         text = response.choices[0].message.content.strip()
-
         print(text)
-
         pattern = r"```python(.*?)```"
         function_code = re.findall(pattern, text, re.DOTALL)[0]
-
         qa_message.code = function_code
-
         qa_message.chain_of_thought = text
 
+        return qa_message
 
 if __name__ == "__main__":
     from amadeusgpt.config import Config

@@ -48,13 +48,14 @@ def calc_angle_between_2d_coordinate_systems(cs1, cs2):
     return np.rad2deg(np.arccos(dot))
 
 
-def get_pairwise_distance(arr1, arr2):
+def get_pairwise_distance(arr1: np.ndarray, arr2: np.ndarray):
     # we want to make sure this uses a fast implementation
-    # (n_frame,  n_kpts, 2)
+    # arr: (n_frame,  n_kpts, 2)
     assert len(arr1.shape) == 3 and len(arr2.shape) == 3
     # pariwise distance (n_frames, n_kpts, n_kpts)
     pairwise_distances = np.ones((arr1.shape[0], arr1.shape[1], arr2.shape[1])) * 100000
     for frame_id in range(arr1.shape[0]):
+        # should we use the mean of all keypoints for the distance?
         pairwise_distances[frame_id] = cdist(arr1[frame_id], arr2[frame_id])
 
     return pairwise_distances

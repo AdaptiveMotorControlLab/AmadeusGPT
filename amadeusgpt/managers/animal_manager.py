@@ -14,7 +14,7 @@ from amadeusgpt.programs.api_registry import (register_class_methods,
                                               register_core_api)
 
 from .base import Manager
-
+from scipy.interpolate import interp1d
 
 def get_orientation_vector(cls, b1_name, b2_name):
     b1 = cls.get_keypoints()[:, :, cls.get_bodypart_index(b1_name), :]
@@ -22,34 +22,45 @@ def get_orientation_vector(cls, b1_name, b2_name):
     return b1 - b2
 
 
-def ast_fillna_2d(arr: ndarray) -> ndarray:
+def interpolate_keypoints(keypoints):
     """
-    Fills NaN values in a 4D keypoints array using linear interpolation.
-
+    Interpolate missing (NaN or 0) keypoints in neighboring frames.
+    
     Parameters:
-    arr (np.ndarray): A 4D numpy array of shape (n_frames, n_individuals, n_kpts, n_dims).
-
+    keypoints (numpy array): Array of shape (n_frames, n_individuals, n_keypoints, n_dim).
+    
     Returns:
-    np.ndarray: The 4D array with NaN values filled.
+    numpy array: Interpolated keypoints array.
     """
-    n_frames, n_individuals, n_kpts, n_dims = arr.shape
-    arr_reshaped = arr.reshape(n_frames, -1)
-    x = np.arange(n_frames)
-    for i in range(arr_reshaped.shape[1]):
-        valid_mask = ~np.isnan(arr_reshaped[:, i])
-        if np.all(valid_mask):
-            continue
-        elif np.any(valid_mask):
-            # Perform interpolation when there are some valid points
-            arr_reshaped[:, i] = np.interp(
-                x, x[valid_mask], arr_reshaped[valid_mask, i]
-            )
-        else:
-            # Handle the case where all values are NaN
-            # Replace with a default value or another suitable handling
-            arr_reshaped[:, i].fill(0)  # Example: filling with 0
-
-    return arr_reshaped.reshape(n_frames, n_individuals, n_kpts, n_dims)
+    n_frames, n_individuals, n_keypoints, n_dim = keypoints.shape
+    
+    # Replace zeros with NaNs for interpolation purposes
+    keypoints[keypoints == 0] = np.nan
+    
+    # Function to interpolate along the frames axis
+    def interpolate_along_frames(data):
+        for individual in range(n_individuals):
+            for keypoint in range(n_keypoints):
+                for dim in range(n_dim):
+                    # Extract the data for the current dimension
+                    values = data[:, individual, keypoint, dim]
+                    valid_mask = ~np.isnan(values)
+                    
+                    if valid_mask.sum() > 1:
+                        # Interpolate only if we have more than one valid value
+                        interp_fn = interp1d(np.flatnonzero(valid_mask), values[valid_mask], bounds_error=False, fill_value="extrapolate")
+                        values[~valid_mask] = interp_fn(np.flatnonzero(~valid_mask))
+                        data[:, individual, keypoint, dim] = values
+                        
+        return data
+    
+    # Interpolate missing values
+    keypoints = interpolate_along_frames(keypoints)
+    
+    # Replace NaNs back with zeros if needed
+    keypoints[np.isnan(keypoints)] = 0
+    
+    return keypoints
 
 
 def reject_outlier_keypoints(keypoints: ndarray, threshold_in_stds: int = 2):
@@ -84,6 +95,7 @@ class AnimalManager(Manager):
         self.animals: List[AnimalSeq] = []
         self.full_keypoint_names = []
         self.superanimal_predicted_video = None
+        self.superanimal_name = None
         self.init_pose()
 
     def configure_animal_from_meta(self, meta_info):
@@ -118,12 +130,18 @@ class AnimalManager(Manager):
             animalseq = AnimalSeq(
                 animal_name, all_keypoints[:, individual_id], self.keypoint_names
             )
-            if self.config["keypoint_info"] and "body_orientation_keypoints" in self.config["keypoint_info"]:
+            if (
+                self.config["keypoint_info"]
+                and "body_orientation_keypoints" in self.config["keypoint_info"]
+            ):
                 animalseq.set_body_orientation_keypoints(
                     self.config["keypoint_info"]["body_orientation_keypoints"]
                 )
 
-            if self.config["keypoint_info"] and "head_orientation_keypoints" in self.config["keypoint_info"]:
+            if (
+                self.config["keypoint_info"]
+                and "head_orientation_keypoints" in self.config["keypoint_info"]
+            ):
                 animalseq.set_head_orientation_keypoints(
                     self.config["keypoint_info"]["head_orientation_keypoints"]
                 )
@@ -143,13 +161,24 @@ class AnimalManager(Manager):
         self.n_frames = df.shape[0]
         self.n_kpts = len(self.keypoint_names)
 
-        df_array = df.to_numpy().reshape(
-            (self.n_frames, self.n_individuals, self.n_kpts, -1)
-        )[..., :2]
+        # whether to keep the 3rd dimension in the last axis
+        if (
+            self.config["keypoint_info"].get("use_3d", False) == True
+            or self.config["keypoint_info"].get("include_confidence", False) == True
+        ):
+            df_array = df.to_numpy().reshape(
+                (self.n_frames, self.n_individuals, self.n_kpts, -1)
+            )
+        else:
+            df_array = df.to_numpy().reshape(
+                (self.n_frames, self.n_individuals, self.n_kpts, -1)
+            )[..., :2]
 
         df_array = reject_outlier_keypoints(df_array)
-        df_array = ast_fillna_2d(df_array)
+        df_array = interpolate_keypoints(df_array)
         return df_array
+
+
 
     def _process_keypoint_file_from_json(self) -> ndarray:
         # default as the mabe predicted keypoints from mmpose-superanimal-topviewmouse
@@ -255,7 +284,9 @@ class AnimalManager(Manager):
     @register_core_api
     def get_keypoints(self) -> ndarray:
         """
-        Get the keypoints of animals. The shape is of shape  n_frames, n_individuals, n_kpts, n_dims
+        Get the keypoints of animals. The keypoints are of shape  (n_frames, n_individuals, n_kpts, n_dims)
+        n_dims is 2 (x,y) for 2D keypoints and 3 (x,y,z) for 3D keypoints.
+        Do not forget the n_individuals dimension. If there is only one animal, the n_individuals dimension is 1.
         Optionally, you can pass a list of events to filter the keypoints based on the events.
         """
 
@@ -310,7 +341,7 @@ class AnimalManager(Manager):
     @register_core_api
     def get_velocity(self) -> ndarray:
         """
-        Get the velocity. The shape is (n_frames, n_individuals, n_kpts, 2) # 2 is the x and y components
+        Get the velocity. The shape is (n_frames, n_individuals, n_kpts, n_dim) n_dim is 2 or 3
         The velocity is a vector.
         """
         return np.stack([animal.get_velocity() for animal in self.animals], axis=1)
@@ -342,7 +373,7 @@ class AnimalManager(Manager):
     @register_core_api
     def get_keypoint_names(self) -> List[str]:
         """
-        Get the names of the bodyparts.
+        Get the names of the bodyparts. This is used to index the keypoints for a specific bodypart.
         """
         # this is to initialize
         self.get_keypoints()

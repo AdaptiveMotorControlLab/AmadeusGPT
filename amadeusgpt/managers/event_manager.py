@@ -153,74 +153,46 @@ class EventManager(Manager):
     @register_core_api
     def get_animals_state_events(
         self,
-        query: str,
-        bodypart_names: Optional[List[str]] = None,
-        min_window: Optional[int] = 0,
-        max_window: Optional[int] = 1000000,
-        smooth_window_size: Optional[int] = 3,
+        mask: np.ndarray,
+        min_window: int = 10,
+        max_window: int = 1000000,
     ) -> List[Event]:
         """
         Parameters
         ----------
-        query: str
-            Takes the form of {type_of_query}{comparison operator}{numerical value}.
-            For example, at 'speed>50', type_of_query is 'speed', comparison operator is '>', and numerical value is 50.
-            Valid type_of_query ONLY INCLUDE "speed", "acceleration_mag" (magnitude of acceleration), "bodypart_pairwise_distance".
-            There can only be one compasion operator in the query.
+        mask: np.ndarray, optional.
+            The mask must be of shape (n_frames, n_individuals). It is a boolean mask that describes the condition for the behavior.
+            If n_individuals is 1, the shape should be (n_frames, 1)
+        min_window : int, optional, default 10
+            Only include events that are longer than min_window
+        max_window : int, optional, default 1000000
+            Only include events that are shorter than max_window
         Returns
         -------
         List[Event]
         --------
-
         """
-        if min_window is None:
-            min_window = 0
-        if max_window is None:
-            max_window = 1000000
-        if smooth_window_size is None:
-            smooth_window_size = 3
 
-        if bodypart_names is not None:
-            self.animal_manager.update_roi_keypoint_by_names(bodypart_names)
-        ret_events = []
-        pattern = r"(==|<=|>=|<|>)"
-        # note we need to strip off the spaces
-        comparison_operator = re.findall(pattern, query)[0].strip()
-        query_name = query.split(comparison_operator)[0].strip()
-        comparison = comparison_operator + "".join(query.split(comparison_operator)[1:])
+        if len(mask.shape) == 1:
+            mask = mask.reshape(-1, 1)
 
-        for sender_animal_name in self.animal_manager.get_animal_names():
+        ret_events = []       
+        for animal_idx, sender_animal_name in enumerate(
+            self.animal_manager.get_animal_names()
+        ):
             # to construct the events
 
-            state = self.animal_manager.query_animal_states(
-                sender_animal_name, query_name
-            )
-
-            # must be of shape (n_frames, n_kpts, n_dim)
-            assert (
-                len(state.shape) == 3
-            ), f"state shape is {state.shape}. It must be of shape (n_frames, n_kpts, n_dim)"
-            if len(state.shape) == 3:
-                state = np.nanmedian(state, axis=(1, 2))
-            relation_string = "state" + comparison
-
-            mask = eval(relation_string)
-
             events = Event.mask2events(
-                mask,
+                mask[:, animal_idx],
                 self.video_file_path,
                 sender_animal_name,
                 set(),
                 set(),
-                smooth_window_size=smooth_window_size,
-            )
-
-            events = Event.filter_events_by_duration(events, min_window, max_window)
+            )       
+            events = Event.filter_events_by_duration(events, min_window, max_window)        
             ret_events.extend(events)
 
         ret_events = sorted(ret_events, key=lambda x: x.start)
-        if bodypart_names is not None:
-            self.animal_manager.restore_roi_keypoint()
 
         return ret_events
 

@@ -7,6 +7,6 @@ analysis_fac = {}
 
 def create_analysis(identifier: Identifier):
 
-    if str(identifier) not in analysis_fac:
-        analysis_fac[str(identifier)] = AnimalBehaviorAnalysis(identifier)
-    return analysis_fac[str(identifier)]
+    if identifier not in analysis_fac:
+        analysis_fac[identifier] = AnimalBehaviorAnalysis(identifier)
+    return analysis_fac[identifier]
