@@ -47,8 +47,14 @@ class VisualManager(Manager):
         self.animal_manager = animal_manager
         self.object_manager = object_manager
 
-    def get_scene_image(self):
-        scene_frame_index = self.config["video_info"].get("scene_frame_number", 1)
+    @register_core_api
+    def get_scene_image(self, scene_frame_index: int| None = None):
+        """
+        Returns the frame given the index in the video.
+        For visualizing keypoints or keypoint labels, it's nice to overlay the keypoints on the scene image.
+        """
+        if scene_frame_index is None:
+            scene_frame_index = self.config["video_info"].get("scene_frame_number", 1)
         if os.path.exists(self.video_file_path):
             cap = cv2.VideoCapture(self.video_file_path)
             cap.set(cv2.CAP_PROP_POS_FRAMES, scene_frame_index)
