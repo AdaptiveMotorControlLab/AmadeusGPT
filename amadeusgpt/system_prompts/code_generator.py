@@ -92,6 +92,7 @@ RULES:
 11) You MUST call functions in api docs on the analysis object.
 12) For api functions that require min_window and max_window, make sure you leave them as default values unless you are asked to change them.
 
+
 HOW TO AVOID BUGS:
 You should always comment the shape of the any numpy array you are working with to avoid bugs. YOU MUST DO IT.
 """
