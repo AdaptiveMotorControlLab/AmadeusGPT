@@ -14,7 +14,11 @@ def create_project(data_folder, result_folder, **kwargs):
             "result_folder": result_folder,
             "video_suffix": ".mp4",
         },
-        "llm_info": {"max_tokens": 4096, "temperature": 0.0, "keep_last_n_messages": 2},
+        "llm_info": {"max_tokens": 4096, 
+                     "temperature": 0.0, 
+                     # let's use the best model by default
+                     "gpt_model": "gpt-4o",
+                     "keep_last_n_messages": 2},
         "object_info": {"load_objects_from_disk": False, "use_grid_objects": False},
         "keypoint_info": {
             "use_3d": False,

@@ -143,6 +143,7 @@ class KeypointVisualization(MatplotlibVisualization):
         n_individuals: int,
         average_keypoints: Optional[bool] = True,
         events: Optional[List[BaseEvent]] = None,
+        use_3d: Optional[bool] = False,
     ):
         assert len(keypoints.shape) == 3
         super().__init__(axs)
