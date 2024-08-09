@@ -48,9 +48,16 @@ class VisualManager(Manager):
         self.object_manager = object_manager
 
     @register_core_api
-    def get_scene_image(self, scene_frame_index: int| None = None):
+    def get_scene_image(self, scene_frame_index: int |None = None)-> np.ndarray:
         """
         Returns the frame given the index in the video.
+        Parameter
+        ---------
+        scene_frame_index: int (optional) that specifies the index of the video frame.
+        Returns
+        -------
+        An ndarray image
+
         For visualizing keypoints or keypoint labels, it's nice to overlay the keypoints on the scene image.
         """
         if scene_frame_index is None:

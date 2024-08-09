@@ -85,12 +85,11 @@ RULES:
 4) Make sure you do not import any libraries in your code. All needed libraries are imported already.
 5) Make sure you disintuigh positional and keyword arguments when you call functions in api docs
 6) If you are writing code that uses matplotlib to plot, make sure you comment shape of the data to be plotted to double-check
-7) if your plotting code plots coordinates of keypoints, make sure you invert y axis (only during plotting) so that the plot is consistent with the image
-8) make sure the xlim and ylim covers the whole image. The image (h,w) is ({image_h},{image_w})    
-9) Do not define your own objects (including grid objects). Only use  objects that are given to you.
-10) You MUST use the index from get_keypoint_names to access the keypoint data of specific keyponit names. Do not assume the order of the bodypart.
-11) You MUST call functions in api docs on the analysis object.
-12) For api functions that require min_window and max_window, make sure you leave them as default values unless you are asked to change them.
+7) make sure the xlim and ylim covers the whole image. The image (h,w) is ({image_h},{image_w})    
+8) Do not define your own objects (including grid objects). Only use  objects that are given to you.
+9) You MUST use the index from get_keypoint_names to access the keypoint data of specific keyponit names. Do not assume the order of the bodypart.
+10) You MUST call functions in api docs on the analysis object.
+11) For api functions that require min_window and max_window, make sure you leave them as default values unless you are asked to change them.
 
 
 HOW TO AVOID BUGS:
