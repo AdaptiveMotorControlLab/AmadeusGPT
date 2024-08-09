@@ -212,7 +212,7 @@ def create_qa_message(query: str, video_file_paths: list[str]) -> QA_Message:
     return QA_Message(query, video_file_paths)
 
 
-from IPython.display import Markdown, Video, display
+from IPython.display import Markdown, Video, display, HTML
 
 
 def parse_result(amadeus, qa_message, use_ipython=True, skip_code_execution=False):
@@ -231,13 +231,20 @@ def parse_result(amadeus, qa_message, use_ipython=True, skip_code_execution=Fals
         )
         if use_ipython:
             if len(qa_message.out_videos) > 0:
-                for video_path, event_videos in qa_message.out_videos.items():
+                for identifier, event_videos in qa_message.out_videos.items():
                     for event_video in event_videos:
                         display(Video(event_video, embed=True))
 
     if use_ipython:
+        from matplotlib.animation import FuncAnimation
         if len(qa_message.function_rets) > 0:
-            for video_file_path in qa_message.function_rets:
-                display(Markdown(str(qa_message.function_rets[video_file_path])))
+            for identifier, rets in qa_message.function_rets.items():
+                if not isinstance(rets, (tuple, list)):
+                    rets = [rets]
+                for ret in rets:
+                    if isinstance(ret, FuncAnimation):
+                        display(HTML(ret.to_jshtml()))
+                    else:
+                        display(Markdown(str(qa_message.function_rets[identifier])))
 
     return qa_message

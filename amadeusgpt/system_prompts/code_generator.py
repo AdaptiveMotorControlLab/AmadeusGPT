@@ -90,6 +90,7 @@ RULES:
 9) You MUST use the index from get_keypoint_names to access the keypoint data of specific keyponit names. Do not assume the order of the bodypart.
 10) You MUST call functions in api docs on the analysis object.
 11) For api functions that require min_window and max_window, make sure you leave them as default values unless you are asked to change them.
+12) When making plots of keypoints of making animation about keypoints, try to overlap the plots with the scene frame if feasible.
 
 
 HOW TO AVOID BUGS:
