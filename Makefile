@@ -3,7 +3,6 @@ app:
 
 	streamlit run amadeusgpt/app.py --server.fileWatcherType none --server.maxUploadSize 1000
 
-
 IMG_TAG := 0.1
 IMG_NAME := amadeusgpt
 DOCKERFILE := Dockerfile
@@ -25,10 +24,14 @@ DOCKER_SRC := /home/$(shell id -un)/AmadeusGPT
 VOLUMES := \
 	--volume $(HOST_SRC):$(DOCKER_SRC) 
 
-CONTAINER_TAG :=_test_v0.1
-CONTAINER_NAME := amadeusgpt_$(CONTAINER_TAG) # $(GPU)
+CONTAINER_TAG :=v0.1
+CONTAINER_NAME := amadeusgpt_$(CONTAINER_TAG)
 
 run:
 	docker run --shm-size=60G --gpus all -it --name $(CONTAINER_NAME) \
 							$(VOLUMES) \
-							$(IMG_NAME):$(IMG_TAG) tail -f /dev/null
+							$(IMG_NAME):$(IMG_TAG)
+#  tail -f /dev/null
+
+exec:
+	docker exec -it $(CONTAINER_NAME) /bin/bash
