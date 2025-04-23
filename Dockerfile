@@ -1,10 +1,8 @@
 FROM pytorch/pytorch:2.3.1-cuda11.8-cudnn8-runtime
-
 ARG user_name
 ARG uid
 ARG gid
 ENV HOME=/root 
-
 WORKDIR ${HOME}
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -17,12 +15,25 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && apt-get update 
 
+# Install conda packages as root
+SHELL ["/bin/bash", "-lc"]
+RUN conda install -y python=3.10 pytables=3.8.0 hdf5 jupyter
+
+# Install DeepLabCut and other pip packages as root
+RUN pip install --no-cache-dir --upgrade pip setuptools && \
+    pip install --no-cache-dir gpustat nvitop pytest PySide6==6.3.1 streamlit networkx isort black && \
+    pip install --no-cache-dir amadeusgpt && \
+    pip install --no-cache-dir git+https://github.com/DeepLabCut/DeepLabCut.git
+
+# Initialize conda for zsh shell
+RUN /opt/conda/bin/conda init zsh
+
 # Create a non-root user
 RUN mkdir /app /logs /data
 RUN groupadd -g ${gid} ${user_name} \
     && useradd -m -u ${uid} -g ${gid} ${user_name} \
     && chown -R ${uid}:${gid} /home
-# 
+
 # Switch to the new user and set home directory as working directory
 USER ${user_name}
 ENV HOME=/home/${user_name}
@@ -36,18 +47,7 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
 
 RUN echo "export PATH=$PATH:/home/${user_name}/.local/bin" >> /home/${user_name}/.zshrc
 
-# install pip packages
-COPY ./conda/amadeusGPT.yml ${HOME}/amadeusGPT.yml
-SHELL ["/bin/bash", "-lc"]
-RUN source /opt/conda/etc/profile.d/conda.sh && \
-    conda env create -f ${HOME}/amadeusGPT.yml && \
-    conda activate amadeusgpt && \
-    pip install --no-cache-dir --upgrade pip setuptools && \
-    pip install --no-cache-dir gpustat nvitop pytest PySide6==6.3.1 streamlit networkx isort black git+https://github.com/DeepLabCut/DeepLabCut.git
-
-# USER ${user_name}
 USER root
-# ENV HOME=/root
 WORKDIR /app
 
 CMD ["zsh"]
