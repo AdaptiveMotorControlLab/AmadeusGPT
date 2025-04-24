@@ -127,8 +127,7 @@ the key dependencies that need installed are:
 pip install notebook
 conda install hdf5
 conda install pytables==3.8
-# pip install deeplabcut==3.0.0rc4 if you want to use SuperAnimal on your own videos
-
+pip install -U --pre deeplabcut
 pip install amadeusgpt
 ```
 ## Citation
