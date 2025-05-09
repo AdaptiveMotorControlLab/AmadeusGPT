@@ -21,7 +21,8 @@ def sam2_image_seg(image_path, prompt=None, output_path=None):
         np.ndarray: Segmentation mask
     """    
     # Model paths
-    checkpoint = "/home/ti_wang/AmadeusGPT/sam2/checkpoints/sam2.1_hiera_small.pt"
+    # checkpoint = "~/SAM2/checkpoints/sam2.1_hiera_small.pt"
+    checkpoint = os.path.expanduser("~/SAM2/checkpoints/sam2.1_hiera_small.pt")
     model_cfg = "configs/sam2.1/sam2.1_hiera_s.yaml"
     
     # Initialize predictor
@@ -72,9 +73,11 @@ def sam2_image_seg(image_path, prompt=None, output_path=None):
         plt.title("Image with Predicted Mask")
         plt.savefig(output_path)
         plt.close()
-    
+        
     return masks
 
+# from SAM.sam2_image import sam2_image_seg
+# from sam2.build_sam import build_sam2
 
 if __name__ == "__main__":
         
@@ -103,6 +106,6 @@ if __name__ == "__main__":
     #     plt.title("Image with Predicted Mask")
     #     plt.savefig("./test_images/mask_overlay.png")  # Save the figure
         
-    image_path = "./sam2/notebooks/images/truck.jpg"
-    output_path = "./ti_test/mask_overlay_2.png"
+    image_path = "./SAM/notebooks/images/truck.jpg"
+    output_path = "./ti_test/mask_overlay_4.png"
     sam2_image_seg(image_path, output_path=output_path)
