@@ -39,7 +39,7 @@ USER ${user_name}
 ENV HOME=/home/${user_name}
 WORKDIR ${HOME}
 
-RUN git clone https://github.com/facebookresearch/sam2.git && cd sam2 && pip install -e .
+RUN git clone https://github.com/facebookresearch/sam2.git SAM2 && cd SAM2 && pip install -e . && cd checkpoints && sh download_ckpts.sh
 
 # Install Oh My Zsh and plugins
 # RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" --unattended \
@@ -49,7 +49,7 @@ RUN git clone https://github.com/facebookresearch/sam2.git && cd sam2 && pip ins
 # RUN echo "export PATH=$PATH:/home/${user_name}/.local/bin" >> /home/${user_name}/.zshrc
 
 USER root
-WORKDIR /app
+WORKDIR ${HOME}
 
 # CMD ["zsh"]
 # SHELL ["/bin/zsh", "-c"]
