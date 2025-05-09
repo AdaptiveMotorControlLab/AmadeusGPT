@@ -3,9 +3,9 @@ app:
 
 	streamlit run amadeusgpt/app.py --server.fileWatcherType none --server.maxUploadSize 1000
 
-IMG_TAG := 0.1
+IMG_TAG := 0.2
 IMG_NAME := amadeusgpt
-DOCKERFILE := Dockerfile
+DOCKERFILE := Dockerfile.sam2
 
 BUILD_ARGS := \
         --build-arg uid=$(shell id -u) \
@@ -24,7 +24,7 @@ DOCKER_SRC := /home/$(shell id -un)/AmadeusGPT
 VOLUMES := \
 	--volume $(HOST_SRC):$(DOCKER_SRC) 
 
-CONTAINER_TAG :=v0.1
+CONTAINER_TAG :=v0.14
 CONTAINER_NAME := amadeusgpt_$(CONTAINER_TAG)
 
 run:
