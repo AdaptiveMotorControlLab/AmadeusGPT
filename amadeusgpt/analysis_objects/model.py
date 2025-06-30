@@ -20,6 +20,10 @@ def _superanimal_inference(
 ):
     import deeplabcut
 
+    # Patch for PyTorch 2.6 weights_only issue
+    from amadeusgpt.utils import patch_pytorch_weights_only
+    patch_pytorch_weights_only()
+
     progress_obj = st.progress(0)
     deeplabcut.video_inference_superanimal(
         [video_file_path],

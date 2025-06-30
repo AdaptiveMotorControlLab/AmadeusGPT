@@ -13,6 +13,7 @@ __pycache__
 __pycache__/
 *.py[cod]
 *$py.class
+notebooks/.ipynb_checkpoints/
 
 # Binary files
 *.jpg
@@ -23,6 +24,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+_build/
 develop-eggs/
 dist/
 downloads/
