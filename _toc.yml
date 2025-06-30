@@ -1,0 +1,11 @@
+format: jb-book
+root: README
+parts:
+- caption: Using AmadeusGPT
+  chapters:
+  - file: notebooks/EPM_demo
+  - file: notebooks/Horse_demo
+  - file: notebooks/MABe_demo
+  - file: notebooks/MausHaus_demo
+  - file: notebooks/Use_Task_Program 
+  - file: notebooks/YourData
