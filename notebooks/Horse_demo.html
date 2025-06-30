@@ -443,7 +443,16 @@ document.write(`
 </ul>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mykey</span> <span class="o">=</span> <span class="s2">&quot;paste-your-key-here&quot;</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mykey</span> <span class="o">=</span> <span class="s2">&quot;your-key-here&quot;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="k">if</span> <span class="s1">&#39;OPENAI_API_KEY&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+     <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;OPENAI_API_KEY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mykey</span>
 </pre></div>
 </div>
 </div>
@@ -456,9 +465,14 @@ document.write(`
 
 <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
     <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4&quot;</span><span class="p">,</span>
-    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Hello&quot;</span><span class="p">}]</span>
+    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Hello AmadeusGPT&quot;</span><span class="p">}]</span>
 <span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Hello! How can I assist you today?
 </pre></div>
 </div>
 </div>
@@ -523,6 +537,38 @@ document.write(`
 </pre></div>
 </div>
 </div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Project created at results. Results will be saved to results
+The project will load video files (*.mp4) and optionally keypoint files from ../examples/Horse
+A copy of the project config file is saved at results/config.yaml
+{&#39;data_info&#39;: {&#39;data_folder&#39;: &#39;../examples/Horse&#39;,
+               &#39;result_folder&#39;: &#39;results&#39;,
+               &#39;video_suffix&#39;: &#39;.mp4&#39;},
+ &#39;keypoint_info&#39;: {&#39;include_confidence&#39;: False, &#39;use_3d&#39;: False},
+ &#39;llm_info&#39;: {&#39;gpt_model&#39;: &#39;gpt-4o&#39;},
+ &#39;object_info&#39;: {&#39;load_objects_from_disk&#39;: False, &#39;use_grid_objects&#39;: False},
+ &#39;video_info&#39;: {&#39;scene_frame_number&#39;: 100}}
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions &quot;HTTP/1.1 200 OK&quot;
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>current total cost 0.0031 $
+current input tokens 438
+current accumulated tokens 501
+description of the image frame provided
+```json
+{
+    &quot;description&quot;: &quot;A person walking a horse in an outdoor setting with trees and a tent in the background.&quot;,
+    &quot;individuals&quot;: 1,
+    &quot;species&quot;: &quot;sideview_quadruped&quot;,
+    &quot;background_objects&quot;: [&quot;trees&quot;, &quot;tent&quot;, &quot;building&quot;]
+}
+```
+[&#39;../examples/Horse/BrownHorseinShadow.mp4&#39;]
+</pre></div>
+</div>
+</div>
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
@@ -532,14 +578,187 @@ document.write(`
 </pre></div>
 </div>
 </div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.image.AxesImage at 0x3120df1a0&gt;
+</pre></div>
+</div>
+<img alt="../_images/272a3e590ecf57971672e90611fd97dfca4ee562b02f5e2f700be93bef95b616.png" src="../_images/272a3e590ecf57971672e90611fd97dfca4ee562b02f5e2f700be93bef95b616.png" />
+</div>
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;Plot the gait analysis using Offfrontfoot; Offfrontfetlock; Offknee; Elbow and Shoulder.&quot;</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;Plot the gait analysis using the keypoints Offfrontfoot; Offfrontfetlock; Offknee; Elbow and Shoulder.&quot;</span>
 <span class="n">qa_message</span> <span class="o">=</span> <span class="n">amadeus</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
 <span class="n">qa_message</span> <span class="o">=</span> <span class="n">parse_result</span><span class="p">(</span><span class="n">amadeus</span><span class="p">,</span> <span class="n">qa_message</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings &quot;HTTP/1.1 200 OK&quot;
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions &quot;HTTP/1.1 200 OK&quot;
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>current total cost 0.0224 $
+current input tokens 2956
+current accumulated tokens 3754
+</pre></div>
+</div>
+<p>To plot the gait analysis using the specified keypoints, we can utilize the <code class="docutils literal notranslate"><span class="pre">run_gait_analysis</span></code> and <code class="docutils literal notranslate"><span class="pre">plot_gait_analysis_results</span></code> functions from the provided API. The keypoints you mentioned are ‘Offfrontfoot’, ‘Offfrontfetlock’, ‘Offknee’, ‘Elbow’, and ‘Shoulder’.</p>
+<p>Let’s proceed with writing the code to perform and plot the gait analysis using these keypoints.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">plot_gait_analysis</span><span class="p">(</span><span class="n">identifier</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Parameters:</span>
+<span class="sd">    ----------</span>
+<span class="sd">    identifier: Identifier. Contains information about the video, keypoint and config</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c1"># Create an instance of AnimalBehaviorAnalysis</span>
+    <span class="n">analysis</span> <span class="o">=</span> <span class="n">create_analysis</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+    
+    <span class="c1"># Define the keypoints for gait analysis</span>
+    <span class="n">limb_keypoint_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Offfrontfoot&#39;</span><span class="p">,</span> <span class="s1">&#39;Offfrontfetlock&#39;</span><span class="p">,</span> <span class="s1">&#39;Offknee&#39;</span><span class="p">,</span> <span class="s1">&#39;Elbow&#39;</span><span class="p">,</span> <span class="s1">&#39;Shoulder&#39;</span><span class="p">]</span>
+    
+    <span class="c1"># Run gait analysis</span>
+    <span class="n">gait_analysis_results</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">run_gait_analysis</span><span class="p">(</span><span class="n">limb_keypoint_names</span><span class="o">=</span><span class="n">limb_keypoint_names</span><span class="p">)</span>
+    
+    <span class="c1"># Plot the gait analysis results</span>
+    <span class="n">figure</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">plot_gait_analysis_results</span><span class="p">(</span><span class="n">gait_analysis_results</span><span class="o">=</span><span class="n">gait_analysis_results</span><span class="p">,</span>
+                                                      <span class="n">limb_keypoints</span><span class="o">=</span><span class="n">limb_keypoint_names</span><span class="p">,</span>
+                                                      <span class="n">color_stance</span><span class="o">=</span><span class="s2">&quot;plum&quot;</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">figure</span><span class="p">,</span> <span class="n">axs</span>
+</pre></div>
+</div>
+<p>This function will perform the gait analysis using the specified keypoints and plot the results. The plot will be returned as a tuple containing the figure and axes objects.</p>
+<p>(&lt;Figure size 800x800 with 1 Axes&gt;, <a class="reference external" href="AxesSubplot:ylabel='Limb'">AxesSubplot:ylabel=’Limb’</a>)</p>
+<p>(&lt;Figure size 800x800 with 1 Axes&gt;, <a class="reference external" href="AxesSubplot:ylabel='Limb'">AxesSubplot:ylabel=’Limb’</a>)</p>
+<img alt="../_images/27b03af0cf899a1fbbaca2bca67e831dffa321ececdce30b8dfceaadb618a8be.png" src="../_images/27b03af0cf899a1fbbaca2bca67e831dffa321ececdce30b8dfceaadb618a8be.png" />
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;What keypoints are in this data?&quot;</span>
+<span class="n">qa_message</span> <span class="o">=</span> <span class="n">amadeus</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+<span class="n">qa_message</span> <span class="o">=</span> <span class="n">parse_result</span><span class="p">(</span><span class="n">amadeus</span><span class="p">,</span> <span class="n">qa_message</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings &quot;HTTP/1.1 200 OK&quot;
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>doing active forgetting
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions &quot;HTTP/1.1 200 OK&quot;
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>current total cost 0.0914 $
+current input tokens 3531
+current accumulated tokens 15146
+</pre></div>
+</div>
+<p>The keypoints available in this data are:</p>
+<ol class="arabic simple">
+<li><p>Nose</p></li>
+<li><p>Eye</p></li>
+<li><p>Nearknee</p></li>
+<li><p>Nearfrontfetlock</p></li>
+<li><p>Nearfrontfoot</p></li>
+<li><p>Offknee</p></li>
+<li><p>Offfrontfetlock</p></li>
+<li><p>Offfrontfoot</p></li>
+<li><p>Shoulder</p></li>
+<li><p>Midshoulder</p></li>
+<li><p>Elbow</p></li>
+<li><p>Girth</p></li>
+<li><p>Wither</p></li>
+<li><p>Nearhindhock</p></li>
+<li><p>Nearhindfetlock</p></li>
+<li><p>Nearhindfoot</p></li>
+<li><p>Hip</p></li>
+<li><p>Stifle</p></li>
+<li><p>Offhindhock</p></li>
+<li><p>Offhindfetlock</p></li>
+<li><p>Offhindfoot</p></li>
+<li><p>Ischium</p></li>
+</ol>
+<p>These keypoints represent various body parts of the animal in the data.</p>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;Plot the nose, hip, and nearhindfoot over time. Invert the Y coordinate axis&quot;</span>
+<span class="n">qa_message</span> <span class="o">=</span> <span class="n">amadeus</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+<span class="n">qa_message</span> <span class="o">=</span> <span class="n">parse_result</span><span class="p">(</span><span class="n">amadeus</span><span class="p">,</span> <span class="n">qa_message</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>INFO:httpx:HTTP Request: POST https://api.openai.com/v1/embeddings &quot;HTTP/1.1 200 OK&quot;
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>doing active forgetting
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions &quot;HTTP/1.1 200 OK&quot;
+</pre></div>
+</div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>current total cost 0.1418 $
+current input tokens 3474
+current accumulated tokens 22893
+</pre></div>
+</div>
+<p>To plot the keypoints “Nose”, “Hip”, and “Nearhindfoot” over time with the Y-axis inverted, we can modify the plot to invert the Y-axis. This can be done by setting the <code class="docutils literal notranslate"><span class="pre">ylim</span></code> in reverse order. Here’s the code:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">plot_keypoints_over_time_inverted_y</span><span class="p">(</span><span class="n">identifier</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Plots the Nose, Hip, and Nearhindfoot keypoints over time with the Y-axis inverted.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    ----------</span>
+<span class="sd">    identifier: Identifier. Contains information about the video, keypoint, and config.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c1"># Create an instance of AnimalBehaviorAnalysis</span>
+    <span class="n">analysis</span> <span class="o">=</span> <span class="n">create_analysis</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+    
+    <span class="c1"># Get keypoints data</span>
+    <span class="n">keypoints</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">get_keypoints</span><span class="p">()</span>  <span class="c1"># shape (n_frames, n_individuals, n_kpts, n_dims)</span>
+    
+    <span class="c1"># Get keypoint names to find indices</span>
+    <span class="n">keypoint_names</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">get_keypoint_names</span><span class="p">()</span>
+    
+    <span class="c1"># Find indices for the required keypoints</span>
+    <span class="n">nose_index</span> <span class="o">=</span> <span class="n">keypoint_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;Nose&#39;</span><span class="p">)</span>
+    <span class="n">hip_index</span> <span class="o">=</span> <span class="n">keypoint_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;Hip&#39;</span><span class="p">)</span>
+    <span class="n">nearhindfoot_index</span> <span class="o">=</span> <span class="n">keypoint_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;Nearhindfoot&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Extract the x and y coordinates for the required keypoints</span>
+    <span class="n">nose_data</span> <span class="o">=</span> <span class="n">keypoints</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">nose_index</span><span class="p">,</span> <span class="p">:]</span>  <span class="c1"># shape (n_frames, n_dims)</span>
+    <span class="n">hip_data</span> <span class="o">=</span> <span class="n">keypoints</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">hip_index</span><span class="p">,</span> <span class="p">:]</span>  <span class="c1"># shape (n_frames, n_dims)</span>
+    <span class="n">nearhindfoot_data</span> <span class="o">=</span> <span class="n">keypoints</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">nearhindfoot_index</span><span class="p">,</span> <span class="p">:]</span>  <span class="c1"># shape (n_frames, n_dims)</span>
+    
+    <span class="c1"># Create a figure and axis</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+    
+    <span class="c1"># Plot the keypoints over time</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">nose_data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">nose_data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Nose&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">hip_data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">hip_data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Hip&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">nearhindfoot_data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">nearhindfoot_data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Nearhindfoot&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Set labels and title</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;X Coordinate&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Y Coordinate&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Keypoints Over Time with Inverted Y-axis&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">288</span><span class="p">)</span>  <span class="c1"># xlim covers the whole image width</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">162</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># ylim is inverted to cover the whole image height</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+    
+    <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span>
+</pre></div>
+</div>
+<p>This function will plot the x and y coordinates of the “Nose”, “Hip”, and “Nearhindfoot” keypoints over time, with the Y-axis inverted, allowing you to visualize their movement throughout the video with the inverted Y-axis.</p>
+<p>(&lt;Figure size 1000x600 with 1 Axes&gt;, &lt;AxesSubplot:title={‘center’:’Keypoints Over Time with Inverted Y-axis’}, xlabel=’X Coordinate’, ylabel=’Y Coordinate’&gt;)</p>
+<p>(&lt;Figure size 1000x600 with 1 Axes&gt;, &lt;AxesSubplot:title={‘center’:’Keypoints Over Time with Inverted Y-axis’}, xlabel=’X Coordinate’, ylabel=’Y Coordinate’&gt;)</p>
+<img alt="../_images/ee8905d94c5723d5a1dd8f653685e8e8c7d86fd2f4c56705d45984fd587213d5.png" src="../_images/ee8905d94c5723d5a1dd8f653685e8e8c7d86fd2f4c56705d45984fd587213d5.png" />
 </div>
 </div>
 <div class="cell docutils container">
