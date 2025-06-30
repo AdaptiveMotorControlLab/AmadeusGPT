@@ -13,6 +13,7 @@
 
 [🛠️ Installation](https://github.com/AdaptiveMotorControlLab/AmadeusGPT?tab=readme-ov-file#install--run-amadeusgpt) |
 [🌎 Home Page](http://www.mackenziemathislab.org/amadeusgpt) |
+[🚀 Demos & Docs](https://adaptivemotorcontrollab.github.io/AmadeusGPT/README.html)
 [🚨 News](https://github.com/AdaptiveMotorControlLab/AmadeusGPT?tab=readme-ov-file#news) |
 [🪲 Reporting Issues](https://github.com/AdaptiveMotorControlLab/AmadeusGPT/issues) |
 [💬 Discussions!](https://github.com/AdaptiveMotorControlLab/AmadeusGPT/discussions)
@@ -157,6 +158,7 @@ AmadeusGPT is license under the Apache-2.0 license.
 - If you already have keypoint file corresponding to the video file, look how we set-up the config file in the Notebooks.  Right now we only support keypoint output from DeepLabCut.
 
 ## News
+- June 2025 [v0.1.3](https://pypi.org/project/amadeusgpt/0.1.3/) is out, and we introduce new demo docs!
 - July 2024 [v0.1.1](https://github.com/AdaptiveMotorControlLab/AmadeusGPT/releases/tag/v0.1.1) is released! This is a major code update ...
 - June 2024 as part of the CZI EOSS, The Kavli Foundation now supports this work! ✨
 - 🤩 Dec 2023, code released!
