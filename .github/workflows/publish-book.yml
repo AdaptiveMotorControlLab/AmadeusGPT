@@ -20,6 +20,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip setuptools
         python -m pip install .[docs]
+        python -m pip install jupyter-book numpydoc
         pip install jupyter-book sphinxcontrib-mermaid
 
     - name: Build the book
