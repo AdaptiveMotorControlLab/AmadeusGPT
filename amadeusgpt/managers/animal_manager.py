@@ -96,6 +96,8 @@ class AnimalManager(Manager):
         self.full_keypoint_names = []
         self.superanimal_predicted_video = None
         self.superanimal_name = None
+        self.model_name = None
+        self.detector_name = None
         self.init_pose()
 
     def configure_animal_from_meta(self, meta_info):
@@ -106,11 +108,17 @@ class AnimalManager(Manager):
         self.max_individuals = int(meta_info["individuals"])
         species = meta_info["species"]
         if species == "topview_mouse":
-            self.superanimal_name = "superanimal_topviewmouse_hrnetw32"
+            self.superanimal_name = "superanimal_topviewmouse"
+            self.model_name = "hrnet_w32"
+            self.detector_name = "fasterrcnn_resnet50_fpn_v2"
         elif species == "sideview_quadruped":
-            self.superanimal_name = "superanimal_quadruped_hrnetw32"
+            self.superanimal_name = "superanimal_quadruped"
+            self.model_name = "hrnet_w32"
+            self.detector_name = "fasterrcnn_resnet50_fpn_v2"
         else:
             self.superanimal_name = None
+            self.model_name = None
+            self.detector_name = None
 
     def init_pose(self):
 
@@ -304,10 +312,14 @@ class AnimalManager(Manager):
             from deeplabcut.modelzoo.video_inference import \
                 video_inference_superanimal
 
+            # Patch for PyTorch 2.6+ weights_only issue
+            from amadeusgpt.utils import patch_pytorch_weights_only
+            patch_pytorch_weights_only()
+
             video_suffix = Path(self.video_file_path).suffix
 
             self.keypoint_file_path = self.video_file_path.replace(
-                video_suffix, "_" + self.superanimal_name + ".h5"
+                video_suffix, f"_superanimal_{self.superanimal_name.split('_', 1)[1]}_{self.detector_name}_{self.model_name}.h5"
             )
             self.superanimal_predicted_video = self.keypoint_file_path.replace(
                 ".h5", "_labeled.mp4"
@@ -315,9 +327,15 @@ class AnimalManager(Manager):
 
             if not os.path.exists(self.keypoint_file_path):
                 print(f"going to inference video with {self.superanimal_name}")
+                if self.model_name is None:
+                    raise ValueError("Model name not set. Please call configure_animal_from_meta first.")
+                if self.detector_name is None:
+                    raise ValueError("Detector name not set. Please call configure_animal_from_meta first.")
                 video_inference_superanimal(
                     videos=[self.video_file_path],
                     superanimal_name=self.superanimal_name,
+                    model_name=self.model_name,
+                    detector_name=self.detector_name,
                     max_individuals=self.max_individuals,
                     video_adapt=False,
                 )
