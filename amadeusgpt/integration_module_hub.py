@@ -1,17 +1,19 @@
 import os
 import pickle
 
-from openai import OpenAI
+from amadeusgpt.utils.openai_adapter import OpenAIAdapter
 from sklearn.metrics.pairwise import cosine_similarity
 
+from amadeusgpt import st
+from amadeusgpt.utils.api_key_util import get_api_key
 from amadeusgpt.programs.api_registry import INTEGRATION_API_REGISTRY
-
-client = OpenAI()
 
 
 class IntegrationModuleHub:
     def __init__(self):
         self.amadeus_root = os.path.dirname(os.path.realpath(__file__))
+        self.client = OpenAIAdapter(
+            api_key=get_api_key(st.session_state)).get_client()
 
     def save_embeddings(self):
         result = {}
@@ -20,7 +22,7 @@ class IntegrationModuleHub:
             docstring = module_info["description"]
             text = docstring.replace("\n", " ")
             embedding = (
-                client.embeddings.create(input=[text], model=model).data[0].embedding
+                self.client.embeddings.create(input=[text], model=model).data[0].embedding
             )
             result[module_name] = embedding
         if len(result) > 0:
@@ -35,7 +37,7 @@ class IntegrationModuleHub:
         model = "text-embedding-3-small"
 
         query_embedding = (
-            client.embeddings.create(input=[query], model=model).data[0].embedding
+            self.client.embeddings.create(input=[query], model=model).data[0].embedding
         )
 
         if not os.path.exists(

@@ -7,6 +7,8 @@ keypoint_info:
     nose: "nose"
     neck: "neck"  
 llm_info:
+  gpt_model: "qwen/qwen3-coder:free"
+  max_tokens: 20000
   keep_last_n_messages: 2
 object_info:
   load_objects_from_disk: false

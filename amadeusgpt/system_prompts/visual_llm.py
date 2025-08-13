@@ -1,3 +1,12 @@
+from pydantic import BaseModel
+from typing import List, Literal
+
+class VlmInferenceOutput(BaseModel):
+    description: str
+    individuals: int
+    species: Literal["topview_mouse", "sideview_quadruped", "others"]
+    background_objects: List[str]
+
 def _get_system_prompt():
     system_prompt = """
     Describe what you see in the image and fill in the following json string:

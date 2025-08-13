@@ -9,7 +9,7 @@ def test_3d_maushaus():
 
     kwargs = {
         'keypoint_info.use_3d': True,
-        'llm_info.gpt_model': "gpt-4o"
+        'llm_info.gpt_model': "moonshotai/kimi-dev-72b:free"
     }
 
     config = create_project(data_folder="examples/MausHaus3D", 

@@ -32,32 +32,83 @@ In our original work (NeurIPS 2023) we used GPT3.5 and GPT4 as part of our agent
   
 ## Get started: install AmadeusGPT🎻
 
-### [1] You will need an openAI key:
+### [1] You will need an API key (OpenAI or OpenRouter):
 
-**Why OpenAI API Key is needed** AmadeusGPT relies on API calls of OpenAI (we will add more LLM options in the future) for language understanding and code writing. Sign up for a [openAI API key](https://platform.openai.com/account/api-keys) [here](https://platform.openai.com/account/api-keys).
+**Why an API Key is needed** AmadeusGPT relies on API calls to language models for understanding natural language and generating code. You can use either OpenAI's models directly or access a wider variety of models through OpenRouter.
 
-Then, you can add this into your environment by passing the following in the terminal after you launched your conda env:
+#### Option A: OpenAI API Key
+Sign up for an [OpenAI API key](https://platform.openai.com/account/api-keys) to use GPT-4, GPT-4o, and other OpenAI models.
 
-```bash
-export OPENAI_API_KEY='your API key' 
+#### Option B: OpenRouter API Key  
+Sign up for an [OpenRouter API key](https://openrouter.ai/keys) to access a wide variety of models from different providers. OpenRouter offers:
+- **Pricing flexibility**: Choose from free models or pay-per-use options. See [OpenRouter pricing](https://openrouter.ai/pricing) for model costs.
+- **Rate limits**: Check [OpenRouter rate limits](https://openrouter.ai/docs/limits) for usage restrictions.
+- **Model variety**: Access models from OpenAI, Anthropic, Google, Meta, and more.
+
+#### Setting up your API key:
+
+**Option 1: .env file (recommended)**
+Create a `.env` file in the repository root and add:
+```
+OPENAI_API_KEY=your_openai_api_key
+# OR
+OPENROUTER_API_KEY=your_openrouter_api_key
 ```
 
-Or inside a python script or Jupyter Notebook, add this if you did not pass at the terminal stage:
+For Jupyter Notebooks, use the .env file approach and load it:
+```python
+from dotenv import load_dotenv
+load_dotenv()  # This loads the .env file automatically
+```
 
+**Option 2: Environment variables**
+```bash
+# For OpenAI
+export OPENAI_API_KEY='your_openai_api_key'
 
+# For OpenRouter  
+export OPENROUTER_API_KEY='your_openrouter_api_key'
+```
+
+**Option 3: Python script inline**
 ```python
 import os
-os.environ["OPENAI_API_KEY"] = 'your api key' 
+# For OpenAI
+os.environ["OPENAI_API_KEY"] = 'your_openai_api_key'
+
+# For OpenRouter
+os.environ["OPENROUTER_API_KEY"] = 'your_openrouter_api_key'
 ```
 
-### [2] Set up a conda environment:
+#### Configuring models:
+OpenRouter models can be specified in the configuration files located at `amadeusgpt/configs/<example_type>.yaml` under the `llm_info` section:
+```yaml
+llm_info:
+  gpt_model: "qwen/qwen3-coder:free"  # Example OpenRouter model
+  max_tokens: 20000
+```
 
-Conda is an easy-to-use Python interface that supports launching [Jupyter Notebooks](https://jupyter.org/). If you are completely new to this, we recommend checking out the [docs here for getting conda installed](https://deeplabcut.github.io/DeepLabCut/docs/beginner-guides/beginners-guide.html#beginner-user-guide). Otherwise, proceed to use one of [our supplied conda files](https://github.com/AdaptiveMotorControlLab/AmadeusGPT/tree/main/conda). As you will see we have minimal dependencies to get started, and [here is a simple step-by-step guide](https://deeplabcut.github.io/DeepLabCut/docs/installation.html#step-2-build-an-env-using-our-conda-file) you can reference for setting it up (or see [BONUS](README.md#bonus---customized-your-conda-env) below). Here is the quick start command:
+Supported models and their pricing are defined in the [`LLM` class](amadeusgpt/analysis_objects/llm.py#L23-L27). To add a new model, update the `prices` dictionary with the model name and its input/output costs per token.
+
+### [2] Set up your Python environment:
+
+[uv](https://github.com/astral-sh/uv) is a fast Python package manager by Astral. Install uv first:
 
 ```bash
-conda env create -f amadeusGPT.yml
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# Or on Windows: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
-To note, some modules AmadeusGPT can use benefit from GPU support, therefore we recommend also having an NVIDIA GPU available and installing CUDA. 
+
+Then install AmadeusGPT:
+```bash
+# Clone the repository and install
+git clone https://github.com/AdaptiveMotorControlLab/AmadeusGPT.git
+cd AmadeusGPT
+uv sync
+```
+
+**Note:** Some modules AmadeusGPT can use benefit from GPU support, therefore we recommend also having an NVIDIA GPU available and installing CUDA. 
 
 
 ### [3] 🪄 That's it! Now you have AmadeusGPT installed! 

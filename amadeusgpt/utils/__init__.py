@@ -9,6 +9,7 @@ import numpy as np
 from amadeusgpt.analysis_objects.event import Event
 from amadeusgpt.logger import AmadeusLogger
 from IPython.display import Markdown, Video, display, HTML
+from amadeusgpt.utils.openai_adapter import OpenAIAdapter
 
 def filter_kwargs_for_function(func, kwargs):
     sig = inspect.signature(func)
@@ -36,13 +37,8 @@ def parse_error_message_from_python():
     return traceback_str
 
 def validate_openai_api_key(key):
-    import openai
-    openai.api_key = key
-    try:
-        openai.models.list()
-        return True
-    except openai.AuthenticationError:
-        return False
+    client = OpenAIAdapter(key)
+    return client.validate()
 
 def flatten_tuple(t):
     """

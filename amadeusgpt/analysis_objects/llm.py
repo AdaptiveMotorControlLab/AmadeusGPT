@@ -10,9 +10,12 @@ import cv2
 import numpy as np
 import openai
 from openai import OpenAI
+from pydantic import ValidationError
 
 from amadeusgpt.programs.sandbox import Sandbox
+from amadeusgpt.system_prompts.visual_llm import VlmInferenceOutput
 from amadeusgpt.utils import AmadeusLogger, QA_Message, create_qa_message
+from amadeusgpt.utils.openai_adapter import OpenAIAdapter
 
 from .base import AnalysisObject
 
@@ -22,6 +25,7 @@ class LLM(AnalysisObject):
     prices = {
         "gpt-4o": {"input": 5 / 10**6, "output": 15 / 10**6},
         "gpt-4o-mini": {"input": 0.15 / 10**6, "output": 0.6 / 10**6},
+        "qwen/qwen3-coder:free": {"input": 0, "output": 0},
     }
     total_cost = 0
 
@@ -65,17 +69,17 @@ class LLM(AnalysisObject):
         This is routed to openai > 1.0 interfaces
         """
 
-        if self.config.get("use_streamlit", False):
-            if "OPENAI_API_KEY" in os.environ:
-                openai.api_key = os.environ["OPENAI_API_KEY"]
-        else:
-            openai.api_key = os.environ["OPENAI_API_KEY"]
+        # if self.config.get("use_streamlit", False):
+        #     if "OPENAI_API_KEY" in os.environ:
+        #         openai.api_key = os.environ["OPENAI_API_KEY"]
+        # else:
+        #     openai.api_key = os.environ["OPENAI_API_KEY"]
         response = None
         # gpt_model is default to be the cls.gpt_model, which can be easily set
-        gpt_model = self.gpt_model
+        # gpt_model = self.gpt_model
         # in streamlit app, "gpt_model" is set by the text box
 
-        client = OpenAI()
+        client = OpenAIAdapter().get_client()
 
         if self.config.get("use_streamlit", False):
             if "gpt_model" in st.session_state:
@@ -89,7 +93,7 @@ class LLM(AnalysisObject):
 
         # the usage was recorded from the last run. However, since we have many LLMs that
         # share the call of this function, we will need to store usage and retrieve them from the database class
-        num_retries = 3
+        num_retries = 1
         for _ in range(num_retries):
             try:
                 json_data = {
@@ -259,19 +263,37 @@ class VisualLLM(LLM):
             multi_image_content=multi_image_content,
             in_place=True,
         )
-        response = self.connect_gpt(self.context_window, max_tokens=2000)
+        response = self.connect_gpt(self.context_window, max_tokens=20000)
         text = response.choices[0].message.content.strip()
 
         print("description of the image frame provided")
         print(text)
 
+        thinking_pattern = r'<think>.*?</think>'
+        output_text = re.sub(thinking_pattern, '', text, flags=re.DOTALL)
+
+        print(f"output text after removing thinking: {output_text}")
+
         pattern = r"```json(.*?)```"
-        if len(re.findall(pattern, text, re.DOTALL)) == 0:
-            raise ValueError("can't parse the json string correctly", text)
+        if len(re.findall(pattern, output_text, re.DOTALL)) == 0:
+            raise ValueError("can't parse the json string correctly", output_text)
         else:
-            json_string = re.findall(pattern, text, re.DOTALL)[0]
-            json_obj = json.loads(json_string)
-            return json_obj
+            results = []
+            for response_json in re.findall(pattern, output_text, re.DOTALL):
+                try:
+                    json_obj = json.loads(response_json)
+                    VlmInferenceOutput.model_validate(json_obj)
+                    results.append(json_obj)
+                except ValidationError as val_err:
+                    print(f"Couldn't validate the json string correctly for {response_json}", val_err)
+                except Exception as e:
+                    print(f"Couldn't parse the json string correctly for {response_json}", e)
+                    raise e
+            if len(results) == 0:
+                raise ValueError("can't parse the json string correctly", output_text)
+            elif len(results) > 1:
+                print("WARNING!! Found multiple json strings. Returning only the first", results)
+            return results[0]
 
 
 class CodeGenerationLLM(LLM):
@@ -319,7 +341,7 @@ class CodeGenerationLLM(LLM):
 
         self.update_history("user", query)
 
-        response = self.connect_gpt(self.context_window, max_tokens=2000)
+        response = self.connect_gpt(self.context_window, max_tokens=20000)
         text = response.choices[0].message.content.strip()
         # need to keep the memory of the answers from LLM
         self.update_history("assistant", text)
@@ -374,7 +396,7 @@ All the modules were already imported so you don't need to import them again.
 Can you correct the code? Make sure you only write one function which is the updated function.
 """
         self.update_history("user", query)
-        response = self.connect_gpt(self.context_window, max_tokens=4096)
+        response = self.connect_gpt(self.context_window, max_tokens=20000)
         text = response.choices[0].message.content.strip()
         print(text)
         pattern = r"```python(.*?)```"

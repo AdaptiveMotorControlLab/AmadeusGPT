@@ -7,7 +7,7 @@ def test_superanimal():
     # the dummy video only contains 6 frames.
     kwargs = {
         'video_info.scene_frame_number': 1,
-        'llm_info.gpt_model': "gpt-4o"
+        'llm_info.gpt_model': "qwen/qwen2.5-vl-72b-instruct:free"
     }
     data_folder = "examples/DummyVideo"
     result_folder = "temp_result_folder"

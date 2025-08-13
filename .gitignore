@@ -46,3 +46,11 @@ MANIFEST
 *.pyc
 __pycache__/
 *~
+
+digest.txt
+uv.lock
+.vscode/launch.json
+amadeusgpt/modules_embedding.pickle
+temp_answer.json
+
+logs/

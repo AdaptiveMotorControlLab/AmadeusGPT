@@ -1,9 +1,7 @@
 import os
 import traceback
 
-import streamlit as st
-
-from amadeusgpt import app_utils
+from amadeusgpt import app_utils, st
 from amadeusgpt.utils import validate_openai_api_key
 
 # Set page configuration
@@ -21,6 +19,10 @@ def main():
     if "exist_valid_openai_api_key" not in st.session_state:
         if "OPENAI_API_KEY" in os.environ:
             st.session_state["exist_valid_openai_api_key"] = True
+            st.session_state["OPENAI_API_KEY"] = os.environ["OPENAI_API_KEY"]
+        elif "OPENROUTER_API_KEY" in os.environ:
+            st.session_state["exist_valid_openai_api_key"] = True
+            st.session_state["OPENROUTER_API_KEY"] = os.environ["OPENROUTER_API_KEY"]
         else:
             st.session_state["exist_valid_openai_api_key"] = False
 
@@ -30,6 +32,8 @@ def main():
         print("inside valid api key function")
         if "OPENAI_API_KEY" in os.environ:
             api_token = os.environ["OPENAI_API_KEY"]
+        elif "OPENROUTER_API_KEY" in os.environ:
+            api_token = os.environ["OPENROUTER_API_KEY"]
         else:
             api_token = st.session_state["openAI_token"]
         check_valid = validate_openai_api_key(api_token)
